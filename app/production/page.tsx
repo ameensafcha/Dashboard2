@@ -31,10 +31,28 @@ export default async function ProductionPage() {
   const MAX_CAPACITY_KG = 3000;
   const utilizationPercent = Math.round((monthlyProductionKg / MAX_CAPACITY_KG) * 100);
 
+  // Active Batches Trend (This week vs Last week)
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const thisWeekActive = activeBatches; // Currently active
+  const lastWeekActive = batches.filter(b => {
+    const d = new Date(b.startDate);
+    return d <= oneWeekAgo && (!b.endDate || new Date(b.endDate) > oneWeekAgo);
+  }).length;
+
+  const activeDiff = thisWeekActive - lastWeekActive;
+  const activeTrendText = activeDiff > 0 ? `+${activeDiff} vs last wk` : activeDiff < 0 ? `${activeDiff} vs last wk` : 'Same as last wk';
+  const activeTrend = activeDiff > 0 ? 'up' : activeDiff < 0 ? 'down' : 'neutral';
+
   // Average Yield (Completed batches only)
-  const completedBatches = batches.filter(b => b.status === 'completed' && b.actualQty && Number(b.targetQty) > 0);
-  const sumYield = completedBatches.reduce((sum, b) => sum + ((b.actualQty! / Number(b.targetQty)) * 100), 0);
-  const avgYield = completedBatches.length > 0 ? (sumYield / completedBatches.length).toFixed(1) : '0.0';
+  const completedBatches = batches.filter(b => b.status === 'completed' && b.actualQty !== null && Number(b.targetQty) > 0);
+
+  // Calculate weighted average (Total Actual / Total Target) for an accurate facility yield rating
+  const totalActual = completedBatches.reduce((sum, b) => sum + Number(b.actualQty || 0), 0);
+  const totalTarget = completedBatches.reduce((sum, b) => sum + Number(b.targetQty || 0), 0);
+
+  const avgYield = totalTarget > 0 ? ((totalActual / totalTarget) * 100).toFixed(1) : '0.0';
 
   // QC Pass Rate
   const recentQC = qualityChecks.slice(0, 30); // Last 30 checks
@@ -54,29 +72,29 @@ export default async function ProductionPage() {
         <KPICard
           title="Active Batches"
           value={activeBatches.toString()}
-          change="+2 vs last wk"
-          trend="up"
+          change={activeTrendText}
+          trend={activeTrend}
           icon={Factory}
         />
         <KPICard
           title="Pending QC"
           value={pendingQC.toString()}
-          change={pendingQC > 5 ? "High (Queue)" : "Normal"}
-          trend={pendingQC > 5 ? "down" : "neutral"}
+          change={pendingQC > 5 ? "High Queue" : pendingQC > 0 ? "Normal Load" : "All Clear"}
+          trend={pendingQC > 5 ? "down" : pendingQC > 0 ? "neutral" : "up"}
           icon={AlertTriangle}
         />
         <KPICard
           title="Capacity Utilization"
           value={`${utilizationPercent}%`}
           change={`${monthlyProductionKg} kg / 3 tons`}
-          trend="neutral"
+          trend={utilizationPercent > 90 ? "up" : "neutral"}
           icon={TrendingUp}
         />
         <KPICard
           title="Avg. Yield & QC"
           value={`${avgYield}%`}
           change={`${qcPassRate}% Pass Rate`}
-          trend={qcPassRate >= 90 ? "up" : "down"}
+          trend={qcPassRate >= 95 ? "up" : qcPassRate >= 80 ? "neutral" : "down"}
           icon={CheckCircle2}
         />
       </div>

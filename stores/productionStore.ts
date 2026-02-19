@@ -20,7 +20,16 @@ interface ProductionStore {
   isDetailOpen: boolean;
   formData: ProductionBatchForm;
   isSaving: boolean;
-  
+
+  // R&D State
+  rndProjects: any[];
+  isRnDModalOpen: boolean;
+  selectedRnDProject: any | null;
+
+  // Batch detailed toggles
+  isEditingBatch: boolean;
+  isDeleteDialogOpen: boolean;
+
   setBatches: (batches: any[]) => void;
   setProducts: (products: any[]) => void;
   setIsModalOpen: (open: boolean) => void;
@@ -29,6 +38,13 @@ interface ProductionStore {
   setFormData: (data: Partial<ProductionBatchForm>) => void;
   resetForm: () => void;
   setIsSaving: (saving: boolean) => void;
+
+  setRnDProjects: (projects: any[]) => void;
+  setIsRnDModalOpen: (open: boolean) => void;
+  setSelectedRnDProject: (project: any | null) => void;
+
+  setIsEditingBatch: (editing: boolean) => void;
+  setIsDeleteDialogOpen: (open: boolean) => void;
 }
 
 const initialFormData: ProductionBatchForm = {
@@ -51,7 +67,14 @@ export const useProductionStore = create<ProductionStore>((set) => ({
   isDetailOpen: false,
   formData: initialFormData,
   isSaving: false,
-  
+
+  rndProjects: [],
+  isRnDModalOpen: false,
+  selectedRnDProject: null,
+
+  isEditingBatch: false,
+  isDeleteDialogOpen: false,
+
   setBatches: (batches) => set({ batches }),
   setProducts: (products) => set({ products }),
   setIsModalOpen: (isModalOpen) => set({ isModalOpen }),
@@ -60,4 +83,11 @@ export const useProductionStore = create<ProductionStore>((set) => ({
   setFormData: (data) => set((state) => ({ formData: { ...state.formData, ...data } })),
   resetForm: () => set({ formData: initialFormData }),
   setIsSaving: (isSaving) => set({ isSaving }),
+
+  setRnDProjects: (rndProjects) => set({ rndProjects }),
+  setIsRnDModalOpen: (isRnDModalOpen) => set({ isRnDModalOpen }),
+  setSelectedRnDProject: (selectedRnDProject) => set({ selectedRnDProject }),
+
+  setIsEditingBatch: (isEditingBatch) => set({ isEditingBatch }),
+  setIsDeleteDialogOpen: (isDeleteDialogOpen) => set({ isDeleteDialogOpen }),
 }));

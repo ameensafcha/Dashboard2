@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { RndProjectType } from '@/app/actions/production';
 import { Badge } from '@/components/ui/badge';
 import RnDDetailModal from './RnDDetailModal';
+import { useProductionStore } from '@/stores/productionStore';
 
 const statusColors: Record<string, string> = {
     ideation: 'bg-gray-500',
@@ -15,7 +16,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function RnDList({ projects }: { projects: RndProjectType[] }) {
-    const [selectedProject, setSelectedProject] = useState<RndProjectType | null>(null);
+    const { selectedRnDProject, setSelectedRnDProject } = useProductionStore();
 
     if (projects.length === 0) {
         return (
@@ -45,7 +46,7 @@ export function RnDList({ projects }: { projects: RndProjectType[] }) {
                                 key={project.id}
                                 className="border-t hover:bg-muted/50 transition-colors cursor-pointer"
                                 style={{ borderColor: 'var(--border)' }}
-                                onClick={() => setSelectedProject(project)}
+                                onClick={() => setSelectedRnDProject(project)}
                             >
                                 <td className="px-4 py-3 font-medium" style={{ color: 'var(--foreground)' }}>{project.name}</td>
                                 <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{project.category}</td>
@@ -70,9 +71,9 @@ export function RnDList({ projects }: { projects: RndProjectType[] }) {
             </div>
 
             <RnDDetailModal
-                project={selectedProject}
-                isOpen={!!selectedProject}
-                onClose={() => setSelectedProject(null)}
+                project={selectedRnDProject}
+                isOpen={!!selectedRnDProject}
+                onClose={() => setSelectedRnDProject(null)}
             />
         </div>
     );

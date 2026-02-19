@@ -150,6 +150,10 @@ export async function createProductionBatch(data: {
 
     const batchNumber = await generateBatchNumber(data.startDate);
 
+    const yieldPercent = (data.actualQty && data.targetQty > 0)
+      ? (data.actualQty / data.targetQty) * 100
+      : undefined;
+
     const batch = await prisma.productionBatch.create({
       data: {
         batchNumber,
@@ -157,6 +161,7 @@ export async function createProductionBatch(data: {
         variantId: data.variantId,
         targetQty: data.targetQty,
         actualQty: data.actualQty,
+        yieldPercent: yieldPercent,
         status: data.status as any || 'planned',
         startDate: data.startDate,
         endDate: data.endDate,
@@ -198,15 +203,33 @@ export async function updateProductionBatch(id: string, data: {
   notes?: string;
 }) {
   try {
+    const currentBatch = await prisma.productionBatch.findUnique({ where: { id } });
+    const targetQty = currentBatch ? Number(currentBatch.targetQty) : 0;
+
+    // Calculate new yield if actualQty is provided
+    let newYieldPercent: number | undefined;
+    if (data.actualQty !== undefined && targetQty > 0) {
+      newYieldPercent = (data.actualQty / targetQty) * 100;
+    }
+
     const batch = await prisma.productionBatch.update({
       where: { id },
       data: {
         ...data,
+        yieldPercent: newYieldPercent,
         status: data.status as any,
       },
     });
+
+    const serializedBatch = {
+      ...batch,
+      targetQty: batch.targetQty?.toNumber() || 0,
+      actualQty: batch.actualQty?.toNumber() || null,
+      yieldPercent: batch.yieldPercent?.toNumber() || null,
+    };
+
     revalidatePath('/production/batches');
-    return { success: true, data: batch };
+    return { success: true, data: serializedBatch };
   } catch (error) {
     console.error('Error updating batch:', error);
     return { success: false, error: 'Failed to update batch' };

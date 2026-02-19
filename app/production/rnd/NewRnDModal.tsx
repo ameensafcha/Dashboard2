@@ -11,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { useRouter } from 'next/navigation';
+import { useProductionStore } from '@/stores/productionStore';
 
 export default function NewRnDModal() {
     const router = useRouter();
-    const [isOpen, setIsOpen] = useState(false);
+    const { isRnDModalOpen, setIsRnDModalOpen } = useProductionStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -51,7 +52,7 @@ export default function NewRnDModal() {
 
             if (result.success) {
                 toast({ title: 'Success', description: 'R&D project created successfully' });
-                setIsOpen(false);
+                setIsRnDModalOpen(false);
                 setFormData({
                     name: '',
                     category: '',
@@ -76,12 +77,12 @@ export default function NewRnDModal() {
 
     return (
         <>
-            <Button onClick={() => setIsOpen(true)} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-sm font-medium">
+            <Button onClick={() => setIsRnDModalOpen(true)} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-sm font-medium">
                 <Plus className="w-4 h-4 mr-2" />
                 New R&D Project
             </Button>
 
-            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <Dialog open={isRnDModalOpen} onOpenChange={setIsRnDModalOpen}>
                 <DialogContent className="sm:max-w-3xl p-0 overflow-hidden border-border bg-background shadow-2xl sm:rounded-xl">
                     <DialogHeader className="px-6 py-5 border-b border-border bg-muted/30">
                         <DialogTitle className="text-xl font-bold flex items-center gap-2">
@@ -271,7 +272,7 @@ export default function NewRnDModal() {
                                 <span className="text-red-500">*</span> Required fields
                             </p>
                             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                                <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="px-6 hover:bg-muted">
+                                <Button type="button" variant="outline" onClick={() => setIsRnDModalOpen(false)} className="px-6 hover:bg-muted">
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={isSubmitting} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black font-semibold px-6 shadow-sm">

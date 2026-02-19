@@ -11,6 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/toast';
 import { useRouter } from 'next/navigation';
 import { Trash2, Edit2, Save, X } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RnDDetailModalProps {
     project: RndProjectType | null;
@@ -22,6 +32,7 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [formData, setFormData] = useState<any>({});
 
     useEffect(() => {
@@ -75,13 +86,12 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
     };
 
     const handleDelete = async () => {
-        if (!window.confirm('Are you sure you want to delete this R&D project? This action cannot be undone.')) return;
-
         setIsSubmitting(true);
         try {
             const result = await deleteRnDProject(project.id);
             if (result.success) {
                 toast({ title: 'Deleted', description: 'Project removed successfully' });
+                setIsDeleteDialogOpen(false);
                 onClose();
                 router.refresh();
             } else {
@@ -111,9 +121,28 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
                             <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                                 <Edit2 className="w-4 h-4 mr-2" /> Edit
                             </Button>
-                            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isSubmitting}>
+
+                            <Button variant="destructive" size="sm" disabled={isSubmitting} onClick={() => setIsDeleteDialogOpen(true)}>
                                 <Trash2 className="w-4 h-4" />
                             </Button>
+
+                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the R&D project
+                                            "{project.name}" and remove its data from our servers.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel disabled={isSubmitting} onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">
+                                            {isSubmitting ? 'Deleting...' : 'Delete Project'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     )}
                 </DialogHeader>
