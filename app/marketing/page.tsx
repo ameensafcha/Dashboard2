@@ -1,8 +1,10 @@
+import { PageHeader } from '@/components/ui/PageHeader';
+
 export default function MarketingPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#333333] mb-6">Marketing</h1>
-      <p className="text-[#757575]">Marketing module coming soon...</p>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Marketing" />
+      <p style={{ color: 'var(--text-muted)' }}>Marketing module coming soon...</p>
     </div>
   );
 }

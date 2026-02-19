@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCategories, createCategory, deleteCategory } from '@/app/actions/product/actions';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '@/app/actions/product/actions';
 import { ProductCategoryType } from '@/app/actions/product/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Edit, X } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -21,27 +22,25 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/toast';
+import { PageHeader } from '@/components/ui/PageHeader';
+
+function truncateWords(text: string, wordCount: number = 5) {
+  if (!text) return '-';
+  const words = text.split(' ');
+  if (words.length <= wordCount) return text;
+  return words.slice(0, wordCount).join(' ') + '...';
+}
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<ProductCategoryType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingCategory, setViewingCategory] = useState<ProductCategoryType | null>(null);
+  const [editingCategory, setEditingCategory] = useState<ProductCategoryType | null>(null);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [isSaving, setIsSaving] = useState(false);
-  
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -59,53 +58,63 @@ export default function CategoriesPage() {
     fetchCategories();
   }, []);
 
+  const handleOpenModal = (category?: ProductCategoryType) => {
+    if (category) {
+      setEditingCategory(category);
+      setNewCategory({ name: category.name, description: category.description || '' });
+    } else {
+      setEditingCategory(null);
+      setNewCategory({ name: '', description: '' });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingCategory(null);
+    setNewCategory({ name: '', description: '' });
+  };
+
+  const handleViewCategory = (category: ProductCategoryType) => {
+    setViewingCategory(category);
+    setIsViewModalOpen(true);
+  };
+
   const handleSave = async () => {
     if (!newCategory.name) return;
     
     setIsSaving(true);
     try {
-      await createCategory({
-        name: newCategory.name,
-        description: newCategory.description || null,
-      });
-      setIsModalOpen(false);
-      setNewCategory({ name: '', description: '' });
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, {
+          name: newCategory.name,
+          description: newCategory.description || null,
+        });
+        toast({ title: 'Success', description: 'Category updated successfully', type: 'success' });
+      } else {
+        await createCategory({
+          name: newCategory.name,
+          description: newCategory.description || null,
+        });
+        toast({ title: 'Success', description: 'Category added successfully', type: 'success' });
+      }
+      handleCloseModal();
       fetchCategories();
-      toast({ title: 'Success', description: 'Category added successfully', type: 'success' });
     } catch (error) {
-      console.error('Error creating category:', error);
-      toast({ title: 'Error', description: 'Failed to create category', type: 'error' });
+      console.error('Error saving category:', error);
+      toast({ title: 'Error', description: 'Failed to save category', type: 'error' });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    
-    setIsDeleting(true);
-    try {
-      await deleteCategory(deleteId);
-      setDeleteId(null);
-      fetchCategories();
-      toast({ title: 'Success', description: 'Category deleted successfully', type: 'success' });
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      toast({ title: 'Error', description: 'Failed to delete category', type: 'error' });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   return (
-    <div className="p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1A1A2E]">Categories</h1>
-          <p className="text-gray-500 mt-1">Manage product categories</p>
-        </div>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Categories" />
+
+      <div className="mb-4 flex justify-end">
         <Button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => handleOpenModal()}
           className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -114,10 +123,10 @@ export default function CategoriesPage() {
       </div>
 
       {isLoading ? (
-        <div className="border border-gray-200 rounded-lg">
+        <div className="border rounded-lg" style={{ borderColor: 'var(--border)' }}>
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
+              <TableRow style={{ background: 'var(--muted)' }}>
                 <TableHead className="font-semibold">Name</TableHead>
                 <TableHead className="font-semibold">Description</TableHead>
                 <TableHead className="text-right font-semibold">Actions</TableHead>
@@ -135,15 +144,15 @@ export default function CategoriesPage() {
           </Table>
         </div>
       ) : categories.length === 0 ? (
-        <div className="text-center py-12 border border-gray-200 rounded-lg">
-          <p className="text-gray-500 mb-4">No categories yet</p>
-          <p className="text-sm text-gray-400">Add your first category to get started</p>
+        <div className="text-center py-12 border rounded-lg" style={{ borderColor: 'var(--border)' }}>
+          <p className="mb-4" style={{ color: 'var(--text-muted)' }}>No categories yet</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Add your first category to get started</p>
         </div>
       ) : (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border)' }}>
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
+              <TableRow style={{ background: 'var(--muted)' }}>
                 <TableHead className="font-semibold">Name</TableHead>
                 <TableHead className="font-semibold">Description</TableHead>
                 <TableHead className="text-right font-semibold">Actions</TableHead>
@@ -151,17 +160,23 @@ export default function CategoriesPage() {
             </TableHeader>
             <TableBody>
               {categories.map((category) => (
-                <TableRow key={category.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="text-gray-500">{category.description || '-'}</TableCell>
+                <TableRow 
+                  key={category.id} 
+                  style={{ background: 'var(--card)', cursor: 'pointer' }}
+                  onClick={() => handleViewCategory(category)}
+                  className="hover:bg-[var(--muted)] transition-colors"
+                >
+                  <TableCell className="font-medium" style={{ color: 'var(--foreground)' }}>{category.name}</TableCell>
+                  <TableCell style={{ color: 'var(--text-muted)' }}>{truncateWords(category.description || '')}</TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end">
                       <button
-                        onClick={() => setDeleteId(category.id)}
-                        className="p-2 text-gray-600 hover:text-[#D32F2F] hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
+                        onClick={(e) => { e.stopPropagation(); handleOpenModal(category); }}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--text-secondary)' }}
+                        title="Edit"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Edit className="w-4 h-4" />
                       </button>
                     </div>
                   </TableCell>
@@ -172,11 +187,33 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {/* Add Category Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      {/* View Category Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Category</DialogTitle>
+            <DialogTitle>{viewingCategory?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="pt-4">
+            <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Description</p>
+            <p style={{ color: 'var(--foreground)' }}>{viewingCategory?.description || '-'}</p>
+          </div>
+          <div className="flex justify-end pt-4">
+            <Button
+              onClick={() => { setIsViewModalOpen(false); handleOpenModal(viewingCategory); }}
+              className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              Edit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Category Modal */}
+      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 pt-4">
@@ -192,18 +229,19 @@ export default function CategoriesPage() {
             
             <div>
               <label className="text-sm font-medium">Description</label>
-              <Input
+              <Textarea
                 value={newCategory.description}
                 onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                 placeholder="Category description"
                 className="mt-1"
+                rows={3}
               />
             </div>
             
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
-                onClick={() => setIsModalOpen(false)}
+                onClick={handleCloseModal}
                 disabled={isSaving}
               >
                 Cancel
@@ -219,30 +257,6 @@ export default function CategoriesPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this category? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteId(null)} disabled={isDeleting}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-[#D32F2F] hover:bg-[#b71c1c] text-white"
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

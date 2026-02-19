@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getProducts, ProductsResponse } from '@/app/actions/product/actions';
 import ProductList from './ProductList';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata = {
   title: 'Products - Safcha Dashboard',
@@ -25,15 +26,8 @@ export default async function ProductsPage({
   });
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#1A1A2E]">
-          Product Catalog
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Manage your products, variants, and pricing
-        </p>
-      </div>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Product Catalog" />
 
       <Suspense fallback={<div>Loading...</div>}>
         <ProductList initialData={data} />

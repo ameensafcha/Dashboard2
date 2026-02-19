@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const translations = {
   en: {
@@ -44,8 +45,8 @@ export default function Home() {
   const kpis = language === 'en' ? kpiCardsEn : kpiCardsAr;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>{t.title}</h1>
+    <div className="p-4 sm:p-6">
+      <PageHeader title={t.title} />
       
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

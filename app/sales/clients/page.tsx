@@ -1,8 +1,10 @@
+import { PageHeader } from '@/components/ui/PageHeader';
+
 export default function ClientsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#333333] mb-6">Clients</h1>
-      <p className="text-[#757575]">Clients management coming soon...</p>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Clients" />
+      <p style={{ color: 'var(--text-muted)' }}>Clients management coming soon...</p>
     </div>
   );
 }

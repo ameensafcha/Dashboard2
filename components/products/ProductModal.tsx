@@ -13,7 +13,7 @@ export default function ProductModal() {
   
   const [formData, setFormData] = useState<any>({
     name: '',
-    skuPrefix: '',
+    productId: '',
     categoryId: '',
     status: 'active',
     baseCost: 0,
@@ -27,6 +27,7 @@ export default function ProductModal() {
     launchDate: null,
   });
 
+  const [originalData, setOriginalData] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -40,17 +41,21 @@ export default function ProductModal() {
   const loadProduct = async (id: string) => {
     const product = await getProduct(id);
     if (product) {
-      setFormData({
+      const productId = product.skuPrefix ? product.skuPrefix.replace('PRD-', '') : '';
+      const data = {
         ...product,
         categoryId: product.categoryId || '',
-      });
+        productId,
+      };
+      setFormData(data);
+      setOriginalData(data);
     }
   };
 
   const resetForm = () => {
     setFormData({
       name: '',
-      skuPrefix: '',
+      productId: '',
       categoryId: '',
       status: 'active',
       baseCost: 0,
@@ -63,6 +68,7 @@ export default function ProductModal() {
       image: null,
       launchDate: null,
     });
+    setOriginalData(null);
   };
 
   const handleClose = () => {
@@ -75,22 +81,36 @@ export default function ProductModal() {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
+  const hasChanges = () => {
+    if (!originalData) return true;
+    return JSON.stringify(formData) !== JSON.stringify(originalData);
+  };
+
   const handleSave = async () => {
-    if (!formData.name || !formData.skuPrefix) {
+    if (!formData.name || !formData.productId) {
       toast({ title: 'Error', description: 'Please fill required fields', type: 'error' });
       return;
     }
 
+    const skuPrefix = `PRD-${formData.productId}`;
+    const dataToSave = {
+      ...formData,
+      skuPrefix,
+    };
+
     setIsSaving(true);
     try {
       if (selectedProduct) {
-        await updateProduct(selectedProduct, formData);
+        await updateProduct(selectedProduct, dataToSave);
         toast({ title: 'Success', description: 'Product updated successfully', type: 'success' });
+        // Reload product to get fresh data
+        await loadProduct(selectedProduct);
+        window.dispatchEvent(new Event('refresh-products'));
       } else {
-        await createProduct(formData);
+        await createProduct(dataToSave);
         toast({ title: 'Success', description: 'Product created successfully', type: 'success' });
+        handleClose();
       }
-      handleClose();
     } catch (error) {
       console.error('Error saving product:', error);
       toast({ title: 'Error', description: 'Failed to save product', type: 'error' });
@@ -120,7 +140,7 @@ export default function ProductModal() {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving || !formData.name || !formData.skuPrefix}
+            disabled={isSaving || !formData.name || !formData.productId || (selectedProduct && !hasChanges())}
             className="bg-[#E8A838] hover:bg-[#d49a2d] text-black"
           >
             {isSaving ? 'Saving...' : 'Save'}

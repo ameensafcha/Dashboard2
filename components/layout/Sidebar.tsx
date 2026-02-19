@@ -20,7 +20,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const translations = {
   en: [
@@ -78,16 +78,14 @@ export default function Sidebar() {
   
   const navigation = translations[isRTL ? 'ar' : 'en'];
 
+  useEffect(() => {
+    const handleToggle = () => setMobileOpen(prev => !prev);
+    window.addEventListener('toggle-sidebar', handleToggle);
+    return () => window.removeEventListener('toggle-sidebar', handleToggle);
+  }, []);
+
   return (
     <>
-      {/* Mobile menu button */}
-      <button 
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[#1A1A2E] text-white rounded-lg"
-      >
-        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </button>
-
       {/* Sidebar */}
       <div className={`
         fixed lg:static inset-y-0 z-40

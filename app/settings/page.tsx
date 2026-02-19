@@ -1,8 +1,10 @@
+import { PageHeader } from '@/components/ui/PageHeader';
+
 export default function SettingsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#333333] mb-6">Settings</h1>
-      <p className="text-[#757575]">Settings module coming soon...</p>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Settings" />
+      <p style={{ color: 'var(--text-muted)' }}>Settings module coming soon...</p>
     </div>
   );
 }

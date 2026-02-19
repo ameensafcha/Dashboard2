@@ -18,6 +18,14 @@ export interface ProductsResponse {
   totalPages: number;
 }
 
+function serializeProduct(product: any) {
+  return {
+    ...product,
+    baseCost: Number(product.baseCost),
+    baseRetailPrice: Number(product.baseRetailPrice),
+  };
+}
+
 export async function getProducts(params: GetProductsParams = {}): Promise<ProductsResponse> {
   const { page = 1, limit = 5, search = '', status = '' } = params;
   
@@ -46,7 +54,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
   ]);
   
   return {
-    products,
+    products: products.map(serializeProduct),
     total,
     page,
     totalPages: Math.ceil(total / limit),
@@ -54,14 +62,15 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
 }
 
 export async function getProduct(id: string) {
-  return prisma.product.findUnique({
+  const product = await prisma.product.findUnique({
     where: { id },
     include: { category: true },
   });
+  return product ? serializeProduct(product) : null;
 }
 
 export async function createProduct(data: any) {
-  return prisma.product.create({
+  const product = await prisma.product.create({
     data: {
       name: data.name,
       skuPrefix: data.skuPrefix,
@@ -78,10 +87,11 @@ export async function createProduct(data: any) {
       launchDate: data.launchDate,
     },
   });
+  return serializeProduct(product);
 }
 
 export async function updateProduct(id: string, data: any) {
-  return prisma.product.update({
+  const product = await prisma.product.update({
     where: { id },
     data: {
       name: data.name,
@@ -99,6 +109,7 @@ export async function updateProduct(id: string, data: any) {
       launchDate: data.launchDate,
     },
   });
+  return serializeProduct(product);
 }
 
 export async function deleteProduct(id: string) {

@@ -1,8 +1,10 @@
+import { PageHeader } from '@/components/ui/PageHeader';
+
 export default function EventsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#333333] mb-6">Events & Expos</h1>
-      <p className="text-[#757575]">Events module coming soon...</p>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Events & Expos" />
+      <p style={{ color: 'var(--text-muted)' }}>Events module coming soon...</p>
     </div>
   );
 }

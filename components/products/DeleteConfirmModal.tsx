@@ -46,6 +46,8 @@ export default function DeleteConfirmModal() {
     setIsDeleting(true);
     try {
       await deleteProduct(productToDelete);
+      window.dispatchEvent(new CustomEvent('product-deleted', { detail: { id: productToDelete } }));
+      window.dispatchEvent(new Event('refresh-products'));
       handleClose();
       toast({ title: 'Success', description: 'Product deleted successfully', type: 'success' });
     } catch (error) {

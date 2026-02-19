@@ -35,12 +35,13 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
           />
         </div>
         <div>
-          <Label htmlFor="skuPrefix">SKU Prefix *</Label>
+          <Label htmlFor="productId">Product ID *</Label>
           <Input
-            id="skuPrefix"
-            value={product.skuPrefix || ''}
-            onChange={(e) => onChange('skuPrefix', e.target.value)}
-            placeholder="e.g., OSC"
+            id="productId"
+            type="number"
+            value={product.productId || ''}
+            onChange={(e) => onChange('productId', e.target.value)}
+            placeholder="e.g., 101"
             className="mt-1"
           />
         </div>

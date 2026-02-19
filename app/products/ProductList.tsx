@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { useProductStore } from '@/stores/productStore';
 import { ProductsResponse, getProducts } from '@/app/actions/product/actions';
 import ViewToggle from '@/components/products/ViewToggle';
@@ -19,17 +18,17 @@ interface ProductListProps {
 }
 
 export default function ProductList({ initialData }: ProductListProps) {
-  const router = useRouter();
   const { viewMode, filters, setFilters, setModalOpen, isLoading, setLoading } = useProductStore();
   
   const [data, setData] = useState<ProductsResponse>(initialData);
   const [currentPage, setCurrentPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = async (page: number) => {
     setLoading(true);
     try {
       const result = await getProducts({
-        page: currentPage,
+        page,
         limit: 5,
         search: filters.search,
         status: filters.status,
@@ -40,11 +39,22 @@ export default function ProductList({ initialData }: ProductListProps) {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, filters.search, filters.status, setLoading]);
+  };
 
+  // Fetch when page or filters change
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchProducts(currentPage);
+  }, [currentPage, filters.search, filters.status]);
+
+  // Refresh after modal close (when product is added/updated)
+  useEffect(() => {
+    const handleRefresh = () => {
+      setRefreshKey(k => k + 1);
+      fetchProducts(currentPage);
+    };
+    window.addEventListener('refresh-products', handleRefresh);
+    return () => window.removeEventListener('refresh-products', handleRefresh);
+  }, [currentPage]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -55,8 +65,8 @@ export default function ProductList({ initialData }: ProductListProps) {
   };
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div key={refreshKey}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <ProductFilters />
         
         <div className="flex items-center gap-3">

@@ -1,8 +1,10 @@
+import { PageHeader } from '@/components/ui/PageHeader';
+
 export default function TasksPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#333333] mb-6">Team & Tasks</h1>
-      <p className="text-[#757575]">Tasks module coming soon...</p>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Team & Tasks" />
+      <p style={{ color: 'var(--text-muted)' }}>Tasks module coming soon...</p>
     </div>
   );
 }

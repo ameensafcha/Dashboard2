@@ -20,8 +20,8 @@ export default function Pagination({ currentPage, totalPages, total, onPageChang
   const end = Math.min(currentPage * 5, total);
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-      <div className="text-sm text-gray-500">
+    <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
+      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
         {isRTL 
           ? `عرض ${start} - ${end} من ${total}`
           : `Showing ${start} - ${end} of ${total}`
@@ -47,7 +47,7 @@ export default function Pagination({ currentPage, totalPages, total, onPageChang
               variant={page === currentPage ? 'default' : 'outline'}
               size="sm"
               onClick={() => onPageChange(page)}
-              className={`w-8 h-8 p-0 ${page === currentPage ? 'bg-[#1A1A2E] text-white hover:bg-[#1A1A2E]' : ''}`}
+              className={`w-8 h-8 p-0 ${page === currentPage ? 'bg-[#E8A838] text-black hover:bg-[#d49a2d]' : ''}`}
             >
               {page}
             </Button>

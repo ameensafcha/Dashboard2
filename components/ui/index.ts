@@ -1,2 +1,3 @@
 export { KPICard } from './KPICard';
-export { PageHeader, PageContainer } from './PageLayout';
+export { PageHeader } from './PageHeader';
+export { PageContainer } from './PageLayout';

@@ -1,8 +1,10 @@
+import { PageHeader } from '@/components/ui/PageHeader';
+
 export default function ProductionPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#333333] mb-6">Production</h1>
-      <p className="text-[#757575]">Production module coming soon...</p>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Production" />
+      <p style={{ color: 'var(--text-muted)' }}>Production module coming soon...</p>
     </div>
   );
 }

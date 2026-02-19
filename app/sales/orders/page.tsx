@@ -1,8 +1,10 @@
+import { PageHeader } from '@/components/ui/PageHeader';
+
 export default function OrdersPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#333333] mb-6">Orders</h1>
-      <p className="text-[#757575]">Orders management coming soon...</p>
+    <div className="p-4 sm:p-6">
+      <PageHeader title="Orders" />
+      <p style={{ color: 'var(--text-muted)' }}>Orders management coming soon...</p>
     </div>
   );
 }
