@@ -16,10 +16,22 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
     const [activeCategoryId, setActiveCategoryId] = useState<string>(
         categories.length > 0 ? categories[0].id : ''
     );
+    const [editingTier, setEditingTier] = useState<PricingTierWithCategory | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const filteredTiers = initialTiers.filter(
         (tier) => tier.categoryId === activeCategoryId
     );
+
+    const handleEdit = (tier: PricingTierWithCategory) => {
+        setEditingTier(tier);
+        setIsDialogOpen(true);
+    };
+
+    const handleAddNew = () => {
+        setEditingTier(null);
+        setIsDialogOpen(true);
+    };
 
     if (categories.length === 0) {
         return (
@@ -31,7 +43,6 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
 
     return (
         <div className="space-y-6">
-            {/* Category Tabs */}
             {/* Category Tabs */}
             <div className="flex overflow-x-auto pb-2 gap-2 scrollbar-hide">
                 {categories.map((category) => (
@@ -51,9 +62,19 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
             </div>
 
             <div className="flex justify-end">
+                <Button
+                    onClick={handleAddNew}
+                    className="bg-[#E8A838] hover:bg-[#d49a2d] text-black"
+                >
+                    Add Tier
+                </Button>
                 <PricingTierDialog
+                    key={editingTier?.id ?? 'new'}
                     categories={categories}
                     defaultCategoryId={activeCategoryId}
+                    tierToEdit={editingTier}
+                    open={isDialogOpen}
+                    onOpenChange={setIsDialogOpen}
                 />
             </div>
 
@@ -70,6 +91,7 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
                                 <tr>
                                     <th className="px-4 py-3 text-left text-sm font-semibold">Tier Name</th>
                                     <th className="px-4 py-3 text-left text-sm font-semibold">Min Order (kg)</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold">Max Order (kg)</th>
                                     <th className="px-4 py-3 text-left text-sm font-semibold">Price/kg</th>
                                     <th className="px-4 py-3 text-left text-sm font-semibold">Discount</th>
                                     <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
@@ -80,10 +102,20 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
                                     <tr key={tier.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
                                         <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tier.tierName}</td>
                                         <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tier.minOrderKg.toString()}</td>
+                                        <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>
+                                            {tier.maxOrderKg ? tier.maxOrderKg.toString() : '-'}
+                                        </td>
                                         <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>SAR {tier.pricePerKg.toString()}</td>
                                         <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tier.discountPercent.toString()}%</td>
                                         <td className="px-4 py-3">
-                                            <Button variant="ghost" size="sm">Edit</Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="cursor-pointer hover:bg-[#E8A838]/20 hover:text-[#E8A838]"
+                                                onClick={() => handleEdit(tier)}
+                                            >
+                                                Edit
+                                            </Button>
                                         </td>
                                     </tr>
                                 ))}

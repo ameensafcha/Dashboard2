@@ -4,7 +4,12 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { PricingTier as PrismaPricingTier, Category } from '@prisma/client';
 
-export type PricingTierWithCategory = PrismaPricingTier & {
+export type PricingTierWithCategory = Omit<PrismaPricingTier, 'minOrderKg' | 'maxOrderKg' | 'pricePerKg' | 'discountPercent' | 'marginPercent'> & {
+  minOrderKg: number;
+  maxOrderKg: number;
+  pricePerKg: number;
+  discountPercent: number;
+  marginPercent: number;
   category: Category | null;
 };
 
@@ -19,7 +24,15 @@ export async function getPricingTiers(): Promise<PricingTierWithCategory[]> {
         createdAt: 'desc',
       },
     });
-    return tiers;
+
+    return tiers.map(tier => ({
+      ...tier,
+      minOrderKg: tier.minOrderKg.toNumber(),
+      maxOrderKg: tier.maxOrderKg ? tier.maxOrderKg.toNumber() : 0, // Handle existing nulls safely if any
+      pricePerKg: tier.pricePerKg.toNumber(),
+      discountPercent: tier.discountPercent.toNumber(),
+      marginPercent: tier.marginPercent.toNumber(),
+    }));
   } catch (error) {
     console.error('Error fetching pricing tiers:', error);
     return [];
@@ -32,27 +45,19 @@ export async function createPricingTier(data: {
   categoryId: string;
   tierName: string;
   minOrderKg: number;
+  maxOrderKg: number;
   pricePerKg: number;
   discountPercent: number;
   marginPercent: number;
   isGlobal?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if category already has a tier (though schema unique constraint handles this, 
-    // explicit check provides better error message)
-    const existingTier = await prisma.pricingTier.findUnique({
-      where: { categoryId: data.categoryId },
-    });
-
-    if (existingTier) {
-      return { success: false, error: 'This category already has a pricing tier.' };
-    }
-
     await prisma.pricingTier.create({
       data: {
         categoryId: data.categoryId,
         tierName: data.tierName,
         minOrderKg: data.minOrderKg,
+        maxOrderKg: data.maxOrderKg,
         pricePerKg: data.pricePerKg,
         discountPercent: data.discountPercent,
         marginPercent: data.marginPercent,
@@ -65,6 +70,35 @@ export async function createPricingTier(data: {
   } catch (error) {
     console.error('Error creating pricing tier:', error);
     return { success: false, error: 'Failed to create pricing tier' };
+  }
+}
+
+export async function updatePricingTier(id: string, data: {
+  tierName: string;
+  minOrderKg: number;
+  maxOrderKg: number;
+  pricePerKg: number;
+  discountPercent: number;
+  marginPercent: number;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.pricingTier.update({
+      where: { id },
+      data: {
+        tierName: data.tierName,
+        minOrderKg: data.minOrderKg,
+        maxOrderKg: data.maxOrderKg,
+        pricePerKg: data.pricePerKg,
+        discountPercent: data.discountPercent,
+        marginPercent: data.marginPercent,
+      },
+    });
+
+    revalidatePath('/products/pricing');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating pricing tier:', error);
+    return { success: false, error: (error as Error).message || 'Failed to update pricing tier' };
   }
 }
 

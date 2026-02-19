@@ -26,7 +26,7 @@ model Category {
   createdAt   DateTime @default(now()) @map("created_at")
 
   products    Product[]
-  pricingTier PricingTier?
+  pricingTiers PricingTier[]
 
   @@map("categories")
 }
@@ -78,6 +78,7 @@ model PricingTier {
   productId       String?  @map("product_id")
   tierName        String   @map("tier_name")
   minOrderKg      Decimal  @map("min_order_kg") @db.Decimal(10, 2)
+  maxOrderKg      Decimal  @default(0) @map("max_order_kg") @db.Decimal(10, 2)
   pricePerKg      Decimal  @map("price_per_kg") @db.Decimal(10, 2)
   discountPercent Decimal  @map("discount_percent") @db.Decimal(5, 2)
   marginPercent   Decimal  @map("margin_percent") @db.Decimal(5, 2)
@@ -85,7 +86,7 @@ model PricingTier {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  categoryId String?   @unique @map("category_id")
+  categoryId String?   @map("category_id")
   product    Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
   category   Category? @relation(fields: [categoryId], references: [id])
 

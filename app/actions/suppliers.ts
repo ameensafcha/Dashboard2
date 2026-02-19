@@ -1,5 +1,7 @@
 'use server';
 
+import prisma from '@/lib/prisma';
+
 export interface Supplier {
   id: string;
   name: string;
@@ -9,62 +11,40 @@ export interface Supplier {
   address: string | null;
   notes: string | null;
   isActive: boolean;
-  createdAt: string;
+  createdAt: Date;
 }
 
-const mockSuppliers: Supplier[] = [
-  {
-    id: '1',
-    name: 'Herb Exports Co.',
-    contactPerson: 'Ahmed Hassan',
-    email: 'ahmed@herbexports.com',
-    phone: '+966 50 123 4567',
-    address: 'Riyadh, Saudi Arabia',
-    notes: 'Primary supplier for base powders',
-    isActive: true,
-    createdAt: '2024-01-01',
-  },
-  {
-    id: '2',
-    name: 'Spice Masters',
-    contactPerson: 'Khalid Ibrahim',
-    email: 'khalid@spicemasters.com',
-    phone: '+966 55 987 6543',
-    address: 'Jeddah, Saudi Arabia',
-    notes: 'Premium spice supplier',
-    isActive: true,
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '3',
-    name: 'Pack Solutions',
-    contactPerson: 'Fahad Alotaibi',
-    email: 'fahad@packsol.com',
-    phone: '+966 56 111 2222',
-    address: 'Dammam, Saudi Arabia',
-    notes: 'Packaging materials',
-    isActive: true,
-    createdAt: '2024-02-01',
-  },
-];
-
 export async function getSuppliers(): Promise<Supplier[]> {
-  return mockSuppliers;
+  try {
+    return await prisma.supplier.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch (error) {
+    console.error('Error fetching suppliers:', error);
+    return [];
+  }
 }
 
 export async function createSupplier(data: Omit<Supplier, 'id' | 'createdAt'>): Promise<Supplier> {
-  const newSupplier: Supplier = {
-    ...data,
-    id: String(mockSuppliers.length + 1),
-    createdAt: new Date().toISOString(),
-  };
-  mockSuppliers.push(newSupplier);
-  return newSupplier;
+  return await prisma.supplier.create({
+    data: {
+      name: data.name,
+      contactPerson: data.contactPerson,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      notes: data.notes,
+      isActive: data.isActive ?? true,
+    },
+  });
 }
 
 export async function deleteSupplier(id: string): Promise<boolean> {
-  const index = mockSuppliers.findIndex(s => s.id === id);
-  if (index === -1) return false;
-  mockSuppliers.splice(index, 1);
-  return true;
+  try {
+    await prisma.supplier.delete({ where: { id } });
+    return true;
+  } catch (error) {
+    console.error('Error deleting supplier:', error);
+    return false;
+  }
 }

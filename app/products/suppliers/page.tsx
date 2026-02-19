@@ -1,7 +1,5 @@
 import { Suspense } from 'react';
-import { getSuppliers, Supplier } from '@/app/actions/suppliers';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { getSuppliers } from '@/app/actions/suppliers';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -18,10 +16,6 @@ async function SuppliersList() {
       {suppliers.length === 0 ? (
         <div className="text-center py-12">
           <p style={{ color: 'var(--text-muted)' }}>No suppliers yet</p>
-          <Button className="mt-4 bg-[#E8A838] hover:bg-[#d49a2d] text-black">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Supplier
-          </Button>
         </div>
       ) : (
         <div className="rounded-lg border overflow-hidden" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
@@ -65,13 +59,6 @@ export default async function SuppliersPage() {
   return (
     <div className="p-4 sm:p-6">
       <PageHeader title="Suppliers" />
-
-      <div className="mb-4 flex justify-end">
-        <Button className="bg-[#E8A838] hover:bg-[#d49a2d] text-black">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Supplier
-        </Button>
-      </div>
 
       <Suspense fallback={<div>Loading...</div>}>
         <SuppliersList />
