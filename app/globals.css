@@ -1,0 +1,169 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root, [data-theme="light"] {
+  /* Safcha Brand Colors - Light Mode */
+  --primary: #1A1A2E;
+  --primary-foreground: #ffffff;
+  
+  /* Accent Colors */
+  --accent-gold: #E8A838;
+  --accent-gold-foreground: #000000;
+  --accent-green: #2D6A4F;
+  --accent-green-foreground: #ffffff;
+  --accent-red: #D32F2F;
+  --accent-red-foreground: #ffffff;
+  
+  /* Backgrounds */
+  --background: #F5F5F0;
+  --foreground: #333333;
+  --card: #FFFFFF;
+  --card-foreground: #333333;
+  --sidebar: #1A1A2E;
+  --sidebar-foreground: #ffffff;
+  --header-bg: #FFFFFF;
+  
+  /* Text */
+  --text-primary: #333333;
+  --text-secondary: #757575;
+  --text-muted: #757575;
+  
+  /* Borders */
+  --border: #E0E0E0;
+  --input: #E0E0E0;
+  
+  /* Muted */
+  --muted: #F5F5F0;
+  --muted-foreground: #757575;
+  
+  /* Radius */
+  --radius: 0.5rem;
+  
+  /* Other */
+  --popover: #FFFFFF;
+  --popover-foreground: #333333;
+  --secondary: #F5F5F0;
+  --secondary-foreground: #333333;
+  --accent: #F5F5F0;
+  --accent-foreground: #333333;
+  --destructive: #D32F2F;
+  --ring: #E8A838;
+  
+  /* Status Colors */
+  --success: #2D6A4F;
+  --warning: #E8A838;
+  --error: #D32F2F;
+}
+
+[data-theme="dark"] {
+  /* Safcha Brand Colors - Dark Mode */
+  --primary: #E8A838;
+  --primary-foreground: #000000;
+  
+  /* Backgrounds */
+  --background: #0F0F1A;
+  --foreground: #F5F5F0;
+  --card: #1A1A2E;
+  --card-foreground: #F5F5F0;
+  --sidebar: #0A0A14;
+  --sidebar-foreground: #F5F5F0;
+  --header-bg: #1A1A2E;
+  
+  /* Text */
+  --text-primary: #F5F5F0;
+  --text-secondary: #A0A0A0;
+  --text-muted: #757575;
+  
+  /* Borders */
+  --border: #2A2A3E;
+  --input: #2A2A3E;
+  
+  /* Muted */
+  --muted: #1A1A2E;
+  --muted-foreground: #A0A0A0;
+  
+  /* Other */
+  --popover: #1A1A2E;
+  --popover-foreground: #F5F5F0;
+  --secondary: #1A1A2E;
+  --secondary-foreground: #F5F5F0;
+  --accent: #1A1A2E;
+  --accent-foreground: #F5F5F0;
+  --destructive: #D32F2F;
+  --ring: #E8A838;
+  
+  /* Status Colors */
+  --success: #4ADE80;
+  --warning: #FBBF24;
+  --error: #F87171;
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent-gold: var(--accent-gold);
+  --color-accent-gold-foreground: var(--accent-gold-foreground);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-foreground: var(--accent-green-foreground);
+  --color-accent-red: var(--accent-red);
+  --color-accent-red-foreground: var(--accent-red-foreground);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* RTL Support */
+[dir="rtl"] .rtl\:space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+}
