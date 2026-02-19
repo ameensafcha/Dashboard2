@@ -199,7 +199,7 @@ export default function CategoriesPage() {
           </div>
           <div className="flex justify-end pt-4">
             <Button
-              onClick={() => { setIsViewModalOpen(false); handleOpenModal(viewingCategory); }}
+              onClick={() => { setIsViewModalOpen(false); handleOpenModal(viewingCategory ?? undefined); }}
               className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2"
             >
               <Edit className="w-4 h-4" />

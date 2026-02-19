@@ -98,7 +98,7 @@ export async function updatePricingTier(id: string, data: {
     return { success: true };
   } catch (error) {
     console.error('Error updating pricing tier:', error);
-    return { success: false, error: (error as Error).message || 'Failed to update pricing tier' };
+    return { success: false, error: 'Failed to update pricing tier' };
   }
 }
 

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getSuppliers } from '@/app/actions/suppliers';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata = {

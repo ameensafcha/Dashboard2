@@ -57,7 +57,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
     const setOpen = onOpenChange || setInternalOpen;
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             categoryId: defaultCategoryId || '',
             tierName: '',

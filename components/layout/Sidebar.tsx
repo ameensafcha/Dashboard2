@@ -30,7 +30,11 @@ const translations = {
       { name: 'Clients', href: '/sales/clients' },
     ]},
     { name: 'Inventory', href: '/inventory', icon: Package },
-    { name: 'Production', href: '/production', icon: Factory },
+    { name: 'Production', href: '/production', icon: Factory, children: [
+      { name: 'Batches', href: '/production/batches' },
+      { name: 'Quality Control', href: '/production/quality' },
+      { name: 'R&D', href: '/production/rnd' },
+    ]},
     { name: 'Products', href: '/products', icon: Coffee, children: [
       { name: 'Product Catalog', href: '/products' },
       { name: 'Categories', href: '/products/categories' },
@@ -53,7 +57,11 @@ const translations = {
       { name: 'العملاء', href: '/sales/clients' },
     ]},
     { name: 'المخزون', href: '/inventory', icon: Package },
-    { name: 'الإنتاج', href: '/production', icon: Factory },
+    { name: 'الإنتاج', href: '/production', icon: Factory, children: [
+      { name: 'دفعات الإنتاج', href: '/production/batches' },
+      { name: 'ضبط الجودة', href: '/production/quality' },
+      { name: 'البحث والتطوير', href: '/production/rnd' },
+    ]},
     { name: 'المنتجات', href: '/products', icon: Coffee, children: [
       { name: 'كتالوج المنتجات', href: '/products' },
       { name: 'الفئات', href: '/products/categories' },

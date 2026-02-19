@@ -27,38 +27,48 @@ function serializeProduct(product: any) {
 }
 
 export async function getProducts(params: GetProductsParams = {}): Promise<ProductsResponse> {
-  const { page = 1, limit = 5, search = '', status = '' } = params;
-  
-  const where: any = {};
-  
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { skuPrefix: { contains: search, mode: 'insensitive' } },
-    ];
+  try {
+    const { page = 1, limit = 5, search = '', status = '' } = params;
+    
+    const where: any = {};
+    
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { skuPrefix: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    
+    if (status) {
+      where.status = status;
+    }
+    
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { category: true },
+      }),
+      prisma.product.count({ where }),
+    ]);
+    
+    return {
+      products: products?.map(serializeProduct) || [],
+      total: total || 0,
+      page,
+      totalPages: Math.ceil((total || 0) / limit),
+    };
+  } catch (error: any) {
+    console.error('Error fetching products:', error?.message || error);
+    return {
+      products: [],
+      total: 0,
+      page: 1,
+      totalPages: 0,
+    };
   }
-  
-  if (status) {
-    where.status = status;
-  }
-  
-  const [products, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: { category: true },
-    }),
-    prisma.product.count({ where }),
-  ]);
-  
-  return {
-    products: products.map(serializeProduct),
-    total,
-    page,
-    totalPages: Math.ceil(total / limit),
-  };
 }
 
 export async function getProduct(id: string) {
@@ -69,11 +79,35 @@ export async function getProduct(id: string) {
   return product ? serializeProduct(product) : null;
 }
 
+async function generateSKU(): Promise<string> {
+  try {
+    const lastProduct = await prisma.product.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    let nextNum = 1;
+    if (lastProduct && lastProduct.skuPrefix) {
+      const match = lastProduct.skuPrefix.match(/SKU-(\d+)/);
+      if (match) {
+        nextNum = parseInt(match[1]) + 1;
+      }
+    }
+    
+    return `SKU-${nextNum}`;
+  } catch (error: any) {
+    console.error('Error generating SKU:', error?.message || error);
+    const timestamp = Date.now().toString().slice(-4);
+    return `SKU-${timestamp}`;
+  }
+}
+
 export async function createProduct(data: any) {
+  const skuPrefix = data.skuPrefix || await generateSKU();
+  
   const product = await prisma.product.create({
     data: {
       name: data.name,
-      skuPrefix: data.skuPrefix,
+      skuPrefix: skuPrefix,
       categoryId: data.categoryId || null,
       description: data.description,
       keyIngredients: data.keyIngredients,
