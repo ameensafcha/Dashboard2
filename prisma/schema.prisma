@@ -20,37 +20,38 @@ enum ProductStatus {
 }
 
 model Category {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  description String?   @db.Text
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
 
   products    Product[]
+  pricingTier PricingTier?
 
   @@map("categories")
 }
 
 model Product {
-  id              String          @id @default(uuid())
+  id              String        @id @default(uuid())
   name            String
-  categoryId      String?         @map("category_id")
-  skuPrefix       String          @map("sku_prefix")
-  description     String?         @db.Text
-  keyIngredients  String?         @map("key_ingredients") @db.Text
-  caffeineFree    Boolean         @default(true) @map("caffeine_free")
-  sfdaStatus      SfdaStatus      @default(not_submitted) @map("sfda_status")
-  sfdaReference   String?         @map("sfda_reference")
-  baseCost        Decimal         @db.Decimal(10, 2) @map("base_cost")
-  baseRetailPrice Decimal         @db.Decimal(10, 2) @map("base_retail_price")
+  categoryId      String?       @map("category_id")
+  skuPrefix       String        @map("sku_prefix")
+  description     String?       @db.Text
+  keyIngredients  String?       @map("key_ingredients") @db.Text
+  caffeineFree    Boolean       @default(true) @map("caffeine_free")
+  sfdaStatus      SfdaStatus    @default(not_submitted) @map("sfda_status")
+  sfdaReference   String?       @map("sfda_reference")
+  baseCost        Decimal       @map("base_cost") @db.Decimal(10, 2)
+  baseRetailPrice Decimal       @map("base_retail_price") @db.Decimal(10, 2)
   image           String?
-  status          ProductStatus   @default(active)
-  launchDate      DateTime?       @map("launch_date")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  status          ProductStatus @default(active)
+  launchDate      DateTime?     @map("launch_date")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  variants       ProductVariant[]
-  pricingTiers   PricingTier[]
+  category     Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants     ProductVariant[]
+  pricingTiers PricingTier[]
 
   @@map("products")
 }
@@ -60,14 +61,14 @@ model ProductVariant {
   productId   String   @map("product_id")
   name        String
   sku         String   @unique
-  weightKg    Decimal  @db.Decimal(10, 3) @map("weight_kg")
-  retailPrice Decimal  @db.Decimal(10, 2) @map("retail_price")
+  weightKg    Decimal  @map("weight_kg") @db.Decimal(10, 3)
+  retailPrice Decimal  @map("retail_price") @db.Decimal(10, 2)
   cost        Decimal  @db.Decimal(10, 2)
   barcode     String?
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_variants")
 }
@@ -76,15 +77,17 @@ model PricingTier {
   id              String   @id @default(uuid())
   productId       String?  @map("product_id")
   tierName        String   @map("tier_name")
-  minOrderKg      Decimal  @db.Decimal(10, 2) @map("min_order_kg")
-  pricePerKg      Decimal  @db.Decimal(10, 2) @map("price_per_kg")
-  discountPercent Decimal  @db.Decimal(5, 2) @map("discount_percent")
-  marginPercent   Decimal  @db.Decimal(5, 2) @map("margin_percent")
+  minOrderKg      Decimal  @map("min_order_kg") @db.Decimal(10, 2)
+  pricePerKg      Decimal  @map("price_per_kg") @db.Decimal(10, 2)
+  discountPercent Decimal  @map("discount_percent") @db.Decimal(5, 2)
+  marginPercent   Decimal  @map("margin_percent") @db.Decimal(5, 2)
   isGlobal        Boolean  @default(false) @map("is_global")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  product         Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  categoryId String?   @unique @map("category_id")
+  product    Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category? @relation(fields: [categoryId], references: [id])
 
   @@map("pricing_tiers")
 }

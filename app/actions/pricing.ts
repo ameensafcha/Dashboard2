@@ -1,75 +1,101 @@
 'use server';
 
-export interface PricingTier {
-  id: string;
-  productId: string | null;
+import prisma from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
+import { PricingTier as PrismaPricingTier, Category } from '@prisma/client';
+
+export type PricingTierWithCategory = PrismaPricingTier & {
+  category: Category | null;
+};
+
+// Fetch all pricing tiers with their associated category
+export async function getPricingTiers(): Promise<PricingTierWithCategory[]> {
+  try {
+    const tiers = await prisma.pricingTier.findMany({
+      include: {
+        category: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return tiers;
+  } catch (error) {
+    console.error('Error fetching pricing tiers:', error);
+    return [];
+  }
+}
+
+// Create a new pricing tier linked to a category
+// Enforces 1 tier per category via schema constraints
+export async function createPricingTier(data: {
+  categoryId: string;
   tierName: string;
   minOrderKg: number;
   pricePerKg: number;
   discountPercent: number;
   marginPercent: number;
-  isGlobal: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+  isGlobal?: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Check if category already has a tier (though schema unique constraint handles this, 
+    // explicit check provides better error message)
+    const existingTier = await prisma.pricingTier.findUnique({
+      where: { categoryId: data.categoryId },
+    });
 
-const mockPricingTiers: PricingTier[] = [
-  {
-    id: '1',
-    productId: null,
-    tierName: 'Silver',
-    minOrderKg: 10,
-    pricePerKg: 40,
-    discountPercent: 10,
-    marginPercent: 30,
-    isGlobal: true,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
-  },
-  {
-    id: '2',
-    productId: null,
-    tierName: 'Gold',
-    minOrderKg: 50,
-    pricePerKg: 35,
-    discountPercent: 20,
-    marginPercent: 40,
-    isGlobal: true,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
-  },
-  {
-    id: '3',
-    productId: null,
-    tierName: 'Platinum',
-    minOrderKg: 100,
-    pricePerKg: 30,
-    discountPercent: 30,
-    marginPercent: 50,
-    isGlobal: true,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
-  },
-];
+    if (existingTier) {
+      return { success: false, error: 'This category already has a pricing tier.' };
+    }
 
-export async function getPricingTiers(): Promise<PricingTier[]> {
-  return mockPricingTiers;
-}
+    await prisma.pricingTier.create({
+      data: {
+        categoryId: data.categoryId,
+        tierName: data.tierName,
+        minOrderKg: data.minOrderKg,
+        pricePerKg: data.pricePerKg,
+        discountPercent: data.discountPercent,
+        marginPercent: data.marginPercent,
+        isGlobal: data.isGlobal || false,
+      },
+    });
 
-export async function createPricingTier(data: Omit<PricingTier, 'id' | 'createdAt' | 'updatedAt'>): Promise<PricingTier> {
-  const newTier: PricingTier = {
-    ...data,
-    id: String(mockPricingTiers.length + 1),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  mockPricingTiers.push(newTier);
-  return newTier;
+    revalidatePath('/products/pricing');
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating pricing tier:', error);
+    return { success: false, error: 'Failed to create pricing tier' };
+  }
 }
 
 export async function deletePricingTier(id: string): Promise<boolean> {
-  const index = mockPricingTiers.findIndex(t => t.id === id);
-  if (index === -1) return false;
-  mockPricingTiers.splice(index, 1);
-  return true;
+  try {
+    await prisma.pricingTier.delete({
+      where: { id },
+    });
+    revalidatePath('/products/pricing');
+    return true;
+  } catch (error) {
+    console.error('Error deleting pricing tier:', error);
+    return false;
+  }
+}
+
+// Fetch categories for the dropdown
+export async function getCategoriesForPricing(): Promise<Category[]> {
+  try {
+    // Return all categories (or filter those without tiers if we want to restrict selection)
+    // To restrict: 
+    // const categories = await prisma.category.findMany({ where: { pricingTier: null } });
+    // But since schema has relation, we can filter in JS or query
+
+    // For now, return all, UI can disable used ones if needed
+    const categories = await prisma.category.findMany({
+      orderBy: { name: 'asc' },
+    });
+    return categories;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
 }

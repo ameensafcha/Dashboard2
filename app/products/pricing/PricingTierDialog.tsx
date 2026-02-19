@@ -1,0 +1,208 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { createPricingTier } from '@/app/actions/pricing';
+import { toast } from '@/components/ui/toast';
+import { Category } from '@prisma/client';
+
+const formSchema = z.object({
+    categoryId: z.string().min(1, 'Category is required'),
+    tierName: z.string().min(1, 'Tier name is required'),
+    minOrderKg: z.coerce.number().min(0, 'Must be positive'),
+    pricePerKg: z.coerce.number().min(0, 'Must be positive'),
+    discountPercent: z.coerce.number().min(0).max(100, 'Must be between 0 and 100'),
+    marginPercent: z.coerce.number().min(0).max(100, 'Must be between 0 and 100'),
+});
+
+interface PricingTierDialogProps {
+    categories: Category[];
+    defaultCategoryId?: string;
+}
+
+export function PricingTierDialog({ categories, defaultCategoryId }: PricingTierDialogProps) {
+    const [open, setOpen] = useState(false);
+
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            categoryId: defaultCategoryId || '',
+            tierName: '',
+            minOrderKg: 0,
+            pricePerKg: 0,
+            discountPercent: 0,
+            marginPercent: 0,
+        },
+    });
+
+    // Sync form with defaultCategoryId when it changes
+    useEffect(() => {
+        if (defaultCategoryId) {
+            form.setValue('categoryId', defaultCategoryId);
+        }
+    }, [defaultCategoryId, form]);
+
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        try {
+            const result = await createPricingTier(values);
+            if (result.success) {
+                toast({
+                    title: 'Success',
+                    description: 'Pricing tier created successfully',
+                    type: 'success',
+                });
+                setOpen(false);
+                form.reset();
+                // Re-set the default category after reset
+                if (defaultCategoryId) {
+                    form.setValue('categoryId', defaultCategoryId);
+                }
+            } else {
+                toast({
+                    title: 'Error',
+                    description: result.error || 'Failed to create pricing tier',
+                    type: 'error',
+                });
+            }
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Something went wrong',
+                type: 'error',
+            });
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button className="bg-[#E8A838] hover:bg-[#d49a2d] text-black">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Tier
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <DialogHeader>
+                    <DialogTitle>Add Pricing Tier</DialogTitle>
+                    <DialogDescription>
+                        Create a new pricing tier linked to a category.
+                        Remember: One tier per category.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...form as any}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+
+
+
+                        <FormField
+                            control={form.control as any}
+                            name="tierName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tier Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g. Standard Wholesale" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control as any}
+                                name="minOrderKg"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Min Order (kg)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control as any}
+                                name="pricePerKg"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Price / kg (SAR)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control as any}
+                                name="discountPercent"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Discount (%)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.1" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control as any}
+                                name="marginPercent"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Margin (%)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.1" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="submit" className="bg-[#E8A838] hover:bg-[#d49a2d] text-black">
+                                Save Tier
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
