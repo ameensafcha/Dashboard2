@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { ProductionBatchWithProduct, RndProjectType } from '@/app/actions/production';
 
 interface ProductionBatchForm {
   productId: string;
@@ -13,35 +14,35 @@ interface ProductionBatchForm {
 }
 
 interface ProductionStore {
-  batches: any[];
-  products: any[];
+  batches: ProductionBatchWithProduct[];
+  products: { id: string; name: string }[];
   isModalOpen: boolean;
-  selectedBatch: any | null;
+  selectedBatch: ProductionBatchWithProduct | null;
   isDetailOpen: boolean;
   formData: ProductionBatchForm;
   isSaving: boolean;
 
   // R&D State
-  rndProjects: any[];
+  rndProjects: RndProjectType[];
   isRnDModalOpen: boolean;
-  selectedRnDProject: any | null;
+  selectedRnDProject: RndProjectType | null;
 
   // Batch detailed toggles
   isEditingBatch: boolean;
   isDeleteDialogOpen: boolean;
 
-  setBatches: (batches: any[]) => void;
-  setProducts: (products: any[]) => void;
+  setBatches: (batches: ProductionBatchWithProduct[]) => void;
+  setProducts: (products: { id: string; name: string }[]) => void;
   setIsModalOpen: (open: boolean) => void;
-  setSelectedBatch: (batch: any | null) => void;
+  setSelectedBatch: (batch: ProductionBatchWithProduct | null) => void;
   setIsDetailOpen: (open: boolean) => void;
   setFormData: (data: Partial<ProductionBatchForm>) => void;
   resetForm: () => void;
   setIsSaving: (saving: boolean) => void;
 
-  setRnDProjects: (projects: any[]) => void;
+  setRnDProjects: (projects: RndProjectType[]) => void;
   setIsRnDModalOpen: (open: boolean) => void;
-  setSelectedRnDProject: (project: any | null) => void;
+  setSelectedRnDProject: (project: RndProjectType | null) => void;
 
   setIsEditingBatch: (editing: boolean) => void;
   setIsDeleteDialogOpen: (open: boolean) => void;

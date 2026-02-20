@@ -2,22 +2,22 @@
 
 import { useProductStore } from '@/stores/productStore';
 import { deleteProduct, getProduct } from '@/app/actions/product/actions';
-import { 
-  AlertDialog, 
-  AlertDialogContent, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogDescription,
-  AlertDialogFooter, 
-  AlertDialogAction, 
-  AlertDialogCancel 
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel
 } from '@/components/ui/alert-dialog';
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/toast';
 
 export default function DeleteConfirmModal() {
   const { isDeleteModalOpen, setDeleteModalOpen, productToDelete, setProductToDelete } = useProductStore();
-  
+
   const [productName, setProductName] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -42,7 +42,7 @@ export default function DeleteConfirmModal() {
 
   const handleDelete = async () => {
     if (!productToDelete) return;
-    
+
     setIsDeleting(true);
     try {
       await deleteProduct(productToDelete);
@@ -64,7 +64,7 @@ export default function DeleteConfirmModal() {
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{productName}"? This action cannot be undone.
+            Are you sure you want to delete &quot;{productName}&quot;? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

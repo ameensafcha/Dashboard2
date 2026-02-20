@@ -9,10 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { getProduct } from '@/app/actions/product/actions';
+import { getProduct, ProductsResponse } from '@/app/actions/product/actions';
+import Image from 'next/image';
+
+type ProductType = ProductsResponse['products'][0];
 
 interface ProductGridProps {
-  products: any[];
+  products: ProductType[];
   isLoading: boolean;
 }
 
@@ -22,21 +25,21 @@ const statusColors: Record<string, string> = {
   discontinued: 'bg-[#D32F2F] text-white',
 };
 
-export function ProductCard({ product, onClick }: { product: any; onClick: () => void }) {
+export function ProductCard({ product, onClick }: { product: ProductType; onClick: () => void }) {
   const { isRTL } = useAppStore();
 
   return (
-    <Card 
+    <Card
       className="hover:shadow-lg transition-shadow duration-200 cursor-pointer"
       onClick={onClick}
     >
       <div className="aspect-square flex items-center justify-center relative" style={{ background: 'var(--muted)' }}>
         {product.image ? (
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+          <Image src={product.image} alt={product.name} fill className="object-cover" />
         ) : (
           <Package className="w-16 h-16" style={{ color: 'var(--text-muted)' }} />
         )}
-        <Badge 
+        <Badge
           className={`absolute top-3 ${isRTL ? 'left-3' : 'right-3'} ${statusColors[product.status]}`}
         >
           {productStatuses.find(s => s.value === product.status)?.label}
@@ -73,7 +76,7 @@ function ProductCardSkeleton() {
 export default function ProductGrid({ products, isLoading }: ProductGridProps) {
   const { isRTL } = useAppStore();
   const { setSelectedProduct, setModalOpen, setProductToDelete, setDeleteModalOpen, isModalOpen } = useProductStore();
-  const [selectedProduct, setSelectedProductState] = useState<any>(null);
+  const [selectedProduct, setSelectedProductState] = useState<ProductType | null>(null);
 
   useEffect(() => {
     const handleRefresh = async () => {
@@ -86,28 +89,33 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
     };
     handleRefresh();
 
-    const handleDeleted = (e: any) => {
+    const handleDeleted = (e: CustomEvent<{ id: string }>) => {
       if (selectedProduct?.id === e.detail.id) {
         setSelectedProductState(null);
       }
     };
-    window.addEventListener('product-deleted', handleDeleted);
-    return () => window.removeEventListener('product-deleted', handleDeleted);
+    window.addEventListener('product-deleted', handleDeleted as EventListener);
+    return () => window.removeEventListener('product-deleted', handleDeleted as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen]);
 
   const handleClose = () => setSelectedProductState(null);
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedProduct(selectedProduct.id);
-    setModalOpen(true);
+    if (selectedProduct) {
+      setSelectedProduct(selectedProduct.id);
+      setModalOpen(true);
+    }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setProductToDelete(selectedProduct.id);
-    setDeleteModalOpen(true);
-    setSelectedProductState(null);
+    if (selectedProduct) {
+      setProductToDelete(selectedProduct.id);
+      setDeleteModalOpen(true);
+      setSelectedProductState(null);
+    }
   };
 
   if (isLoading) {
@@ -135,10 +143,10 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {products.map((product) => (
-          <ProductCard 
-            key={product.id} 
-            product={product} 
-            onClick={() => setSelectedProductState(product)} 
+          <ProductCard
+            key={product.id}
+            product={product}
+            onClick={() => setSelectedProductState(product)}
           />
         ))}
       </div>
@@ -170,7 +178,9 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
             <div className="flex flex-col md:flex-row max-h-[calc(90vh-80px)] overflow-y-auto">
               <div className="w-full md:w-1/2 p-6 flex items-center justify-center" style={{ background: 'var(--muted)' }}>
                 {selectedProduct.image ? (
-                  <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-64 object-cover rounded-lg" />
+                  <div className="relative w-full h-64">
+                    <Image src={selectedProduct.image} alt={selectedProduct.name} fill className="object-cover rounded-lg" />
+                  </div>
                 ) : (
                   <Package className="w-32 h-32" style={{ color: 'var(--text-muted)' }} />
                 )}

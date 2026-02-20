@@ -8,7 +8,15 @@ export const metadata = {
   description: 'Quality control checks',
 };
 
-function QualityChecksList({ checks }: { checks: any[] }) {
+import { QualityCheck, ProductionBatch, Product } from '@prisma/client';
+
+type CheckItem = QualityCheck & {
+  batch: ProductionBatch & {
+    product: Pick<Product, 'id' | 'name'> | null;
+  };
+};
+
+function QualityChecksList({ checks }: { checks: CheckItem[] }) {
   return (
     <div>
       {checks.length === 0 ? (

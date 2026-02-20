@@ -8,8 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { productStatuses, sfdaStatuses } from '@/app/actions/product/types';
 
+import { Product } from '@prisma/client';
+
 interface ProductFormProps {
-  product: any;
+  product: Partial<Product> & { productId?: string; categoryId?: string; status?: string; sfdaStatus?: string; caffeineFree?: boolean };
   onChange: (field: string, value: string | number | boolean) => void;
 }
 
@@ -59,7 +61,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             <SelectTrigger className="mt-1 w-full">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
-            <SelectContent 
+            <SelectContent
               className="z-[100] max-h-60 overflow-auto"
               position="popper"
               sideOffset={4}
@@ -103,7 +105,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             id="baseCost"
             type="number"
             step="0.01"
-            value={product.baseCost || ''}
+            value={product.baseCost ? Number(product.baseCost) : ''}
             onChange={(e) => onChange('baseCost', parseFloat(e.target.value) || 0)}
             placeholder="0.00"
             className="mt-1"
@@ -115,7 +117,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             id="baseRetailPrice"
             type="number"
             step="0.01"
-            value={product.baseRetailPrice || ''}
+            value={product.baseRetailPrice ? Number(product.baseRetailPrice) : ''}
             onChange={(e) => onChange('baseRetailPrice', parseFloat(e.target.value) || 0)}
             placeholder="0.00"
             className="mt-1"

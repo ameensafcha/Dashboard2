@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useProductStore } from '@/stores/productStore';
 import { useAppStore } from '@/stores/appStore';
 import { productStatuses, sfdaStatuses } from '@/app/actions/product/types';
@@ -16,10 +17,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { getProduct } from '@/app/actions/product/actions';
+import { getProduct, ProductsResponse } from '@/app/actions/product/actions';
+
+type ProductType = ProductsResponse['products'][0];
 
 interface ProductTableProps {
-  products: any[];
+  products: ProductType[];
   isLoading: boolean;
 }
 
@@ -32,7 +35,7 @@ const statusColors: Record<string, string> = {
 export default function ProductTable({ products, isLoading }: ProductTableProps) {
   const { setSelectedProduct, setModalOpen, setProductToDelete, setDeleteModalOpen, isModalOpen } = useProductStore();
   const { isRTL } = useAppStore();
-  const [selectedProductForModal, setSelectedProductForModal] = useState<any>(null);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<ProductType | null>(null);
 
   useEffect(() => {
     const handleRefresh = async () => {
@@ -45,16 +48,17 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
     };
     handleRefresh();
 
-    const handleDeleted = (e: any) => {
+    const handleDeleted = (e: CustomEvent<{ id: string }>) => {
       if (selectedProductForModal?.id === e.detail.id) {
         setSelectedProductForModal(null);
       }
     };
-    window.addEventListener('product-deleted', handleDeleted);
-    return () => window.removeEventListener('product-deleted', handleDeleted);
+    window.addEventListener('product-deleted', handleDeleted as EventListener);
+    return () => window.removeEventListener('product-deleted', handleDeleted as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen]);
 
-  const handleRowClick = (product: any) => {
+  const handleRowClick = (product: ProductType) => {
     setSelectedProductForModal(product);
   };
 
@@ -62,7 +66,7 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
     setSelectedProductForModal(null);
   };
 
-  const handleEdit = (product: any, e: React.MouseEvent) => {
+  const handleEdit = (product: ProductType, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedProduct(product.id);
     setModalOpen(true);
@@ -143,8 +147,8 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow 
-                key={product.id} 
+              <TableRow
+                key={product.id}
                 style={{ background: 'var(--card)', cursor: 'pointer' }}
                 onClick={() => handleRowClick(product)}
                 className="hover:bg-[var(--muted)] transition-colors"
@@ -167,11 +171,11 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
       {/* Product Detail Modal */}
       {selectedProductForModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
+          <div
             className="absolute inset-0 bg-black/50"
             onClick={handleCloseModal}
           />
-          <div 
+          <div
             className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-xl"
             style={{ background: 'var(--card)' }}
           >
@@ -209,11 +213,14 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
               {/* Left - Image */}
               <div className="w-full md:w-1/2 p-6 flex items-center justify-center" style={{ background: 'var(--muted)' }}>
                 {selectedProductForModal.image ? (
-                  <img 
-                    src={selectedProductForModal.image} 
-                    alt={selectedProductForModal.name}
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
+                  <div className="relative w-full h-64">
+                    <Image
+                      src={selectedProductForModal.image}
+                      alt={selectedProductForModal.name}
+                      fill
+                      className="object-cover rounded-lg"
+                    />
+                  </div>
                 ) : (
                   <Package className="w-32 h-32" style={{ color: 'var(--text-muted)' }} />
                 )}

@@ -1,6 +1,6 @@
 'use server';
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Product, Category, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -11,14 +11,20 @@ export interface GetProductsParams {
   status?: string;
 }
 
+type SerializedProduct = Omit<Product, 'baseCost' | 'baseRetailPrice'> & {
+  baseCost: number;
+  baseRetailPrice: number;
+  category?: Category | null;
+};
+
 export interface ProductsResponse {
-  products: any[];
+  products: SerializedProduct[];
   total: number;
   page: number;
   totalPages: number;
 }
 
-function serializeProduct(product: any) {
+function serializeProduct(product: Product & { category?: Category | null }): SerializedProduct {
   return {
     ...product,
     baseCost: Number(product.baseCost),
@@ -29,20 +35,20 @@ function serializeProduct(product: any) {
 export async function getProducts(params: GetProductsParams = {}): Promise<ProductsResponse> {
   try {
     const { page = 1, limit = 5, search = '', status = '' } = params;
-    
-    const where: any = {};
-    
+
+    const where: Prisma.ProductWhereInput = {};
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { skuPrefix: { contains: search, mode: 'insensitive' } },
       ];
     }
-    
+
     if (status) {
-      where.status = status;
+      where.status = status as Prisma.EnumProductStatusFilter;
     }
-    
+
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
@@ -53,15 +59,15 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
       }),
       prisma.product.count({ where }),
     ]);
-    
+
     return {
       products: products?.map(serializeProduct) || [],
       total: total || 0,
       page,
       totalPages: Math.ceil((total || 0) / limit),
     };
-  } catch (error: any) {
-    console.error('Error fetching products:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('Error fetching products:', error instanceof Error ? error.message : String(error));
     return {
       products: [],
       total: 0,
@@ -84,7 +90,7 @@ async function generateSKU(): Promise<string> {
     const lastProduct = await prisma.product.findFirst({
       orderBy: { createdAt: 'desc' },
     });
-    
+
     let nextNum = 1;
     if (lastProduct && lastProduct.skuPrefix) {
       const match = lastProduct.skuPrefix.match(/SKU-(\d+)/);
@@ -92,21 +98,21 @@ async function generateSKU(): Promise<string> {
         nextNum = parseInt(match[1]) + 1;
       }
     }
-    
+
     return `SKU-${nextNum}`;
-  } catch (error: any) {
-    console.error('Error generating SKU:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('Error generating SKU:', error instanceof Error ? error.message : String(error));
     const timestamp = Date.now().toString().slice(-4);
     return `SKU-${timestamp}`;
   }
 }
 
-export async function createProduct(data: any) {
+export async function createProduct(data: Partial<Product> & { categoryId?: string | null }) {
   const skuPrefix = data.skuPrefix || await generateSKU();
-  
+
   const product = await prisma.product.create({
     data: {
-      name: data.name,
+      name: data.name!,
       skuPrefix: skuPrefix,
       categoryId: data.categoryId || null,
       description: data.description,
@@ -114,8 +120,8 @@ export async function createProduct(data: any) {
       caffeineFree: data.caffeineFree ?? true,
       sfdaStatus: data.sfdaStatus || 'not_submitted',
       sfdaReference: data.sfdaReference,
-      baseCost: data.baseCost,
-      baseRetailPrice: data.baseRetailPrice,
+      baseCost: data.baseCost || 0,
+      baseRetailPrice: data.baseRetailPrice || 0,
       image: data.image,
       status: data.status || 'active',
       launchDate: data.launchDate,
@@ -124,7 +130,7 @@ export async function createProduct(data: any) {
   return serializeProduct(product);
 }
 
-export async function updateProduct(id: string, data: any) {
+export async function updateProduct(id: string, data: Partial<Product> & { categoryId?: string | null }) {
   const product = await prisma.product.update({
     where: { id },
     data: {

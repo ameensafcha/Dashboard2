@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Edit } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -51,12 +51,14 @@ interface PricingTierDialogProps {
     onOpenChange?: (open: boolean) => void;
 }
 
-export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, open: controlledOpen, onOpenChange }: PricingTierDialogProps) {
+export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: controlledOpen, onOpenChange }: PricingTierDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
     const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const setOpen = onOpenChange || setInternalOpen;
 
-    const form = useForm<z.infer<typeof formSchema>>({
+    type FormValues = z.infer<typeof formSchema>;
+    const form = useForm<FormValues>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             categoryId: defaultCategoryId || '',
@@ -122,7 +124,8 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
                     type: 'error',
                 });
             }
-        } catch (error) {
+        } catch (err) {
+            console.error(err);
             toast({
                 title: 'Error',
                 description: 'Something went wrong',
@@ -148,7 +151,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
                         {tierToEdit ? 'Update the details for this pricing tier.' : 'Create a new pricing tier linked to a category.'}
                     </DialogDescription>
                 </DialogHeader>
-                <Form {...form as any}>
+                <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         {/* Hidden category field */}
                         <FormField
@@ -160,7 +163,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
                         />
 
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="tierName"
                             render={({ field }) => (
                                 <FormItem>
@@ -175,7 +178,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
 
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="minOrderKg"
                                 render={({ field }) => (
                                     <FormItem>
@@ -188,7 +191,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
                                 )}
                             />
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="maxOrderKg"
                                 render={({ field }) => (
                                     <FormItem>
@@ -210,7 +213,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
 
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="pricePerKg"
                                 render={({ field }) => (
                                     <FormItem>
@@ -223,7 +226,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
                                 )}
                             />
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="discountPercent"
                                 render={({ field }) => (
                                     <FormItem>
@@ -238,7 +241,7 @@ export function PricingTierDialog({ categories, defaultCategoryId, tierToEdit, o
                         </div>
 
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="marginPercent"
                             render={({ field }) => (
                                 <FormItem>

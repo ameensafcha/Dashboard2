@@ -1,6 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { Prisma, BatchStatus, RndStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 export type ProductionBatchWithProduct = {
@@ -54,8 +55,8 @@ async function generateBatchNumber(date: Date = new Date()): Promise<string> {
     }
 
     return `BATCH-${datePrefix}-${nextNum.toString().padStart(4, '0')}`;
-  } catch (error: any) {
-    console.error('Error generating batch number:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('Error generating batch number:', error instanceof Error ? error.message : String(error));
     const mm = (date.getMonth() + 1).toString().padStart(2, '0');
     const dd = date.getDate().toString().padStart(2, '0');
     const yy = date.getFullYear().toString().slice(-2);
@@ -91,8 +92,8 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
         quantityUsed: item.quantityUsed?.toNumber() || 0,
       })) || [],
     }));
-  } catch (error: any) {
-    console.error('Error fetching production batches:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('Error fetching production batches:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -125,8 +126,8 @@ export async function getProductionBatchById(id: string) {
         overallScore: qc.overallScore || 0,
       })) || [],
     };
-  } catch (error: any) {
-    console.error('Error fetching batch:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('Error fetching batch:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }
@@ -162,7 +163,7 @@ export async function createProductionBatch(data: {
         targetQty: data.targetQty,
         actualQty: data.actualQty,
         yieldPercent: yieldPercent,
-        status: data.status as any || 'planned',
+        status: (data.status as BatchStatus) || 'planned',
         startDate: data.startDate,
         endDate: data.endDate,
         qualityScore: data.qualityScore,
@@ -180,14 +181,14 @@ export async function createProductionBatch(data: {
 
     revalidatePath('/production/batches');
     return { success: true, data: serializedBatch };
-  } catch (error: any) {
-    console.error('Error creating batch:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('Error creating batch:', error instanceof Error ? error.message : String(error));
     let errorMessage = 'Failed to create batch';
 
-    if (error?.message?.includes('Foreign key constraint')) {
+    if (error instanceof Error && error.message.includes('Foreign key constraint')) {
       errorMessage = 'Invalid product selected. Please select a valid product.';
-    } else if (error?.message) {
-      errorMessage = error.message;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String(error.message);
     }
 
     return { success: false, error: errorMessage };
@@ -217,7 +218,7 @@ export async function updateProductionBatch(id: string, data: {
       data: {
         ...data,
         yieldPercent: newYieldPercent,
-        status: data.status as any,
+        status: data.status as BatchStatus | undefined,
       },
     });
 
@@ -310,8 +311,8 @@ export type RndProjectType = {
   costEstimate: number | null;
   targetLaunchDate: Date | null;
   leadId: string | null;
-  relatedSuppliers: any | null;
-  attachments: any | null;
+  relatedSuppliers: Prisma.JsonValue | null;
+  attachments: Prisma.JsonValue | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -322,7 +323,7 @@ export async function getRnDProjects(): Promise<RndProjectType[]> {
     const projects = await prisma.rndProject.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return projects.map((p: any) => ({
+    return projects.map((p) => ({
       ...p,
       costEstimate: p.costEstimate?.toNumber() ?? null,
       leadId: p.leadId || null,
@@ -344,8 +345,8 @@ export async function createRnDProject(data: {
   costEstimate?: number;
   targetLaunchDate?: Date;
   leadId?: string;
-  relatedSuppliers?: any;
-  attachments?: any;
+  relatedSuppliers?: Prisma.InputJsonValue;
+  attachments?: Prisma.InputJsonValue;
   notes?: string;
 }) {
   try {
@@ -353,7 +354,7 @@ export async function createRnDProject(data: {
       data: {
         name: data.name,
         category: data.category,
-        status: data.status as any || 'ideation',
+        status: (data.status as RndStatus) || 'ideation',
         formulationDetails: data.formulationDetails,
         testResults: data.testResults,
         costEstimate: data.costEstimate,
@@ -362,7 +363,7 @@ export async function createRnDProject(data: {
         relatedSuppliers: data.relatedSuppliers ?? undefined,
         attachments: data.attachments ?? undefined,
         notes: data.notes,
-      } as any,
+      },
     });
     revalidatePath('/production/rnd');
     return { success: true, data: project };
@@ -381,14 +382,17 @@ export async function updateRnDProject(id: string, data: {
   costEstimate?: number;
   targetLaunchDate?: Date;
   leadId?: string;
-  relatedSuppliers?: any;
-  attachments?: any;
+  relatedSuppliers?: Prisma.InputJsonValue;
+  attachments?: Prisma.InputJsonValue;
   notes?: string;
 }) {
   try {
     const project = await prisma.rndProject.update({
       where: { id },
-      data: data as any,
+      data: {
+        ...data,
+        status: data.status,
+      },
     });
     revalidatePath('/production/rnd');
     return { success: true, data: project };

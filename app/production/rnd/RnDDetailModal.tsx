@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { useRouter } from 'next/navigation';
-import { Trash2, Edit2, Save, X } from 'lucide-react';
+import { Trash2, Edit2, Save } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -33,7 +33,19 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
     const [isEditing, setIsEditing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<{
+        name?: string;
+        category?: string;
+        status?: string;
+        leadId?: string;
+        formulationDetails?: string;
+        testResults?: string;
+        costEstimate?: number;
+        targetLaunchDate?: string;
+        relatedSuppliers?: string;
+        attachments?: string;
+        notes?: string;
+    }>({});
 
     useEffect(() => {
         if (project) {
@@ -46,8 +58,8 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
                 testResults: project.testResults || '',
                 costEstimate: project.costEstimate || 0,
                 targetLaunchDate: project.targetLaunchDate ? new Date(project.targetLaunchDate).toISOString().split('T')[0] : '',
-                relatedSuppliers: project.relatedSuppliers?.list || '',
-                attachments: project.attachments?.uri || '',
+                relatedSuppliers: (project.relatedSuppliers as Record<string, string>)?.list || '',
+                attachments: (project.attachments as Record<string, string>)?.uri || '',
                 notes: project.notes || '',
             });
             setIsEditing(false); // Reset edit state when opening a new project
@@ -66,6 +78,7 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
         try {
             const result = await updateRnDProject(project.id, {
                 ...formData,
+                status: formData.status as 'ideation' | 'formulation' | 'testing' | 'sfda_submission' | 'approved' | 'archived' | undefined,
                 costEstimate: formData.costEstimate || undefined,
                 targetLaunchDate: formData.targetLaunchDate ? new Date(formData.targetLaunchDate) : undefined,
                 leadId: formData.leadId || undefined,
@@ -132,7 +145,7 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
                                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                         <AlertDialogDescription>
                                             This action cannot be undone. This will permanently delete the R&D project
-                                            "{project.name}" and remove its data from our servers.
+                                            &quot;{project.name}&quot; and remove its data from our servers.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -257,7 +270,7 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
                                 {isEditing ? (
                                     <Input value={formData.relatedSuppliers} onChange={e => setFormData({ ...formData, relatedSuppliers: e.target.value })} />
                                 ) : (
-                                    <p className="font-medium mt-1">{project.relatedSuppliers?.list || '-'}</p>
+                                    <p className="font-medium mt-1">{(project.relatedSuppliers as Record<string, string>)?.list || '-'}</p>
                                 )}
                             </div>
                             <div>
@@ -266,8 +279,8 @@ export default function RnDDetailModal({ project, isOpen, onClose }: RnDDetailMo
                                     <Input value={formData.attachments} onChange={e => setFormData({ ...formData, attachments: e.target.value })} />
                                 ) : (
                                     <p className="font-medium mt-1">
-                                        {project.attachments?.uri ? (
-                                            <a href={project.attachments.uri} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">View Attachment</a>
+                                        {(project.attachments as Record<string, string>)?.uri ? (
+                                            <a href={(project.attachments as Record<string, string>).uri} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">View Attachment</a>
                                         ) : '-'}
                                     </p>
                                 )}

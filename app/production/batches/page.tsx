@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { useProductionStore } from '@/stores/productionStore';
-import { Trash2, Edit2, Save, X } from 'lucide-react';
+import { Trash2, Edit2, Save } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +68,7 @@ export default function ProductionBatchesPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async () => {
@@ -371,7 +372,7 @@ export default function ProductionBatchesPage() {
                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                       <AlertDialogDescription>
                         This action cannot be undone. This will permanently delete the Production Batch
-                        "{selectedBatch.batchNumber}" and all associated data.
+                        &quot;{selectedBatch.batchNumber}&quot; and all associated data.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -505,7 +506,7 @@ export default function ProductionBatchesPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedBatch.batchItems.map((item: any) => (
+                        {selectedBatch.batchItems.map((item: { id: string; materialName: string; quantityUsed: number }) => (
                           <tr key={item.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
                             <td className="px-3 py-2 text-sm">{item.materialName}</td>
                             <td className="px-3 py-2 text-sm text-right">{item.quantityUsed}</td>
@@ -530,7 +531,7 @@ export default function ProductionBatchesPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedBatch.qualityChecks.map((qc: any) => (
+                        {selectedBatch.qualityChecks.map((qc: { id: string; checkedAt: Date; overallScore: number; passed: boolean }) => (
                           <tr key={qc.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
                             <td className="px-3 py-2 text-sm">{new Date(qc.checkedAt).toLocaleDateString()}</td>
                             <td className="px-3 py-2 text-sm text-right">{qc.overallScore}/10</td>
