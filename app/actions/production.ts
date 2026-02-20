@@ -288,7 +288,7 @@ export async function createQualityCheck(data: {
       where: { id: data.batchId },
       data: {
         qualityScore: data.overallScore,
-        status: data.passed ? 'quality_check' : 'failed',
+        status: data.passed ? 'completed' : 'failed',
       },
     });
 
