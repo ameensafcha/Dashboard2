@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useProductStore } from '@/stores/productStore';
 import { ProductsResponse, getProducts } from '@/app/actions/product/actions';
 import ViewToggle from '@/components/products/ViewToggle';
@@ -19,10 +20,19 @@ interface ProductListProps {
 
 export default function ProductList({ initialData }: ProductListProps) {
   const { viewMode, filters, setFilters, setModalOpen, isLoading, setLoading } = useProductStore();
-  
+  const urlSearchParams = useSearchParams();
+  const urlSearch = urlSearchParams.get('search') || '';
+
   const [data, setData] = useState<ProductsResponse>(initialData);
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Sync URL search param into Zustand filters on mount
+  useEffect(() => {
+    if (urlSearch && urlSearch !== filters.search) {
+      setFilters({ search: urlSearch });
+    }
+  }, [urlSearch]);
 
   const fetchProducts = async (page: number) => {
     setLoading(true);
@@ -68,7 +78,7 @@ export default function ProductList({ initialData }: ProductListProps) {
     <div key={refreshKey}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <ProductFilters />
-        
+
         <div className="flex items-center gap-3">
           <ViewToggle />
           <Button

@@ -1,10 +1,8 @@
-import { PageHeader } from '@/components/ui/PageHeader';
+import { getSystemSettings } from '@/app/actions/production';
+import SettingsClient from './SettingsClient';
 
-export default function SettingsPage() {
-  return (
-    <div className="p-4 sm:p-6">
-      <PageHeader title="Settings" />
-      <p style={{ color: 'var(--text-muted)' }}>Settings module coming soon...</p>
-    </div>
-  );
+export default async function SettingsPage() {
+  const settings = await getSystemSettings();
+
+  return <SettingsClient initialCapacityKg={settings.productionCapacityKg} />;
 }

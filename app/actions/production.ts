@@ -3,12 +3,33 @@
 import prisma from '@/lib/prisma';
 import { Prisma, BatchStatus, RndStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+const createBatchSchema = z.object({
+  productId: z.string().min(1, 'Product is required'),
+  targetQty: z.number().positive('Target quantity must be greater than zero'),
+  actualQty: z.number().nonnegative('Actual quantity cannot be negative').optional(),
+  status: z.nativeEnum(BatchStatus).optional(),
+  startDate: z.date(),
+  endDate: z.date().optional(),
+  qualityScore: z.number().min(0).max(10).optional(),
+  producedBy: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const updateBatchSchema = z.object({
+  actualQty: z.number().nonnegative('Actual quantity cannot be negative').optional(),
+  status: z.nativeEnum(BatchStatus).optional(),
+  qualityScore: z.number().min(0).max(10).optional(),
+  endDate: z.date().optional(),
+  producedBy: z.string().optional(),
+  notes: z.string().optional(),
+});
 
 export type ProductionBatchWithProduct = {
   id: string;
   batchNumber: string;
   productId: string;
-  variantId: string | null;
   targetQty: number;
   actualQty: number | null;
   yieldPercent: number | null;
@@ -20,8 +41,7 @@ export type ProductionBatchWithProduct = {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
-  product: { id: string; name: string } | null;
-  variant: { id: string; name: string } | null;
+  product: { id: string; name: string; size?: number | null; unit?: string | null } | null;
   batchItems: { id: string; materialName: string; quantityUsed: number }[];
   qualityChecks: { id: string; overallScore: number; passed: boolean; checkedAt: Date }[];
 };
@@ -70,8 +90,7 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
   try {
     const batches = await prisma.productionBatch.findMany({
       include: {
-        product: { select: { id: true, name: true } },
-        variant: { select: { id: true, name: true } },
+        product: { select: { id: true, name: true, size: true, unit: true } },
         batchItems: true,
         qualityChecks: { select: { id: true, overallScore: true, passed: true, checkedAt: true } },
       },
@@ -82,12 +101,16 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
       return [];
     }
 
-    return batches.map(b => ({
+    return batches.map((b: any) => ({
       ...b,
+      product: b.product ? {
+        ...b.product,
+        size: b.product.size ? Number(b.product.size) : null,
+      } : null,
       targetQty: b.targetQty?.toNumber() || 0,
       actualQty: b.actualQty?.toNumber() ?? null,
       yieldPercent: b.yieldPercent?.toNumber() ?? null,
-      batchItems: b.batchItems?.map(item => ({
+      batchItems: b.batchItems?.map((item: any) => ({
         ...item,
         quantityUsed: item.quantityUsed?.toNumber() || 0,
       })) || [],
@@ -104,7 +127,6 @@ export async function getProductionBatchById(id: string) {
       where: { id },
       include: {
         product: true,
-        variant: true,
         batchItems: true,
         qualityChecks: true,
       },
@@ -114,14 +136,19 @@ export async function getProductionBatchById(id: string) {
 
     return {
       ...batch,
+      product: batch.product ? {
+        ...batch.product,
+        size: (batch.product as any).size ? Number((batch.product as any).size) : null,
+        unit: (batch.product as any).unit || null,
+      } : null,
       targetQty: batch.targetQty?.toNumber() || 0,
       actualQty: batch.actualQty?.toNumber() || null,
       yieldPercent: batch.yieldPercent?.toNumber() || null,
-      batchItems: batch.batchItems?.map(item => ({
+      batchItems: batch.batchItems?.map((item: any) => ({
         ...item,
         quantityUsed: item.quantityUsed?.toNumber() || 0,
       })) || [],
-      qualityChecks: batch.qualityChecks?.map(qc => ({
+      qualityChecks: batch.qualityChecks?.map((qc: any) => ({
         ...qc,
         overallScore: qc.overallScore || 0,
       })) || [],
@@ -134,7 +161,6 @@ export async function getProductionBatchById(id: string) {
 
 export async function createProductionBatch(data: {
   productId: string;
-  variantId?: string;
   targetQty: number;
   actualQty?: number;
   status?: string;
@@ -145,30 +171,31 @@ export async function createProductionBatch(data: {
   notes?: string;
 }) {
   try {
-    if (!data.productId) {
-      return { success: false, error: 'Product is required' };
+    const parsedData = createBatchSchema.safeParse(data);
+    if (!parsedData.success) {
+      return { success: false, error: parsedData.error.issues[0].message };
     }
 
-    const batchNumber = await generateBatchNumber(data.startDate);
+    const validData = parsedData.data;
+    const batchNumber = await generateBatchNumber(validData.startDate);
 
-    const yieldPercent = (data.actualQty && data.targetQty > 0)
-      ? (data.actualQty / data.targetQty) * 100
+    const yieldPercent = (validData.actualQty && validData.targetQty > 0)
+      ? (validData.actualQty / validData.targetQty) * 100
       : undefined;
 
     const batch = await prisma.productionBatch.create({
       data: {
         batchNumber,
-        productId: data.productId,
-        variantId: data.variantId,
-        targetQty: data.targetQty,
-        actualQty: data.actualQty,
+        productId: validData.productId,
+        targetQty: validData.targetQty,
+        actualQty: validData.actualQty,
         yieldPercent: yieldPercent,
-        status: (data.status as BatchStatus) || 'planned',
-        startDate: data.startDate,
-        endDate: data.endDate,
-        qualityScore: data.qualityScore,
-        producedBy: data.producedBy,
-        notes: data.notes,
+        status: validData.status || 'planned',
+        startDate: validData.startDate,
+        endDate: validData.endDate,
+        qualityScore: validData.qualityScore,
+        producedBy: validData.producedBy,
+        notes: validData.notes,
       },
     });
 
@@ -204,21 +231,27 @@ export async function updateProductionBatch(id: string, data: {
   notes?: string;
 }) {
   try {
+    const parsedData = updateBatchSchema.safeParse(data);
+    if (!parsedData.success) {
+      return { success: false, error: parsedData.error.issues[0].message };
+    }
+    const validData = parsedData.data;
+
     const currentBatch = await prisma.productionBatch.findUnique({ where: { id } });
     const targetQty = currentBatch ? Number(currentBatch.targetQty) : 0;
 
     // Calculate new yield if actualQty is provided
     let newYieldPercent: number | undefined;
-    if (data.actualQty !== undefined && targetQty > 0) {
-      newYieldPercent = (data.actualQty / targetQty) * 100;
+    if (validData.actualQty !== undefined && targetQty > 0) {
+      newYieldPercent = (validData.actualQty / targetQty) * 100;
     }
 
     const batch = await prisma.productionBatch.update({
       where: { id },
       data: {
-        ...data,
+        ...validData,
         yieldPercent: newYieldPercent,
-        status: data.status as BatchStatus | undefined,
+        status: validData.status,
       },
     });
 
@@ -318,9 +351,19 @@ export type RndProjectType = {
   updatedAt: Date;
 };
 
-export async function getRnDProjects(): Promise<RndProjectType[]> {
+export async function getRnDProjects(search?: string): Promise<RndProjectType[]> {
   try {
+    const whereClause = search
+      ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { category: { contains: search, mode: 'insensitive' as const } }
+        ]
+      }
+      : {};
+
     const projects = await prisma.rndProject.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
     });
     return projects.map((p) => ({
@@ -410,5 +453,41 @@ export async function deleteRnDProject(id: string) {
   } catch (error) {
     console.error('Error deleting R&D project:', error);
     return { success: false, error: 'Failed to delete project' };
+  }
+}
+
+export async function getSystemSettings() {
+  try {
+    let settings = await (prisma as any).systemSettings.findFirst();
+    if (!settings) {
+      settings = await (prisma as any).systemSettings.create({
+        data: { productionCapacityKg: 3000 },
+      });
+    }
+    return settings;
+  } catch (error) {
+    console.error('Error fetching system settings:', error);
+    return { productionCapacityKg: 3000 };
+  }
+}
+
+export async function updateSystemCapacity(capacityKg: number) {
+  try {
+    const settings = await prisma.systemSettings.findFirst();
+    if (settings) {
+      await prisma.systemSettings.update({
+        where: { id: settings.id },
+        data: { productionCapacityKg: capacityKg },
+      });
+    } else {
+      await prisma.systemSettings.create({
+        data: { productionCapacityKg: capacityKg },
+      });
+    }
+    revalidatePath('/production');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating capacity:', error);
+    return { success: false, error: 'Failed to update capacity' };
   }
 }

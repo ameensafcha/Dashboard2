@@ -1,8 +1,27 @@
 'use server';
 
-import { PrismaClient, Product, Category, Prisma } from '@prisma/client';
+import { PrismaClient, Product, Category, Prisma, ProductStatus, SfdaStatus } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const productSchema = z.object({
+  name: z.string().min(1, 'Product name is required').optional(),
+  skuPrefix: z.string().optional(),
+  categoryId: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  keyIngredients: z.string().nullable().optional(),
+  caffeineFree: z.boolean().optional(),
+  sfdaStatus: z.nativeEnum(SfdaStatus).optional(),
+  sfdaReference: z.string().nullable().optional(),
+  baseCost: z.number().nonnegative('Cost cannot be negative').optional(),
+  baseRetailPrice: z.number().nonnegative('Price cannot be negative').optional(),
+  size: z.number().positive('Size must be positive').optional(),
+  unit: z.string().optional(),
+  image: z.string().nullable().optional(),
+  status: z.nativeEnum(ProductStatus).optional(),
+  launchDate: z.date().nullable().optional(),
+});
 
 export interface GetProductsParams {
   page?: number;
@@ -11,9 +30,11 @@ export interface GetProductsParams {
   status?: string;
 }
 
-type SerializedProduct = Omit<Product, 'baseCost' | 'baseRetailPrice'> & {
+type SerializedProduct = Omit<Product, 'baseCost' | 'baseRetailPrice' | 'size'> & {
   baseCost: number;
   baseRetailPrice: number;
+  size?: number | null;
+  unit?: string | null;
   category?: Category | null;
 };
 
@@ -29,6 +50,8 @@ function serializeProduct(product: Product & { category?: Category | null }): Se
     ...product,
     baseCost: Number(product.baseCost),
     baseRetailPrice: Number(product.baseRetailPrice),
+    size: (product as any).size ? Number((product as any).size) : null,
+    unit: (product as any).unit || null,
   };
 }
 
@@ -55,7 +78,9 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { category: true },
+        include: {
+          category: true,
+        },
       }),
       prisma.product.count({ where }),
     ]);
@@ -80,7 +105,9 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
 export async function getProduct(id: string) {
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { category: true },
+    include: {
+      category: true,
+    },
   });
   return product ? serializeProduct(product) : null;
 }
@@ -108,45 +135,61 @@ async function generateSKU(): Promise<string> {
 }
 
 export async function createProduct(data: Partial<Product> & { categoryId?: string | null }) {
-  const skuPrefix = data.skuPrefix || await generateSKU();
+  const parsedData = productSchema.safeParse(data);
+  if (!parsedData.success) {
+    throw new Error(parsedData.error.issues[0].message);
+  }
+  const validData = parsedData.data;
+
+  const skuPrefix = validData.skuPrefix || await generateSKU();
 
   const product = await prisma.product.create({
     data: {
-      name: data.name!,
+      name: validData.name || 'Unnamed Product',
       skuPrefix: skuPrefix,
-      categoryId: data.categoryId || null,
-      description: data.description,
-      keyIngredients: data.keyIngredients,
-      caffeineFree: data.caffeineFree ?? true,
-      sfdaStatus: data.sfdaStatus || 'not_submitted',
-      sfdaReference: data.sfdaReference,
-      baseCost: data.baseCost || 0,
-      baseRetailPrice: data.baseRetailPrice || 0,
-      image: data.image,
-      status: data.status || 'active',
-      launchDate: data.launchDate,
+      categoryId: validData.categoryId || null,
+      description: validData.description,
+      keyIngredients: validData.keyIngredients,
+      caffeineFree: validData.caffeineFree ?? true,
+      sfdaStatus: validData.sfdaStatus || 'not_submitted',
+      sfdaReference: validData.sfdaReference,
+      baseCost: validData.baseCost || 0,
+      baseRetailPrice: validData.baseRetailPrice || 0,
+      size: validData.size || null,
+      unit: validData.unit || 'gm',
+      image: validData.image,
+      status: validData.status || 'active',
+      launchDate: validData.launchDate,
     },
   });
   return serializeProduct(product);
 }
 
 export async function updateProduct(id: string, data: Partial<Product> & { categoryId?: string | null }) {
+  const parsedData = productSchema.safeParse(data);
+  if (!parsedData.success) {
+    throw new Error(parsedData.error.issues[0].message);
+  }
+  const validData = parsedData.data;
+
   const product = await prisma.product.update({
     where: { id },
     data: {
-      name: data.name,
-      skuPrefix: data.skuPrefix,
-      categoryId: data.categoryId || null,
-      description: data.description,
-      keyIngredients: data.keyIngredients,
-      caffeineFree: data.caffeineFree,
-      sfdaStatus: data.sfdaStatus,
-      sfdaReference: data.sfdaReference,
-      baseCost: data.baseCost,
-      baseRetailPrice: data.baseRetailPrice,
-      image: data.image,
-      status: data.status,
-      launchDate: data.launchDate,
+      name: validData.name,
+      skuPrefix: validData.skuPrefix,
+      categoryId: validData.categoryId || null,
+      description: validData.description,
+      keyIngredients: validData.keyIngredients,
+      caffeineFree: validData.caffeineFree,
+      sfdaStatus: validData.sfdaStatus,
+      sfdaReference: validData.sfdaReference,
+      baseCost: validData.baseCost,
+      baseRetailPrice: validData.baseRetailPrice,
+      size: validData.size,
+      unit: validData.unit,
+      image: validData.image,
+      status: validData.status,
+      launchDate: validData.launchDate,
     },
   });
   return serializeProduct(product);
@@ -156,8 +199,13 @@ export async function deleteProduct(id: string) {
   await prisma.product.delete({ where: { id } });
 }
 
-export async function getCategories() {
+export async function getCategories(search?: string) {
+  const whereClause = search
+    ? { name: { contains: search, mode: 'insensitive' as const } }
+    : {};
+
   return prisma.category.findMany({
+    where: whereClause,
     orderBy: { name: 'asc' },
   });
 }
@@ -181,3 +229,5 @@ export async function updateCategory(id: string, data: { name?: string; descript
 export async function deleteCategory(id: string) {
   await prisma.category.delete({ where: { id } });
 }
+
+// Variants have been removed.

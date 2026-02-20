@@ -125,6 +125,38 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="size">Size *</Label>
+          <Input
+            id="size"
+            type="number"
+            step="0.01"
+            value={(product as any).size ? Number((product as any).size) : ''}
+            onChange={(e) => onChange('size', parseFloat(e.target.value) || 0)}
+            placeholder="e.g. 500"
+            className="mt-1"
+          />
+        </div>
+        <div className="relative">
+          <Label>Unit *</Label>
+          <Select
+            value={(product as any).unit || 'gm'}
+            onValueChange={(value) => onChange('unit', value)}
+          >
+            <SelectTrigger className="mt-1 w-full">
+              <SelectValue placeholder="Select unit" />
+            </SelectTrigger>
+            <SelectContent className="z-[100]" position="popper" sideOffset={4}>
+              <SelectItem value="gm" className="cursor-pointer">gm</SelectItem>
+              <SelectItem value="kg" className="cursor-pointer">kg</SelectItem>
+              <SelectItem value="ml" className="cursor-pointer">ml</SelectItem>
+              <SelectItem value="L" className="cursor-pointer">L</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="relative">
         <Label>SFDA Status</Label>
         <Select

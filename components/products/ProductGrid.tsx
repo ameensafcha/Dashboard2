@@ -47,12 +47,17 @@ export function ProductCard({ product, onClick }: { product: ProductType; onClic
       </div>
       <CardContent className="p-4">
         <p className="font-mono text-sm mb-1" style={{ color: 'var(--text-muted)' }}>{product.skuPrefix}</p>
-        <h3 className="font-semibold text-lg mb-1" style={{ color: 'var(--foreground)' }}>{product.name}</h3>
-        <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+        <h3 className="font-semibold text-lg mb-1 truncate" style={{ color: 'var(--foreground)' }}>{product.name}</h3>
+        <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
           {product.category?.name || '-'}
         </p>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-auto pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
           <p className="font-semibold" style={{ color: 'var(--accent-gold)' }}>SAR {Number(product.baseRetailPrice).toFixed(2)}</p>
+          {product.size && (
+            <Badge variant="outline" className="text-xs font-normal" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+              {Number(product.size)} {product.unit || ''}
+            </Badge>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -99,6 +104,8 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen]);
 
+
+
   const handleClose = () => setSelectedProductState(null);
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -117,6 +124,8 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
       setSelectedProductState(null);
     }
   };
+
+
 
   if (isLoading) {
     return (
@@ -160,6 +169,7 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
             <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border)' }}>
               <h2 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{selectedProduct.name}</h2>
               <div className="flex items-center gap-2">
+
                 <Button onClick={handleEdit} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2">
                   <Edit className="w-4 h-4" />
                   {isRTL ? 'تعديل' : 'Edit'}
@@ -240,6 +250,8 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
                 </div>
               </div>
             </div>
+
+
           </div>
         </div>
       )}

@@ -31,9 +31,9 @@ export default async function BatchDetailsPage({ params }: { params: { id: strin
                 <div className="flex justify-between items-start">
                     <PageHeader title={`Batch: ${batch.batchNumber}`} />
                     <Badge className={`px-3 py-1 text-sm uppercase ${batch.status === 'completed' ? 'bg-green-500' :
-                            batch.status === 'failed' ? 'bg-red-500' :
-                                batch.status === 'quality_check' ? 'bg-purple-500' :
-                                    'bg-blue-500'
+                        batch.status === 'failed' ? 'bg-red-500' :
+                            batch.status === 'quality_check' ? 'bg-purple-500' :
+                                'bg-blue-500'
                         } text-white`}>
                         {batch.status.replace('_', ' ')}
                     </Badge>
@@ -47,7 +47,14 @@ export default async function BatchDetailsPage({ params }: { params: { id: strin
                     <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
                         <div>
                             <p className="text-gray-500">Product</p>
-                            <p className="font-medium text-lg">{batch.product?.name || 'N/A'}</p>
+                            <p className="font-medium text-lg flex items-center gap-2">
+                                {batch.product?.name || 'N/A'}
+                                {batch.product?.size && (
+                                    <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-md mt-0.5">
+                                        {batch.product.size} {batch.product.unit || 'gm'}
+                                    </span>
+                                )}
+                            </p>
                         </div>
                         <div>
                             <p className="text-gray-500">Produced By</p>

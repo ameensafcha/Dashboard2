@@ -9,9 +9,11 @@ import ProductForm from './ProductForm';
 import { toast } from '@/components/ui/toast';
 import { Product } from '@prisma/client';
 
-type ProductFormState = Partial<Omit<Product, 'baseCost' | 'baseRetailPrice'>> & {
+type ProductFormState = Partial<Omit<Product, 'baseCost' | 'baseRetailPrice' | 'size'>> & {
   baseCost: number;
   baseRetailPrice: number;
+  size?: number | null;
+  unit?: string | null;
   productId?: string;
   categoryId?: string;
   status?: string;
@@ -29,6 +31,8 @@ export default function ProductModal() {
     status: 'active',
     baseCost: 0,
     baseRetailPrice: 0,
+    size: null,
+    unit: 'gm',
     sfdaStatus: 'not_submitted',
     sfdaReference: '',
     description: '',
@@ -55,6 +59,9 @@ export default function ProductModal() {
       const productId = product.skuPrefix ? product.skuPrefix.replace('PRD-', '') : '';
       const data = {
         ...product,
+        baseCost: typeof product.baseCost === 'string' ? parseFloat(product.baseCost) : product.baseCost,
+        baseRetailPrice: typeof product.baseRetailPrice === 'string' ? parseFloat(product.baseRetailPrice) : product.baseRetailPrice,
+        size: product.size ? (typeof product.size === 'string' ? parseFloat(product.size) : product.size) : null,
         categoryId: product.categoryId || '',
         productId,
       };
@@ -71,6 +78,8 @@ export default function ProductModal() {
       status: 'active',
       baseCost: 0,
       baseRetailPrice: 0,
+      size: null,
+      unit: 'gm',
       sfdaStatus: 'not_submitted',
       sfdaReference: '',
       description: '',

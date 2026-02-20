@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/toast';
 import { useProductionStore } from '@/stores/productionStore';
+import { useTranslation } from '@/lib/i18n';
 import { Trash2, Edit2, Save } from 'lucide-react';
 import {
   AlertDialog,
@@ -35,6 +36,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ProductionBatchesPage() {
+  const { t } = useTranslation();
   const {
     batches,
     products,
@@ -165,10 +167,10 @@ export default function ProductionBatchesPage() {
   return (
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <PageHeader title="Production Batches" />
+        <PageHeader title={t.productionBatches} />
         <Button onClick={() => setIsModalOpen(true)} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black">
           <Plus className="w-4 h-4 mr-2" />
-          New Batch
+          {t.addBatch}
         </Button>
       </div>
 
@@ -177,13 +179,13 @@ export default function ProductionBatchesPage() {
           <table className="w-full min-w-[800px]">
             <thead style={{ background: 'var(--muted)' }}>
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Batch #</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Product</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold hidden md:table-cell">Target (kg)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold hidden lg:table-cell">Actual (kg)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold hidden lg:table-cell">Yield %</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold hidden sm:table-cell">Start Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">{t.batchNo}</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">{t.product}</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold hidden md:table-cell">{t.targetQty}</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold hidden lg:table-cell">{t.actualQty}</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold hidden lg:table-cell">{t.yield}</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">{t.status}</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold hidden sm:table-cell">{t.startDate}</th>
               </tr>
             </thead>
             <tbody>
@@ -202,7 +204,10 @@ export default function ProductionBatchesPage() {
                     onClick={() => handleRowClick(batch)}
                   >
                     <td className="px-4 py-3 font-medium" style={{ color: 'var(--foreground)' }}>{batch.batchNumber}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{batch.product?.name || '-'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>
+                      {batch.product?.name || '-'}
+                      {batch.product?.size ? <span className="text-xs ml-2 bg-muted-foreground/20 text-foreground px-1.5 py-0.5 rounded-md">{batch.product.size} {batch.product.unit || 'gm'}</span> : ''}
+                    </td>
                     <td className="px-4 py-3 hidden md:table-cell" style={{ color: 'var(--foreground)' }}>{batch.targetQty}</td>
                     <td className="px-4 py-3 hidden lg:table-cell" style={{ color: 'var(--foreground)' }}>{batch.actualQty ?? '-'}</td>
                     <td className="px-4 py-3 hidden lg:table-cell" style={{ color: 'var(--foreground)' }}>
@@ -229,12 +234,12 @@ export default function ProductionBatchesPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Batch</DialogTitle>
+            <DialogTitle>{t.createNewBatch}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
 
             <div>
-              <Label>Product *</Label>
+              <Label>{t.product} *</Label>
               <Select value={formData.productId} onValueChange={(v) => setFormData({ productId: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select product" />
@@ -248,7 +253,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>Status</Label>
+              <Label>{t.status}</Label>
               <Select value={formData.status} onValueChange={(v) => setFormData({ status: v })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -264,7 +269,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>Target Quantity (kg) *</Label>
+              <Label>{t.targetQtyKg} *</Label>
               <Input
                 type="number"
                 value={formData.targetQty || ''}
@@ -276,7 +281,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>Actual Quantity (kg)</Label>
+              <Label>{t.actualQtyKg}</Label>
               <Input
                 type="number"
                 value={formData.actualQty || ''}
@@ -288,7 +293,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>Quality Score (1-10)</Label>
+              <Label>{t.qualityScore} (1-10)</Label>
               <Input
                 type="number"
                 value={formData.qualityScore || ''}
@@ -305,7 +310,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>Start Date</Label>
+              <Label>{t.startDate}</Label>
               <Input
                 type="date"
                 value={formData.startDate}
@@ -314,7 +319,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>End Date</Label>
+              <Label>{t.endDate}</Label>
               <Input
                 type="date"
                 value={formData.endDate}
@@ -323,7 +328,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>Produced By</Label>
+              <Label>{t.producedBy}</Label>
               <Input
                 value={formData.producedBy}
                 onChange={(e) => setFormData({ producedBy: e.target.value })}
@@ -332,7 +337,7 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div>
-              <Label>Notes</Label>
+              <Label>{t.notes}</Label>
               <Input
                 value={formData.notes}
                 onChange={(e) => setFormData({ notes: e.target.value })}
@@ -341,9 +346,9 @@ export default function ProductionBatchesPage() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={() => { setIsModalOpen(false); resetForm(); }}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setIsModalOpen(false); resetForm(); }}>{t.cancel}</Button>
               <Button onClick={handleSubmit} disabled={isSaving} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black">
-                {isSaving ? 'Creating...' : 'Create Batch'}
+                {isSaving ? '...' : t.createBatch}
               </Button>
             </div>
           </div>
@@ -351,209 +356,223 @@ export default function ProductionBatchesPage() {
       </Dialog>
 
       {/* Detail Drawer */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b">
+      <Dialog open={isDetailOpen} onOpenChange={(open) => {
+        setIsDetailOpen(open);
+        if (!open) setIsEditingBatch(false);
+      }}>
+        <DialogContent className="sm:max-w-4xl p-0 border-0 overflow-hidden shadow-2xl rounded-2xl bg-[#ffffff] dark:bg-[#1E1E1E]">
+          {/* Header Region */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-black/20">
             <div>
-              <DialogTitle className="text-xl">Batch Details - {selectedBatch?.batchNumber}</DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {selectedBatch?.product?.name || 'Unknown Product'} • Created {selectedBatch?.startDate && new Date(selectedBatch.startDate).toLocaleDateString()}
+              <DialogTitle className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-gray-100 mb-1">
+                {t.batchDetails} <span className="text-gray-300 dark:text-gray-700">|</span> {selectedBatch?.batchNumber}
+              </DialogTitle>
+              <p className="text-sm text-gray-500 flex items-center gap-2">
+                <span className="font-medium text-gray-900 dark:text-gray-200">{selectedBatch?.product?.name || 'Unknown Product'}</span>
+                {selectedBatch?.product?.size && (
+                  <span className="text-xs bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300 font-medium">
+                    {selectedBatch.product.size} {selectedBatch.product.unit || 'gm'}
+                  </span>
+                )}
+                <span className="text-gray-300 dark:text-gray-700">•</span>
+                <span>Created {selectedBatch?.startDate && new Date(selectedBatch.startDate).toLocaleDateString()}</span>
               </p>
             </div>
             {!isEditingBatch && selectedBatch && (
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsEditingBatch(true)}>
-                  <Edit2 className="w-4 h-4 mr-2" /> Edit
+                <Button variant="outline" size="sm" onClick={() => setIsEditingBatch(true)} className="h-9 font-medium border-gray-200 shadow-sm hover:bg-gray-50 text-gray-700">
+                  <Edit2 className="w-4 h-4 mr-2" /> {t.edit}
                 </Button>
 
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogTitle>{t.areYouSure}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the Production Batch
-                        &quot;{selectedBatch.batchNumber}&quot; and all associated data.
+                        {t.cannotBeUndone} {selectedBatch.batchNumber}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isSaving} onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteBatch} disabled={isSaving} className="bg-red-600 hover:bg-red-700">
-                        {isSaving ? 'Deleting...' : 'Delete Batch'}
+                      <AlertDialogCancel disabled={isSaving} onClick={() => setIsDeleteDialogOpen(false)}>{t.cancel}</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteBatch} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white">
+                        {isSaving ? '...' : t.deleteBatch}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
 
-                <Button variant="destructive" size="sm" disabled={isSaving} onClick={() => setIsDeleteDialogOpen(true)}>
+                <Button variant="destructive" size="sm" className="h-9 w-9 p-0" disabled={isSaving} onClick={() => setIsDeleteDialogOpen(true)}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             )}
-          </DialogHeader>
+          </div>
+
           {selectedBatch && (
-            <div className="space-y-6 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Status</p>
-                  {isEditingBatch ? (
-                    <Select value={formData.status} onValueChange={(v) => setFormData({ status: v })}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="planned">Planned</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="quality_check">Quality Check</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge className={`${statusColors[selectedBatch.status]} text-white mt-1`}>
-                      {selectedBatch.status.replace('_', ' ')}
-                    </Badge>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Product & Target</p>
-                  <p className="font-medium" style={{ color: 'var(--foreground)' }}>
-                    {selectedBatch.product?.name || '-'} ({selectedBatch.targetQty} kg)
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Actual Quantity (kg)</p>
-                  {isEditingBatch ? (
-                    <Input
-                      className="mt-1"
-                      type="number" step="0.1"
-                      value={formData.actualQty}
-                      onChange={e => setFormData({ actualQty: parseFloat(e.target.value) || 0 })}
-                    />
-                  ) : (
-                    <p className="font-medium mt-1" style={{ color: 'var(--foreground)' }}>{selectedBatch.actualQty ?? '-'} kg</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Yield</p>
-                  <p className="font-medium mt-1" style={{ color: 'var(--foreground)' }}>
-                    {selectedBatch.yieldPercent ? `${selectedBatch.yieldPercent.toFixed(1)}%` : '-'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Quality Score</p>
-                  {isEditingBatch ? (
-                    <Input
-                      className="mt-1" type="number" min="0" max="10"
-                      value={formData.qualityScore}
-                      onChange={e => setFormData({ qualityScore: parseInt(e.target.value) || 0 })}
-                    />
-                  ) : (
-                    <p className="font-medium mt-1" style={{ color: 'var(--foreground)' }}>{selectedBatch.qualityScore ?? '-'} / 10</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Start Date</p>
-                  <p className="font-medium mt-1" style={{ color: 'var(--foreground)' }}>{new Date(selectedBatch.startDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>End Date</p>
-                  {isEditingBatch ? (
-                    <Input
-                      className="mt-1" type="date"
-                      value={formData.endDate}
-                      onChange={e => setFormData({ endDate: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-medium mt-1" style={{ color: 'var(--foreground)' }}>
-                      {selectedBatch.endDate ? new Date(selectedBatch.endDate).toLocaleDateString() : '-'}
-                    </p>
-                  )}
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Produced By</p>
-                  {isEditingBatch ? (
-                    <Input
-                      className="mt-1"
-                      value={formData.producedBy}
-                      onChange={e => setFormData({ producedBy: e.target.value })}
-                    />
-                  ) : (
-                    <p className="font-medium mt-1" style={{ color: 'var(--foreground)' }}>{selectedBatch.producedBy || '-'}</p>
-                  )}
+            <div className="p-6 overflow-y-auto max-h-[75vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                {/* General Details Card */}
+                <div className="bg-white dark:bg-[#252525] p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Core Information</h3>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-50 dark:border-gray-800/50">
+                      <span className="text-sm font-medium text-gray-500">{t.status}</span>
+                      {isEditingBatch ? (
+                        <Select value={formData.status} onValueChange={(v) => setFormData({ status: v })}>
+                          <SelectTrigger className="w-[140px] h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="planned">Planned</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="quality_check">Quality Check</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge className={`${statusColors[selectedBatch.status]} text-white border-0 font-medium shadow-none px-2 py-0.5`}>
+                          {selectedBatch.status.replace('_', ' ')}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-50 dark:border-gray-800/50">
+                      <span className="text-sm font-medium text-gray-500">{t.producedBy}</span>
+                      {isEditingBatch ? (
+                        <Input className="w-[140px] h-8 text-sm text-right" value={formData.producedBy} onChange={e => setFormData({ producedBy: e.target.value })} />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedBatch.producedBy || '-'}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-50 dark:border-gray-800/50">
+                      <span className="text-sm font-medium text-gray-500">{t.startDate}</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{new Date(selectedBatch.startDate).toLocaleDateString()}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-500">{t.endDate}</span>
+                      {isEditingBatch ? (
+                        <Input className="w-[140px] h-8 text-sm" type="date" value={formData.endDate} onChange={e => setFormData({ endDate: e.target.value })} />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedBatch.endDate ? new Date(selectedBatch.endDate).toLocaleDateString() : '-'}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="col-span-2">
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Notes</p>
+                {/* Metrics Card */}
+                <div className="bg-white dark:bg-[#252525] p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Production Metrics</h3>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-50 dark:border-gray-800/50">
+                      <span className="text-sm font-medium text-gray-500">{t.targetQty}</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedBatch.targetQty} kg</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-50 dark:border-gray-800/50">
+                      <span className="text-sm font-medium text-gray-500">{t.actualQtyKg}</span>
+                      {isEditingBatch ? (
+                        <Input className="w-[100px] h-8 text-sm text-right" type="number" step="0.1" value={formData.actualQty} onChange={e => setFormData({ actualQty: parseFloat(e.target.value) || 0 })} />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedBatch.actualQty ?? '-'} kg</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-50 dark:border-gray-800/50">
+                      <span className="text-sm font-medium text-gray-500">{t.yield}</span>
+                      <span className={`text-sm font-bold ${selectedBatch.yieldPercent && selectedBatch.yieldPercent >= 95 ? 'text-green-600' : selectedBatch.yieldPercent && selectedBatch.yieldPercent < 80 ? 'text-red-500' : 'text-gray-900 dark:text-gray-100'}`}>
+                        {selectedBatch.yieldPercent ? `${selectedBatch.yieldPercent.toFixed(1)}%` : '-'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-500">{t.qualityScore}</span>
+                      {isEditingBatch ? (
+                        <Input className="w-[100px] h-8 text-sm text-right" type="number" min="0" max="10" value={formData.qualityScore} onChange={e => setFormData({ qualityScore: parseInt(e.target.value) || 0 })} />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedBatch.qualityScore ?? '-'} / 10</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes Container */}
+                <div className="col-span-1 md:col-span-2 bg-gray-50 dark:bg-[#252525] p-5 rounded-xl border border-gray-100 dark:border-gray-800 text-sm">
+                  <span className="font-semibold text-gray-700 dark:text-gray-300 mb-2 block">{t.notes}</span>
                   {isEditingBatch ? (
-                    <Input
-                      className="mt-1"
-                      value={formData.notes}
-                      onChange={e => setFormData({ notes: e.target.value })}
-                    />
+                    <Input className="w-full bg-white dark:bg-black/50 border-gray-300" value={formData.notes} onChange={e => setFormData({ notes: e.target.value })} placeholder="Add batch notes..." />
                   ) : selectedBatch.notes ? (
-                    <p className="font-medium mt-1" style={{ color: 'var(--foreground)' }}>{selectedBatch.notes}</p>
-                  ) : <span className="text-sm text-muted-foreground italic mt-1 block">No notes</span>}
+                    <p className="text-gray-600 dark:text-gray-400 italic">"{selectedBatch.notes}"</p>
+                  ) : <span className="text-gray-400 dark:text-gray-600 italic">No notes provided for this batch.</span>}
                 </div>
               </div>
 
-              {selectedBatch.batchItems && selectedBatch.batchItems.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Raw Materials Used</p>
-                  <div className="rounded border" style={{ borderColor: 'var(--border)' }}>
-                    <table className="w-full">
-                      <thead style={{ background: 'var(--muted)' }}>
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-semibold">Material</th>
-                          <th className="px-3 py-2 text-right text-xs font-semibold">Quantity (kg)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedBatch.batchItems.map((item: { id: string; materialName: string; quantityUsed: number }) => (
-                          <tr key={item.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                            <td className="px-3 py-2 text-sm">{item.materialName}</td>
-                            <td className="px-3 py-2 text-sm text-right">{item.quantityUsed}</td>
+              {/* Data Tables */}
+              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {selectedBatch.batchItems && selectedBatch.batchItems.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 ml-1">Materials Breakdown</h4>
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-black/20 text-gray-500 border-b border-gray-100 dark:border-gray-800">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold">Material</th>
+                            <th className="px-4 py-3 text-right font-semibold">Qty Used</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50 bg-white dark:bg-transparent">
+                          {selectedBatch.batchItems.map((item: any) => (
+                            <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                              <td className="px-4 py-3.5 font-medium text-gray-700 dark:text-gray-300">{item.materialName}</td>
+                              <td className="px-4 py-3.5 text-right font-medium text-gray-900 dark:text-gray-100">{item.quantityUsed} kg</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {selectedBatch.qualityChecks && selectedBatch.qualityChecks.length > 0 && !isEditingBatch && (
-                <div>
-                  <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Quality Checks</p>
-                  <div className="rounded border" style={{ borderColor: 'var(--border)' }}>
-                    <table className="w-full">
-                      <thead style={{ background: 'var(--muted)' }}>
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-semibold">Date</th>
-                          <th className="px-3 py-2 text-right text-xs font-semibold">Score</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold">Result</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedBatch.qualityChecks.map((qc: { id: string; checkedAt: Date; overallScore: number; passed: boolean }) => (
-                          <tr key={qc.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                            <td className="px-3 py-2 text-sm">{new Date(qc.checkedAt).toLocaleDateString()}</td>
-                            <td className="px-3 py-2 text-sm text-right">{qc.overallScore}/10</td>
-                            <td className="px-3 py-2 text-sm">
-                              <Badge className={qc.passed ? 'bg-green-500' : 'bg-red-500'}>
-                                {qc.passed ? 'Passed' : 'Failed'}
-                              </Badge>
-                            </td>
+                {selectedBatch.qualityChecks && selectedBatch.qualityChecks.length > 0 && !isEditingBatch && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 ml-1">Quality Audit Log</h4>
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-black/20 text-gray-500 border-b border-gray-100 dark:border-gray-800">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold">Date</th>
+                            <th className="px-4 py-3 text-center font-semibold">Score</th>
+                            <th className="px-4 py-3 text-right font-semibold">Result</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50 bg-white dark:bg-transparent">
+                          {selectedBatch.qualityChecks.map((qc: any) => (
+                            <tr key={qc.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                              <td className="px-4 py-3.5 text-gray-500 dark:text-gray-400">{new Date(qc.checkedAt).toLocaleDateString()}</td>
+                              <td className="px-4 py-3.5 text-center font-bold text-gray-900 dark:text-gray-100">{qc.overallScore}/10</td>
+                              <td className="px-4 py-3.5 text-right">
+                                <Badge variant="outline" className={`${qc.passed ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'} shadow-none font-semibold px-2 py-0.5`}>
+                                  {qc.passed ? 'PASSED' : 'FAILED'}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {isEditingBatch && (
-                <div className="flex items-center justify-end gap-3 pt-4 border-t">
-                  <Button type="button" variant="outline" onClick={() => setIsEditingBatch(false)}>
+                <div className="flex items-center justify-end gap-3 mt-8 pt-5 border-t border-gray-100 dark:border-gray-800">
+                  <Button type="button" variant="outline" onClick={() => setIsEditingBatch(false)} className="px-6 h-10 font-medium">
                     Cancel
                   </Button>
-                  <Button onClick={handleUpdateBatch} disabled={isSaving} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-sm">
+                  <Button onClick={handleUpdateBatch} disabled={isSaving} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-sm px-6 h-10 font-medium border-0">
                     <Save className="w-4 h-4 mr-2" />
                     {isSaving ? 'Saving...' : 'Save Changes'}
                   </Button>

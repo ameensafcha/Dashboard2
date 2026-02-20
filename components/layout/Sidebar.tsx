@@ -140,7 +140,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-5 styled-scrollbar">
+        <nav className="flex-1 overflow-y-auto py-5 scrollbar-hide">
           <ul className="space-y-1 px-3">
             {navigation.map((item) => {
               const isActive = pathname === item.href ||
@@ -151,9 +151,9 @@ export default function Sidebar() {
               return (
                 <li key={item.name} className="flex flex-col">
                   {item.children ? (
-                    <div className={`flex items-center w-full rounded-lg transition-all duration-200 group ${isActive
-                      ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-sm'
-                      : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                    <div className={`flex items-center w-full rounded-lg transition-all duration-200 ease-in-out cursor-pointer group ${isActive
+                      ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
+                      : 'text-gray-300 hover:bg-white/10 hover:text-white'
                       }`}>
                       <Link
                         href={item.href}
@@ -177,9 +177,9 @@ export default function Sidebar() {
                     <Link
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 group ${isActive
-                        ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-sm'
-                        : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                      className={`flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer group ${isActive
+                        ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
+                        : 'text-gray-300 hover:bg-white/10 hover:text-white'
                         }`}
                     >
                       <item.icon className={`w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity ${isActive ? 'text-black' : ''}`} style={{ marginRight: isRTL ? 0 : 12, marginLeft: isRTL ? 12 : 0 }} />
@@ -200,8 +200,8 @@ export default function Sidebar() {
                               <Link
                                 href={child.href}
                                 onClick={() => setMobileOpen(false)}
-                                className={`flex items-center px-3 py-2 text-sm rounded-md transition-all duration-200 ${isChildActive
-                                  ? 'text-[var(--accent-gold)] font-medium bg-white/5'
+                                className={`flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer ${isChildActive
+                                  ? 'text-[var(--accent-gold)] font-medium bg-white/10'
                                   : 'text-gray-400 hover:text-white hover:bg-white/5'
                                   }`}
                               >
@@ -222,7 +222,7 @@ export default function Sidebar() {
 
         {/* User section */}
         <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <div className="flex items-center hover:bg-white/5 p-2 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-white/10">
+          <div className="flex items-center hover:bg-white/10 p-2 rounded-xl cursor-pointer transition-all duration-200 ease-in-out border border-transparent hover:border-white/10">
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-bold flex-shrink-0 shadow-sm" style={{ background: 'var(--accent-gold)' }}>
               {user?.name?.[0] || 'A'}
             </div>

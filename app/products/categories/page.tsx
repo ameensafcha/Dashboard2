@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '@/app/actions/product/actions';
 import { ProductCategoryType } from '@/app/actions/product/types';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,9 @@ function truncateWords(text: string, wordCount: number = 5) {
 }
 
 export default function CategoriesPage() {
+  const urlSearchParams = useSearchParams();
+  const urlSearch = urlSearchParams.get('search') || undefined;
+
   const [categories, setCategories] = useState<ProductCategoryType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,7 +49,7 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     setIsLoading(true);
     try {
-      const data = await getCategories();
+      const data = await getCategories(urlSearch);
       setCategories(data);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -56,7 +60,7 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [urlSearch]);
 
   const handleOpenModal = (category?: ProductCategoryType) => {
     if (category) {
@@ -82,7 +86,7 @@ export default function CategoriesPage() {
 
   const handleSave = async () => {
     if (!newCategory.name) return;
-    
+
     setIsSaving(true);
     try {
       if (editingCategory) {
@@ -160,8 +164,8 @@ export default function CategoriesPage() {
             </TableHeader>
             <TableBody>
               {categories.map((category) => (
-                <TableRow 
-                  key={category.id} 
+                <TableRow
+                  key={category.id}
                   style={{ background: 'var(--card)', cursor: 'pointer' }}
                   onClick={() => handleViewCategory(category)}
                   className="hover:bg-[var(--muted)] transition-colors"
@@ -215,7 +219,7 @@ export default function CategoriesPage() {
           <DialogHeader>
             <DialogTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 pt-4">
             <div>
               <label className="text-sm font-medium">Name *</label>
@@ -226,7 +230,7 @@ export default function CategoriesPage() {
                 className="mt-1"
               />
             </div>
-            
+
             <div>
               <label className="text-sm font-medium">Description</label>
               <Textarea
@@ -237,7 +241,7 @@ export default function CategoriesPage() {
                 rows={3}
               />
             </div>
-            
+
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
