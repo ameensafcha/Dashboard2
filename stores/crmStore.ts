@@ -67,6 +67,29 @@ export type Contact = {
     }
 };
 
+export type DealStageType = 'new_lead' | 'qualified' | 'sample_sent' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+
+export type Deal = {
+    id: string;
+    title: string;
+    value: number;
+    stage: DealStageType;
+    expectedCloseDate: Date | null;
+    priority: string;
+    clientId: string | null;
+    companyId: string | null;
+    notes: string | null;
+    createdAt: Date;
+    company?: {
+        id: string;
+        name: string;
+    } | null;
+    client?: {
+        id: string;
+        name: string;
+    } | null;
+};
+
 interface CrmStore {
     // Companies
     companies: Company[];
@@ -93,6 +116,18 @@ interface CrmStore {
     setIsNewContactModalOpen: (isOpen: boolean) => void;
     setIsContactDrawerOpen: (isOpen: boolean) => void;
     setSelectedContact: (contact: Contact | null) => void;
+
+    // Deals Pipeline
+    deals: Deal[];
+    isNewDealModalOpen: boolean;
+    isDealDrawerOpen: boolean;
+    selectedDeal: Deal | null;
+
+    setDeals: (deals: Deal[]) => void;
+    setIsNewDealModalOpen: (isOpen: boolean) => void;
+    setIsDealDrawerOpen: (isOpen: boolean) => void;
+    setSelectedDeal: (deal: Deal | null) => void;
+    moveDealOptimistic: (dealId: string, newStage: DealStageType) => void;
 }
 
 export const useCrmStore = create<CrmStore>((set) => ({
@@ -119,4 +154,17 @@ export const useCrmStore = create<CrmStore>((set) => ({
     setIsNewContactModalOpen: (isOpen) => set({ isNewContactModalOpen: isOpen }),
     setIsContactDrawerOpen: (isOpen) => set({ isContactDrawerOpen: isOpen }),
     setSelectedContact: (contact) => set({ selectedContact: contact }),
+
+    deals: [],
+    isNewDealModalOpen: false,
+    isDealDrawerOpen: false,
+    selectedDeal: null,
+
+    setDeals: (deals) => set({ deals }),
+    setIsNewDealModalOpen: (isOpen) => set({ isNewDealModalOpen: isOpen }),
+    setIsDealDrawerOpen: (isOpen) => set({ isDealDrawerOpen: isOpen }),
+    setSelectedDeal: (deal) => set({ selectedDeal: deal }),
+    moveDealOptimistic: (dealId, newStage) => set((state) => ({
+        deals: state.deals.map(d => d.id === dealId ? { ...d, stage: newStage } : d)
+    })),
 }));
