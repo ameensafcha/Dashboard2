@@ -169,6 +169,7 @@ export async function createProductionBatch(data: {
   qualityScore?: number;
   producedBy?: string;
   notes?: string;
+  batchItems?: { rawMaterialId: string; materialName: string; quantityUsed: number }[];
 }) {
   try {
     const parsedData = createBatchSchema.safeParse(data);
@@ -196,6 +197,14 @@ export async function createProductionBatch(data: {
         qualityScore: validData.qualityScore,
         producedBy: validData.producedBy,
         notes: validData.notes,
+        // Phase 7.1: Create batch items (raw material consumption)
+        batchItems: data.batchItems && data.batchItems.length > 0 ? {
+          create: data.batchItems.map(item => ({
+            rawMaterialId: item.rawMaterialId || null,
+            materialName: item.materialName,
+            quantityUsed: item.quantityUsed,
+          })),
+        } : undefined,
       },
     });
 
@@ -293,7 +302,16 @@ export async function getQualityChecks() {
       },
       orderBy: { checkedAt: 'desc' },
     });
-    return checks;
+    // Convert Decimal to Number for client serialization
+    return checks.map(c => ({
+      ...c,
+      batch: c.batch ? {
+        ...c.batch,
+        targetQty: c.batch.targetQty ? Number(c.batch.targetQty) : 0,
+        actualQty: c.batch.actualQty ? Number(c.batch.actualQty) : null,
+        yieldPercent: c.batch.yieldPercent ? Number(c.batch.yieldPercent) : null,
+      } : c.batch,
+    }));
   } catch (error) {
     console.error('Error fetching quality checks:', error);
     return [];
@@ -316,21 +334,176 @@ export async function createQualityCheck(data: {
   notes?: string;
 }) {
   try {
-    const check = await prisma.qualityCheck.create({ data });
+    // Phase 7.3: Use transaction for QC + inventory automation
+    await prisma.$transaction(async (tx) => {
+      // 1. Create QC record
+      await tx.qualityCheck.create({ data });
 
-    await prisma.productionBatch.update({
-      where: { id: data.batchId },
-      data: {
-        qualityScore: data.overallScore,
-        status: data.passed ? 'completed' : 'failed',
-      },
+      // 2. Update batch status
+      const newStatus = data.passed ? 'completed' : 'failed';
+      await tx.productionBatch.update({
+        where: { id: data.batchId },
+        data: {
+          qualityScore: data.overallScore,
+          status: newStatus,
+        },
+      });
+
+      // 3. If PASSED — automate inventory updates
+      if (data.passed) {
+        const batch = await tx.productionBatch.findUnique({
+          where: { id: data.batchId },
+          include: {
+            product: { include: { finishedProduct: true } },
+            batchItems: true,
+          },
+        });
+
+        if (!batch) return;
+
+        const year = new Date().getFullYear();
+        let counter = await tx.stockMovement.count({
+          where: { movementId: { startsWith: `SM-${year}` } },
+        });
+
+        // 3a. INCREASE Finished Product stock by actualQty
+        const fp = batch.product.finishedProduct;
+        if (fp && batch.actualQty) {
+          const qty = Number(batch.actualQty);
+          await tx.finishedProduct.update({
+            where: { id: fp.id },
+            data: { currentStock: { increment: qty } },
+          });
+
+          counter++;
+          await tx.stockMovement.create({
+            data: {
+              movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+              type: 'STOCK_IN',
+              reason: 'PURCHASE', // closest enum for production output
+              quantity: qty,
+              referenceId: batch.batchNumber,
+              finishedProductId: fp.id,
+              notes: `Auto: Production batch ${batch.batchNumber} completed`,
+            },
+          });
+        }
+
+        // 3b. DECREASE Raw Material stock for each BatchItem
+        for (const item of batch.batchItems) {
+          if (item.rawMaterialId) {
+            const usedQty = Number(item.quantityUsed);
+            await tx.rawMaterial.update({
+              where: { id: item.rawMaterialId },
+              data: { currentStock: { decrement: usedQty } },
+            });
+
+            counter++;
+            await tx.stockMovement.create({
+              data: {
+                movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+                type: 'STOCK_OUT',
+                reason: 'PRODUCTION_INPUT',
+                quantity: usedQty,
+                referenceId: batch.batchNumber,
+                rawMaterialId: item.rawMaterialId,
+                notes: `Auto: ${item.materialName} consumed for batch ${batch.batchNumber}`,
+              },
+            });
+          }
+        }
+      }
     });
 
     revalidatePath('/production/quality');
-    return { success: true, data: check };
+    revalidatePath('/production/batches');
+    revalidatePath('/inventory/finished');
+    revalidatePath('/inventory/raw-materials');
+    return { success: true };
   } catch (error) {
     console.error('Error creating quality check:', error);
     return { success: false, error: 'Failed to create quality check' };
+  }
+}
+
+export async function updateQualityCheck(id: string, data: {
+  visualInspection: string;
+  visualNotes?: string;
+  weightVerification: string;
+  weightNotes?: string;
+  tasteTest: string;
+  tasteNotes?: string;
+  labAnalysis?: string;
+  sfdaCompliance: string;
+  overallScore: number;
+  passed: boolean;
+  notes?: string;
+}) {
+  try {
+    const existing = await prisma.qualityCheck.findUnique({ where: { id } });
+    if (!existing) return { success: false, error: 'QC record not found.' };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.qualityCheck.update({
+        where: { id },
+        data: {
+          visualInspection: data.visualInspection,
+          visualNotes: data.visualNotes || null,
+          weightVerification: data.weightVerification,
+          weightNotes: data.weightNotes || null,
+          tasteTest: data.tasteTest,
+          tasteNotes: data.tasteNotes || null,
+          labAnalysis: data.labAnalysis || null,
+          sfdaCompliance: data.sfdaCompliance,
+          overallScore: data.overallScore,
+          passed: data.passed,
+          notes: data.notes || null,
+        },
+      });
+
+      // Update batch status based on new pass/fail
+      await tx.productionBatch.update({
+        where: { id: existing.batchId },
+        data: {
+          qualityScore: data.overallScore,
+          status: data.passed ? 'completed' : 'failed',
+        },
+      });
+    });
+
+    revalidatePath('/production/quality');
+    revalidatePath('/production/batches');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating quality check:', error);
+    return { success: false, error: 'Failed to update quality check.' };
+  }
+}
+
+export async function deleteQualityCheck(id: string) {
+  try {
+    const existing = await prisma.qualityCheck.findUnique({ where: { id } });
+    if (!existing) return { success: false, error: 'QC record not found.' };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.qualityCheck.delete({ where: { id } });
+
+      // Revert batch status back to quality_check so it can be re-inspected
+      await tx.productionBatch.update({
+        where: { id: existing.batchId },
+        data: {
+          status: 'quality_check',
+          qualityScore: null,
+        },
+      });
+    });
+
+    revalidatePath('/production/quality');
+    revalidatePath('/production/batches');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting quality check:', error);
+    return { success: false, error: 'Failed to delete quality check.' };
   }
 }
 

@@ -120,33 +120,33 @@ This document is the **Comprehensive Master Plan** for the entire Safcha Dashboa
 
 ---
 
-## ⏳ Phase 6: Inventory + Orders Automation
+## ✅ Phase 6: Inventory + Orders Automation
 **Goal:** Automate stock deduction when orders ship.
 ### Section 6.1: Reserve Logic
-- [ ] Map logic in `updateOrderStatus`: If changing to `Confirmed`, iterate through `OrderItems` and ADD their quantities to `FinishedProduct` -> `ReservedStock`.
+- [x] Map logic in `updateOrderStatus`: If changing to `Confirmed`, iterate through `OrderItems` and ADD their quantities to `FinishedProduct` -> `ReservedStock`.
 
 ### Section 6.2: Ship Logic
-- [ ] Map logic in `updateOrderStatus`: If changing to `Shipped`, iterate through `OrderItems`.
-- [ ] REDUCE `ReservedStock` by quantity.
-- [ ] REDUCE `CurrentStock` by quantity.
-- [ ] CREATE `StockOut` movement log for each product.
+- [x] Map logic in `updateOrderStatus`: If changing to `Shipped`, iterate through `OrderItems`.
+- [x] REDUCE `ReservedStock` by quantity.
+- [x] REDUCE `CurrentStock` by quantity.
+- [x] CREATE `StockOut` movement log for each product.
 
 ---
 
-## ⏳ Phase 7: Production Completion (Auto-Inventory)
+## ✅ Phase 7: Production Completion (Auto-Inventory)
 **Goal:** Finish the Production module by automating stock updates when manufacturing completes.
 ### Section 7.1: Raw Material Consumption
-- [ ] Update existing `NewProductionBatchModal`.
-- [ ] Add dynamic fields to select `RawMaterials` and input `Quantity Used`.
-- [ ] Modify `createProductionBatch` Action to save these into the `BatchItem` table.
+- [x] Update existing `NewProductionBatchModal`.
+- [x] Add dynamic fields to select `RawMaterials` and input `Quantity Used`.
+- [x] Modify `createProductionBatch` Action to save these into the `BatchItem` table.
 
 ### Section 7.2: QC Checklist UI Form
-- [ ] Build a 5-step form (Visual, Weight, Taste, Lab analysis, SFDA) inside `/production/quality`.
-- [ ] Build Server Action `submitQualityCheck`.
-- [ ] **Gate Logic:** If any toggle fails, set Batch Status to `Failed` and block progression.
+- [x] Build a 5-step form (Visual, Weight, Taste, Lab analysis, SFDA) inside `/production/quality`.
+- [x] Build Server Action `submitQualityCheck`.
+- [x] **Gate Logic:** If any toggle fails, set Batch Status to `Failed` and block progression.
 
 ### Section 7.3: Batch Completion Automation
-- [ ] Map logic in `updateBatchStatus`: If changing to `Completed` (and passed QC):
+- [x] Map logic in `updateBatchStatus`: If changing to `Completed` (and passed QC):
   - INCREASE Finished Product `CurrentStock` by `Actual Quantity`.
   - CREATE `StockIn` movement log.
   - DECREASE Raw Material `CurrentStock` by amounts in `BatchItems`.

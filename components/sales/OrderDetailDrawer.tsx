@@ -19,11 +19,31 @@ import { useTranslation } from '@/lib/i18n';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { createInvoice } from '@/app/actions/sales/invoices';
+import { updateOrderStatus } from '@/app/actions/sales/update-order-status';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreated: () => void }) {
-    const { isDrawerOpen, closeOrderDrawer, selectedOrderId, orders } = useSalesStore();
+    const { isDrawerOpen, closeOrderDrawer, selectedOrderId, orders, updateOrderInStore } = useSalesStore();
     const { isRTL } = useTranslation();
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isChangingStatus, setIsChangingStatus] = useState(false);
+
+    // Client-side valid transitions
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+        draft: ['confirmed', 'cancelled'],
+        confirmed: ['processing', 'cancelled'],
+        processing: ['shipped', 'cancelled'],
+        shipped: ['delivered'],
+        delivered: [],
+        cancelled: [],
+    };
+    const getNextStatuses = (status: string) => VALID_TRANSITIONS[status] || [];
 
     const order = orders.find(o => o.id === selectedOrderId);
 
@@ -139,6 +159,33 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                             <Calendar className="w-4 h-4" />
                             {new Date(order.date).toLocaleDateString()}
                         </p>
+                        {/* Status Change Dropdown */}
+                        {getNextStatuses(order.status).length > 0 && (
+                            <div className="mt-3">
+                                <Select
+                                    disabled={isChangingStatus}
+                                    onValueChange={async (newStatus) => {
+                                        setIsChangingStatus(true);
+                                        const result = await updateOrderStatus(order.id, newStatus as any);
+                                        setIsChangingStatus(false);
+                                        if (result.success) {
+                                            updateOrderInStore(order.id, { status: newStatus as any });
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[200px] bg-[var(--background)] border-[var(--border)] text-sm">
+                                        <SelectValue placeholder={isChangingStatus ? 'Updating...' : 'Change Status →'} />
+                                    </SelectTrigger>
+                                    <SelectContent className="z-[200]">
+                                        {getNextStatuses(order.status).map(s => (
+                                            <SelectItem key={s} value={s} className="capitalize">
+                                                {s.replace('_', ' ')}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
 
                     <Button

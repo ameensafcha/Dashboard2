@@ -51,6 +51,7 @@ interface SalesState {
     isLoading: boolean;
     setOrders: (orders: SerializedOrder[]) => void;
     setIsLoading: (loading: boolean) => void;
+    updateOrderInStore: (orderId: string, updates: Partial<SerializedOrder>) => void;
 
     // Drawer State
     selectedOrderId: string | null;
@@ -64,6 +65,9 @@ export const useSalesStore = create<SalesState>((set) => ({
     isLoading: true,
     setOrders: (orders) => set({ orders }),
     setIsLoading: (isLoading) => set({ isLoading }),
+    updateOrderInStore: (orderId, updates) => set((state) => ({
+        orders: state.orders.map(o => o.id === orderId ? { ...o, ...updates } : o),
+    })),
 
     selectedOrderId: null,
     isDrawerOpen: false,
