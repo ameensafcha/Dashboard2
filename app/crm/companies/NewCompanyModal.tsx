@@ -134,9 +134,9 @@ export default function NewCompanyModal({ onCompanyAdded }: { onCompanyAdded: ()
                         <Label>Category-Specific Pricing Tiers</Label>
                         <p className="text-xs text-gray-500 mb-2">Assign wholesale pricing discounts to this company based on specific product categories.</p>
 
-                        <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
+                        <div className="space-y-2 pr-2 overflow-visible">
                             {activeCategories.length === 0 ? (
-                                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 border border-gray-100 rounded">No categories found in the system.</div>
+                                <div className="text-sm italic p-2 border rounded" style={{ background: 'var(--muted)', color: 'var(--text-muted)' }}>No categories found in the system.</div>
                             ) : (
                                 activeCategories.map(category => (
                                     <div key={category.id} className="grid grid-cols-[1fr_2fr] items-center gap-2">
@@ -150,7 +150,7 @@ export default function NewCompanyModal({ onCompanyAdded }: { onCompanyAdded: ()
                                             <SelectTrigger className="h-8">
                                                 <SelectValue placeholder="Standard Retail" />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)] max-h-[8rem] z-[100]">
                                                 <SelectItem value="none">Standard Retail</SelectItem>
                                                 {activeTiers.filter(t => t.categoryId === category.id || (!t.categoryId && t.isGlobal)).map(tier => (
                                                     <SelectItem key={tier.id} value={tier.id}>

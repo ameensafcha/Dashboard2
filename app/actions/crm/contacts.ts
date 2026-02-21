@@ -18,21 +18,29 @@ const contactSchema = z.object({
     notes: z.string().optional(),
 });
 
-export async function getContacts(search?: string) {
+export async function getContacts(search?: string, companyId?: string) {
     try {
-        const contacts = await prisma.client.findMany({
-            where: search ? {
-                OR: [
-                    { name: { contains: search, mode: 'insensitive' } },
-                    { email: { contains: search, mode: 'insensitive' } },
-                    { phone: { contains: search, mode: 'insensitive' } },
-                    {
-                        company: {
-                            name: { contains: search, mode: 'insensitive' }
-                        }
+        const whereClause: any = {};
+
+        if (search) {
+            whereClause.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search, mode: 'insensitive' } },
+                {
+                    company: {
+                        name: { contains: search, mode: 'insensitive' }
                     }
-                ]
-            } : undefined,
+                }
+            ];
+        }
+
+        if (companyId) {
+            whereClause.companyId = companyId;
+        }
+
+        const contacts = await prisma.client.findMany({
+            where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
             include: {
                 company: {
                     select: {

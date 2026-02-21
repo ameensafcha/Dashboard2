@@ -123,7 +123,7 @@ export default function NewContactModal({ onContactAdded }: { onContactAdded: ()
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a company" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)] z-[100]">
                                     <SelectItem value="none">Independent / Personal</SelectItem>
                                     {companies.map(c => (
                                         <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -157,7 +157,7 @@ export default function NewContactModal({ onContactAdded }: { onContactAdded: ()
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)] z-[100]">
                                     <SelectItem value="client">Client</SelectItem>
                                     <SelectItem value="lead">Lead (Prospect)</SelectItem>
                                     <SelectItem value="supplier">Supplier</SelectItem>
@@ -174,7 +174,7 @@ export default function NewContactModal({ onContactAdded }: { onContactAdded: ()
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)] z-[100]">
                                     <SelectItem value="manual_import">Manual Entry</SelectItem>
                                     <SelectItem value="website">Website Form</SelectItem>
                                     <SelectItem value="event">Event / Expo</SelectItem>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +10,23 @@ import { useCrmStore } from '@/stores/crmStore';
 import { getContacts } from '@/app/actions/crm/contacts';
 import { getCompanies } from '@/app/actions/crm/companies';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from '@/lib/i18n';
 import NewContactModal from './NewContactModal';
 import ContactDetailDrawer from './ContactDetailDrawer';
 import { Contact } from '@/stores/crmStore';
 
-export default function ContactsClient() {
+function ContactsClientContent() {
     const { language } = useTranslation();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    const filterCompanyId = searchParams.get('companyId');
+    const filterCompanyName = searchParams.get('companyName');
     const {
         contacts,
         setContacts,
+        companies,
         setCompanies, // Need companies for the dropdown in NewContactModal
         setIsNewContactModalOpen,
         setSelectedContact,
@@ -28,11 +36,11 @@ export default function ContactsClient() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    const loadData = async (search = '') => {
+    const loadData = async (search = '', compId = filterCompanyId || undefined) => {
         setIsLoading(true);
         try {
             const [contactsData, companiesData] = await Promise.all([
-                getContacts(search),
+                getContacts(search, compId),
                 getCompanies() // Need companies for linking contacts
             ]);
             setContacts(contactsData as any);
@@ -88,22 +96,55 @@ export default function ContactsClient() {
                 </Button>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                    <form onSubmit={handleSearch} className="relative w-full sm:max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                            placeholder="Search contacts, email, company..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 bg-white"
-                        />
-                    </form>
+            <div className="rounded-lg shadow-sm border overflow-hidden" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <div className="p-4 border-b flex flex-col sm:flex-row gap-4 justify-between items-center" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full flex-1">
+                        <form onSubmit={handleSearch} className="relative w-full sm:max-w-md">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                            <Input
+                                placeholder="Search contacts, email, company..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9"
+                                style={{ background: 'var(--background)', color: 'var(--foreground)' }}
+                            />
+                        </form>
+
+                        <div className="w-full sm:w-[220px]">
+                            <Select
+                                value={filterCompanyId || "all"}
+                                onValueChange={(val) => {
+                                    if (val === "all") {
+                                        router.push('/crm/contacts');
+                                        setTimeout(() => loadData(searchTerm, undefined), 50);
+                                    } else {
+                                        const comp = companies.find(c => c.id === val);
+                                        if (comp) {
+                                            router.push(`/crm/contacts?companyId=${comp.id}&companyName=${encodeURIComponent(comp.name)}`);
+                                            setTimeout(() => loadData(searchTerm, comp.id), 50);
+                                        }
+                                    }
+                                }}
+                            >
+                                <SelectTrigger style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+                                    <SelectValue placeholder="All Companies" />
+                                </SelectTrigger>
+                                <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)] max-h-[16rem] z-[100]">
+                                    <SelectItem value="all">All Companies</SelectItem>
+                                    {companies.map(company => (
+                                        <SelectItem key={company.id} value={company.id}>
+                                            {company.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+                        <thead className="text-xs uppercase border-b" style={{ background: 'var(--muted)', color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
                             <tr>
                                 <th className="px-6 py-3">Contact</th>
                                 <th className="px-6 py-3">Company / Role</th>
@@ -115,15 +156,15 @@ export default function ContactsClient() {
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
                                         Loading contacts...
                                     </td>
                                 </tr>
                             ) : contacts.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
                                         <div className="flex flex-col items-center justify-center">
-                                            <User className="h-10 w-10 text-gray-300 mb-2" />
+                                            <User className="h-10 w-10 mb-2 opacity-50" />
                                             <p>No contacts found</p>
                                             <Button variant="link" onClick={() => setIsNewContactModalOpen(true)}>
                                                 Create your first contact
@@ -135,12 +176,13 @@ export default function ContactsClient() {
                                 contacts.map((contact) => (
                                     <tr
                                         key={contact.id}
-                                        className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                                        className="border-b cursor-pointer transition-colors hover:bg-[var(--muted)]"
+                                        style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
                                         onClick={() => handleRowClick(contact)}
                                     >
                                         <td className="px-6 py-4">
-                                            <div className="font-medium text-gray-900">{contact.name}</div>
-                                            <div className="text-gray-500 text-xs mt-1 flex flex-col gap-0.5">
+                                            <div className="font-medium" style={{ color: 'var(--foreground)' }}>{contact.name}</div>
+                                            <div className="text-xs mt-1 flex flex-col gap-0.5" style={{ color: 'var(--text-muted)' }}>
                                                 {contact.email && (
                                                     <span className="flex items-center gap-1">
                                                         <Mail className="h-3 w-3" /> {contact.email}
@@ -154,12 +196,12 @@ export default function ContactsClient() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1.5 font-medium text-gray-900">
-                                                <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                                                {contact.company?.name || <span className="text-gray-400 italic">Independent</span>}
+                                            <div className="flex items-center gap-1.5 font-medium" style={{ color: 'var(--foreground)' }}>
+                                                <Building2 className="h-3.5 w-3.5 opacity-50" />
+                                                {contact.company?.name || <span className="italic" style={{ color: 'var(--text-secondary)' }}>Independent</span>}
                                             </div>
                                             {contact.role && (
-                                                <div className="text-gray-500 text-xs mt-1">
+                                                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                                                     {contact.role}
                                                 </div>
                                             )}
@@ -170,22 +212,22 @@ export default function ContactsClient() {
                                                     {contact.type.toUpperCase()}
                                                 </Badge>
                                                 {contact.source && (
-                                                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+                                                    <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                                                         Source: {formatSource(contact.source)}
                                                     </span>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-600">
+                                        <td className="px-6 py-4" style={{ color: 'var(--foreground)' }}>
                                             {contact.city ? (
                                                 <div className="flex items-center gap-1.5">
-                                                    <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                                                    <MapPin className="h-3.5 w-3.5 opacity-50" />
                                                     <span>{contact.city}</span>
                                                 </div>
                                             ) : '-'}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="font-medium text-gray-900">{contact._count?.deals || 0}</div>
+                                            <div className="font-medium" style={{ color: 'var(--foreground)' }}>{contact._count?.deals || 0}</div>
                                         </td>
                                     </tr>
                                 ))
@@ -198,5 +240,17 @@ export default function ContactsClient() {
             <NewContactModal onContactAdded={() => loadData()} />
             <ContactDetailDrawer onContactUpdated={() => loadData()} />
         </div>
+    );
+}
+
+export default function ContactsClient() {
+    return (
+        <Suspense fallback={
+            <div className="p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
+                <div className="text-gray-500">Loading pipeline...</div>
+            </div>
+        }>
+            <ContactsClientContent />
+        </Suspense>
     );
 }

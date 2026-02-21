@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Building2, Plus, Search, MapPin, Briefcase } from 'lucide-react';
+import { Building2, Plus, Search, MapPin, Briefcase, User } from 'lucide-react';
 import { useCrmStore } from '@/stores/crmStore';
 import { getCompanies } from '@/app/actions/crm/companies';
 import { getPricingTiers } from '@/app/actions/pricing';
@@ -15,9 +15,11 @@ import { Badge } from '@/components/ui/badge';
 import { Company, CompanyPricingTier } from '@/stores/crmStore';
 import { formatCurrency } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
+import { useRouter } from 'next/navigation';
 
 export default function CompaniesClient() {
     const { language } = useTranslation();
+    const router = useRouter();
     const {
         companies,
         setCompanies,
@@ -170,7 +172,17 @@ export default function CompaniesClient() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="font-medium">{company._count?.contacts || 0}</div>
+                                            <div
+                                                className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer inline-flex items-center gap-1 transition-colors"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/crm/contacts?companyId=${company.id}&companyName=${encodeURIComponent(company.name)}`);
+                                                }}
+                                                title={`View all contacts for ${company.name}`}
+                                            >
+                                                <User className="h-3.5 w-3.5" />
+                                                {company._count?.contacts || 0}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right font-medium text-gray-900">
                                             {formatCurrency(company.lifetimeValue)}

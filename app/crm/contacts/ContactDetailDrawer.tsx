@@ -115,19 +115,19 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
 
     return (
         <Sheet open={isContactDrawerOpen} onOpenChange={setIsContactDrawerOpen}>
-            <SheetContent className="w-full sm:max-w-[450px] overflow-y-auto p-0 flex flex-col bg-white">
+            <SheetContent className="w-full sm:max-w-[450px] overflow-y-auto p-0 flex flex-col" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                 {/* Header Section */}
-                <div className="bg-gray-50 px-6 py-6 border-b border-gray-200 flex-shrink-0">
+                <div className="px-6 py-6 border-b flex-shrink-0" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xl uppercase">
+                            <div className="h-12 w-12 rounded-full flex items-center justify-center font-bold text-xl uppercase" style={{ background: 'var(--border)', color: 'var(--foreground)' }}>
                                 {selectedContact.name.substring(0, 2)}
                             </div>
                             <div>
-                                <SheetTitle className="text-xl font-bold text-gray-900 leading-none mb-1">
+                                <SheetTitle className="text-xl font-bold leading-none mb-1" style={{ color: 'var(--foreground)' }}>
                                     {selectedContact.name}
                                 </SheetTitle>
-                                <div className="text-sm text-gray-500 font-medium">
+                                <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
                                     {selectedContact.role ? `${selectedContact.role} at ` : ''}
                                     {selectedContact.company?.name || 'Independent Contact'}
                                 </div>
@@ -135,7 +135,7 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
                         </div>
 
                         {!isEditing && (
-                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="h-8 w-8 text-gray-500 hover:text-gray-900">
+                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="h-8 w-8 hover:bg-[var(--border)]" style={{ color: 'var(--text-muted)' }}>
                                 <Edit className="h-4 w-4" />
                             </Button>
                         )}
@@ -145,14 +145,14 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
                         <Badge variant="outline" className={`${getTypeColor(selectedContact.type)}`}>
                             {selectedContact.type.toUpperCase()}
                         </Badge>
-                        <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
+                        <Badge variant="outline" className="border opacity-70" style={{ background: 'var(--background)', color: 'var(--text-muted)' }}>
                             Source: {formatSource(selectedContact.source)}
                         </Badge>
                     </div>
                 </div>
 
                 {/* Content Section */}
-                <div className="p-6 flex-1 bg-white">
+                <div className="p-6 flex-1" style={{ background: 'var(--card)' }}>
                     {isEditing ? (
                         <div className="space-y-4">
                             <div className="space-y-2">
@@ -244,41 +244,41 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
                             {/* Quick Stats Grid */}
                             <div className="grid gap-4">
                                 <div className="flex items-start gap-3">
-                                    <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+                                    <Mail className="h-5 w-5 mt-0.5" style={{ color: 'var(--text-secondary)' }} />
                                     <div>
-                                        <div className="text-sm font-medium text-gray-900">{selectedContact.email || 'No email provided'}</div>
-                                        <div className="text-xs text-gray-500">Email Address</div>
+                                        <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{selectedContact.email || 'No email provided'}</div>
+                                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Email Address</div>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                                    <Phone className="h-5 w-5 mt-0.5" style={{ color: 'var(--text-secondary)' }} />
                                     <div>
-                                        <div className="text-sm font-medium text-gray-900">{selectedContact.phone || 'No phone provided'}</div>
-                                        <div className="text-xs text-gray-500">Phone Number</div>
+                                        <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{selectedContact.phone || 'No phone provided'}</div>
+                                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Phone Number</div>
                                     </div>
                                 </div>
                                 {selectedContact.city && (
                                     <div className="flex items-start gap-3">
-                                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                                        <MapPin className="h-5 w-5 mt-0.5" style={{ color: 'var(--text-secondary)' }} />
                                         <div>
-                                            <div className="text-sm font-medium text-gray-900">{selectedContact.city}</div>
-                                            <div className="text-xs text-gray-500">Location</div>
+                                            <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{selectedContact.city}</div>
+                                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Location</div>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
                             {/* Additional Info Section */}
-                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                                <div className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-3">CRM Data</div>
+                            <div className="rounded-lg p-4 border" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
+                                <div className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>CRM Data</div>
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500 flex items-center gap-2"><Calendar className="h-4 w-4" /> Added On</span>
-                                        <span className="font-medium text-gray-900">{new Date(selectedContact.createdAt).toLocaleDateString()}</span>
+                                        <span className="flex items-center gap-2" style={{ color: 'var(--text-muted)' }}><Calendar className="h-4 w-4" /> Added On</span>
+                                        <span className="font-medium" style={{ color: 'var(--foreground)' }}>{new Date(selectedContact.createdAt).toLocaleDateString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500 flex items-center gap-2"><Target className="h-4 w-4" /> Linked Deals</span>
-                                        <span className="font-medium text-gray-900">{selectedContact._count?.deals || 0} Deals</span>
+                                        <span className="flex items-center gap-2" style={{ color: 'var(--text-muted)' }}><Target className="h-4 w-4" /> Linked Deals</span>
+                                        <span className="font-medium" style={{ color: 'var(--foreground)' }}>{selectedContact._count?.deals || 0} Deals</span>
                                     </div>
                                 </div>
                             </div>
@@ -286,8 +286,8 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
                             {/* Notes Section */}
                             {selectedContact.notes && (
                                 <div>
-                                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">Private Notes</div>
-                                    <div className="text-sm text-gray-700 bg-yellow-50/50 p-4 rounded-lg border border-yellow-100 whitespace-pre-wrap">
+                                    <div className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>Private Notes</div>
+                                    <div className="text-sm p-4 rounded-lg border whitespace-pre-wrap" style={{ background: 'var(--border)', color: 'var(--foreground)', borderColor: 'var(--border)' }}>
                                         {selectedContact.notes}
                                     </div>
                                 </div>
