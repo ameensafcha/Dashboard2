@@ -66,7 +66,7 @@ export const translations = {
         allStatuses: 'All Statuses',
         active: 'Active',
         draft: 'Draft',
-        archived: 'Archived',
+        archived: 'Archived', 
         name: 'Name',
         sku: 'SKU',
         price: 'Price',
