@@ -96,7 +96,7 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
         console.error('Error creating company:', error);
-        return { success: false, error: 'Failed to create company' };
+        return { success: false, error: 'Failed to create company: ' + (error instanceof Error ? error.message : String(error)) };
     }
 }
 
