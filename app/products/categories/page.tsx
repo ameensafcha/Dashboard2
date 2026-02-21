@@ -33,7 +33,7 @@ function truncateWords(text: string, wordCount: number = 5) {
   return words.slice(0, wordCount).join(' ') + '...';
 }
 
-export default function CategoriesPage() {
+export function CategoriesContent() {
   const urlSearchParams = useSearchParams();
   const urlSearch = urlSearchParams.get('search') || undefined;
 
@@ -262,5 +262,15 @@ export default function CategoriesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+import { Suspense } from 'react';
+
+export default function CategoriesPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading Categories...</div>}>
+      <CategoriesContent />
+    </Suspense>
   );
 }

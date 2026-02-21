@@ -25,8 +25,9 @@ model Category {
   description String?  @db.Text
   createdAt   DateTime @default(now()) @map("created_at")
 
-  products     Product[]
-  pricingTiers PricingTier[]
+  products            Product[]
+  pricingTiers        PricingTier[]
+  companyPricingTiers CompanyPricingTier[]
 
   @@map("categories")
 }
@@ -71,9 +72,11 @@ model PricingTier {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  categoryId String?   @map("category_id")
-  product    Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId          String?              @map("category_id")
+  product             Product?             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category            Category?            @relation(fields: [categoryId], references: [id])
+  companies           Company[] // Deprecated direct link. Kept for legacy compatibility if needed.
+  companyPricingTiers CompanyPricingTier[] // New category-specific link
 
   @@map("pricing_tiers")
 }
@@ -192,4 +195,120 @@ model SystemSettings {
   updatedAt            DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+// ==========================================
+// Phase 3: CRM (Clients, Companies, Deals)
+// ==========================================
+
+enum ClientType {
+  client
+  lead
+  supplier
+  partner
+  investor
+  other
+}
+
+enum LeadSource {
+  website
+  event
+  referral
+  cold_outreach
+  social_media
+  manual_import
+}
+
+model Company {
+  id            String   @id @default(uuid())
+  name          String
+  industry      String?
+  city          String?
+  website       String?
+  lifetimeValue Decimal  @default(0) @map("lifetime_value") @db.Decimal(10, 2)
+  pricingTierId String?  @map("pricing_tier_id") // Deprecated
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  pricingTier         PricingTier?         @relation(fields: [pricingTierId], references: [id], onDelete: SetNull) // Deprecated
+  contacts            Client[] // The employees/contacts that work at this company
+  deals               Deal[] // Sales pipeline deals linked to this company
+  companyPricingTiers CompanyPricingTier[] // The specific pricing tiers this company has per product category
+
+  @@map("companies")
+}
+
+// Phase 3.2.1: Multi-Category Pricing Tiers
+model CompanyPricingTier {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  categoryId    String   @map("category_id")
+  pricingTierId String   @map("pricing_tier_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  pricingTier PricingTier @relation(fields: [pricingTierId], references: [id], onDelete: Cascade)
+
+  // Enforce one tier per category for each company
+  @@unique([companyId, categoryId])
+  @@map("company_pricing_tiers")
+}
+
+// Note: In Safcha's dashboard, "Clients" represent individual Contacts/People
+model Client {
+  id            String     @id @default(uuid())
+  name          String
+  email         String?
+  phone         String?
+  companyId     String?    @map("company_id")
+  role          String?
+  type          ClientType @default(lead)
+  source        LeadSource @default(manual_import)
+  tags          Json? // JSON array of strings for custom tags (e.g. ["Cafe Owner", "VIP"])
+  city          String?
+  lastContacted DateTime?  @map("last_contacted")
+  notes         String?    @db.Text
+  assignedTo    String?    @map("assigned_to") // User ID (String for now)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  deals   Deal[] // Sales pipeline deals directly linked to this contact
+
+  @@map("clients")
+}
+
+enum DealStage {
+  new_lead
+  qualified
+  sample_sent
+  proposal
+  negotiation
+  closed_won
+  closed_lost
+}
+
+model Deal {
+  id                String    @id @default(uuid())
+  title             String // e.g. "Wholesale Supply - Half Million Cafe"
+  value             Decimal   @default(0) @db.Decimal(10, 2)
+  stage             DealStage @default(new_lead)
+  expectedCloseDate DateTime? @map("expected_close_date")
+  companyId         String?   @map("company_id")
+  clientId          String?   @map("client_id")
+  assignedTo        String?   @map("assigned_to") // User ID managing this deal
+  notes             String?   @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  client  Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@map("deals")
 }

@@ -1,0 +1,1065 @@
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 1  
+SAFCHA  
+سافشا  
+ 
+Internal Company Dashboard  
+Technical Specification & Development Brief  
+ 
+Platform: React / Next.js Web Application  
+Prepared for: Ameen (Developer)  
+Prepared by: Aziz (CEO & Founder)  
+Date: February 2026  
+Version: 1.0  
+Classification: Internal — Confidential  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 2 Table of Contents  
+ 
+1. Executive Summary  
+2. Technical Architecture & Stack  
+3. UX/UI Design Guidelines  
+4. Module Specifications  
+    4.1 CEO Dashboard  |  4.2 Sales & Orders  |  4.3 Inventory  |  4.4 Production  
+    4.5 Product Catalog  |  4.6 Finance  |  4.7 CRM  |  4.8 Marketing  
+    4.9 Events & Expos  |  4.10 Team & Tasks  |  4.11 Documents  |  4.12 Strategy  |  4.13 
+Settings  
+5. Cross -Module Workflows  
+6. Notion to Dashboard Migration Map  
+7. Development Roadmap  
+8. Appendix  
+ 
+Note: Update this Table of Contents after opening in Word by right -clicking and selecting 
+“Update Field”.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 3 EXECUTIVE SUMMARY  
+ 
+1. Executive Summary  
+This document provides the complete technical specification for the Safcha Internal Company 
+Dashboard — a centralized web application that consolidates all business operations, data 
+tracking, team management, and strategic planning into a single, role -based platform.  
+ 
+1.1 Purpose  
+Safcha currently manages operations through a Notion workspace with 1 5+ disconnected 
+sections, external spreadsheets (CRM, pricing), PDFs, and manual processes. This creates 
+fragmented visibility, duplicated data entry, and difficulty tracking real -time business metrics 
+across sales, inventory, production, and finance.  
+The new dashboard will replace and consolidate all of these into a unified system that provides 
+real-time business intelligence, streamlined workflows, and role -based access for every team 
+member.  
+ 
+1.2 Key Objectives  
+• Centralize all company data into one pl atform with a single source of truth  
+• Provide real -time KPI tracking across sales, inventory, production, and finance  
+• Automate interconnected workflows (e.g., new order → inventory deduction → 
+production queue → financial update)  
+• Enable role -based access so  each team member sees exactly what they need  
+• Replace fragmented Notion pages, spreadsheets, and PDFs with structured, searchable 
+databases  
+• Support both Arabic and English for internal operations  
+ 
+1.3 Current Pain Points Being Solved  
+Pain Point  Current Sta te Dashboard Solution  
+Data fragmentation  Notion + Excel + PDFs + Zoho 
+scattered  Single unified platform  
+No real -time visibility  Manual updates, outdated 
+numbers  Auto-calculated live KPIs  
+Inventory blind spots  Separate Notion page, no alerts  Real-time stock with auto -deduction  
+Financial tracking  Separate tracker + pricing doc  Integrated P&L with margin analysis  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 4 CRM scattered  Zoho + Excel + Notion lists  Built-in CRM with pipeline stages  
+Team coordination  Tasks spread across pages  Centralized task system with assignments  
+Onboarding difficulty  Multiple PDFs and docs  Guided workflows within dashboard  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 5 TECHNICAL ARCHITECTURE  
+ 
+2. Technical Architecture & Stack  
+2.1 Recommended Tech Stack  
+Layer  Technology  Rationale  
+Frontend  Next.js 14+ (App Router)  SSR, file -based routing, React Server 
+Components  
+UI Library  Tailwind CSS + shadcn/ui  Consistent design system, accessible 
+components  
+State Management  Zustand or React Query  Lightweight, server -state caching  
+Charts / Data Viz  Recharts or Tremor  Dashboard -optimized chart components  
+Authentication  NextAuth.js or Clerk  Role-based auth, session management  
+Database  PostgreSQL (via Supabase or 
+Neon)  Relational data, real -time subscriptions  
+ORM  Prisma  Type -safe database access, migrations  
+File Storage  Supabase Storage or AWS S3  Documents, contracts, images  
+Hosting  Vercel  Optimized for Next.js, global CDN  
+Notifications  Resend (email) + in -app system  Order alerts, low stock, task reminders  
+ 
+2.2 Database Architecture  
+The database should be relational (PostgreSQL) with the following core entity groups. Each 
+module described later in this document maps to one or more database tables.  
+ 
+Entity Group  Core Tables  Key Relationships  
+Users & Auth  users, roles, permissions, teams  users → roles (many -to-many)  
+Sales & Orders  orders, order_items, clients, invoices  orders → clients, order_items → 
+products  
+Inventory  raw_materials, finished_products, 
+stock_movements  stock_movements → orders, 
+production_batches  
+Production  production_batches, batch_items, 
+quality_checks  batches → products, raw_materials  
+Finance  transactions, expenses, 
+revenue_entries  transactions → orders, expenses  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 6 Products  products, product_variants, 
+pricing_tiers  products → variants, pricing_tiers  
+CRM contacts, companies, deals, 
+activities  deals → contacts, companies  
+Tasks  tasks, projects, comments  tasks → users, projects  
+Events  events, event_inventory, 
+event_leads  events → event_inventory, leads  
+Documents  documents, document_categories  documents → categories, modules  
+ 
+2.3 Authentication & Role -Based Access  
+Every page and API route must check user permissions. The system should support granular, 
+section -level access control.  
+ 
+Role Dashboard Access  Permissions  
+CEO / Admin (Aziz)  Full access to everything  Read/Write/Delete all modules, 
+manage users and roles  
+Operations Manager 
+(Malik)  Operations, Inventory, Tasks, 
+CRM Read/Write assigned modules, no 
+financial admin  
+Factory Office (Fay)  Inventory, Production, Tasks  Read/Write inventory and production, 
+read-only finance  
+Manufacturing (Father)  Production, R&D, Quality Control  Full R&D access, read -only sales and 
+finance  
+Marketing Team  Marketing, Events, CRM (leads 
+only) Read/Write marketing, read -only sales 
+data 
+Viewer / Guest  Configurable read -only sections  View -only, no edit or delete 
+permissions  
+Each module section in the sidebar should show/hide based on the logged -in user’s role. Within 
+a module, specific actions (create, edit, delete, export) should also be permission -gated.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 7 UX/UI DESIGN GUIDELINES  
+ 
+3. UX/UI Design Guidelines  
+The dashboard must feel premium, clean, and intuitive. The target aesthetic is a modern SaaS 
+dashboard with warm, earthy tones that reflect Safcha’s brand identity (palm, sand, nature). 
+Below are detailed design directives.  
+ 
+3.1 Design Principles  
+• Clarity over decoration: Every element must earn its place. No decorative clutter.  
+• Progressive disclosure: Show summary first, let users drill into details. Don’t 
+overwhelm with data upfront.  
+• Consistent patterns: Same layout patterns for similar data types (all list views, all detail 
+views, all forms).  
+• Mobile -aware: While primarily desktop, the layout should not break on tablets. Key 
+metrics should be viewable on mobile.  
+• Bilingual -ready: Support RTL layout for Arabic. All text should be tr anslatable. Keep UI 
+labels short.  
+ 
+3.2 Color System  
+Token  Hex Value  Usage  
+--primary  #1A1A2E  Sidebar, headers, primary buttons  
+--accent -gold #E8A838  CTAs, highlights, active states, Safcha brand  
+--accent -green  #2D6A4F  Success states, positive metrics, inventory OK  
+--accent -red #D32F2F  Alerts, negative metrics, low stock warnings  
+--bg-main #F5F5F0  Main content background (warm off -white)  
+--bg-card #FFFFFF  Card backgrounds  
+--bg-sidebar  #1A1A2E  Sidebar background (dark)  
+--text-primary  #333333  Body text  
+--text-secondary  #757575  Labels, captions, secondary info  
+--border  #E0E0E0  Card borders, dividers  
+ 
+3.3 Layout Structure  
+The application layout follows a standard dashboard pattern with three zones:  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 8  
+• Left Sidebar (240px fixed): Dark background (#1A1A2E). Contains Safcha logo, 
+navigation grouped by module category, user avatar and role at the bottom. Collapsible 
+to icon -only (64px) mode.  
+• Top Header Bar (64px fixed): Contains page title/breadcrumbs, global search bar, 
+notification bell with badge count, language toggle (EN/AR), and user menu dropdown.  
+• Main Content Area (fluid): Scrollable. Uses a max -width container (1400px) ce ntered 
+with padding. Content is arranged in responsive card grids.  
+ 
+3.4 Sidebar Navigation Structure  
+The sidebar should group navigation items by business function. Each group is collapsible. 
+Active item gets a gold accent bar on the left edge. Navigation groups:  
+ 
+Nav Group  Icon Sub-items  
+Overview  LayoutDashboard  CEO Dashboard, Company Profile  
+Sales & Orders  ShoppingCart  Orders, Clients, Wholesale, Export, Invoices  
+Inventory  Package  Raw Materials, Finished Products, Stock Movements  
+Production  Factory  Production Batches, Quality Control, R&D  
+Products  Coffee  Product Catalog, Pricing Tiers, Formulations  
+Finance  DollarSign  Revenue, Expenses, P&L, Financial Statements, 
+Subscriptions  
+CRM Users  Contacts, Companies, Deals Pipeline, Event Leads  
+Marketing  Megaphone  Campaigns, Ad Budget & ROI, Content Calendar  
+Events & Expos  Calendar  Event Calendar, Booth Planning, Event Inventory  
+Team & Tasks  CheckSquare  Task Board, Projects, Team Directory, Onboarding  
+Documents  FileText  Legal Docs, Contracts, SOPs, Templates  
+Strategy  Target  Business Plan, OKRs, Goals, Roadmap  
+Settings  Settings  Users & Roles, Company Settings, Integrations  
+ 
+3.5 Component Library  
+Build a shared component library in /components/ui that is reused across all modules. This 
+ensures visual consistency and speeds development. Core components:  
+ 
+Component  Description  States  
+KPICard  Metric card with value, trend arrow, 
+comparison %  Loading, normal, positive, 
+negative, neutral  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 9 DataTable  Sortable, filterable, paginated table with bulk 
+actions  Loading skeleton, empty, 
+populated, selected  
+DetailDrawer  Slide -in panel for viewing/editing records  Open, closed, edit mode, read 
+mode  
+StatusBadge  Color -coded pill for order/task/production 
+status  Per status type (configurable)  
+MetricChart  Line/bar/area chart for trends  Loading, no -data, populated  
+FormModal  Modal dialog for create/edit forms  Pristine, dirty, validating, 
+submitting  
+EmptyState  Illustration + CTA for empty module sections  Per module type  
+SearchBar  Global search with result categories  Focused, suggestions, results  
+FilterBar  Horizontal filter chips with active state  Active filters, clear all  
+Timeline  Vertical timeline for activity/history logs  Loading, populated  
+ 
+3.6 Interaction Patterns  
+• Click row to open detail: All table rows are clickable. Opens a slide -in drawer (not a 
+new page) for quick viewing. Full page available via “Open” button in drawer.  
+• Inline editing: Status changes, quick notes, and simple fields should be editable inline 
+without opening a form.  
+• Keyboard shortcuts: Cmd+K for global search, Cmd+N for new record, Escape to 
+close drawers/modals.  
+• Toast notifications: Bottom -right corner. Au to-dismiss after 4 seconds. Types: success 
+(green), error (red), warning (gold), info (blue).  
+• Loading states: Skeleton screens for initial loads, inline spinners for actions, optimistic 
+UI for quick updates.  
+• Confirmation dialogs: Required for any delete ac tion. Use a clear destructive -action 
+button (red) with explicit confirmation text.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 10 MODULE SPECIFICATIONS  
+ 
+4. Module Specifications  
+Each module below maps directly to a section in the sidebar. For each module, we define: the 
+purpose, what it replaces from the current Notion setup, the data fields, the views/pages 
+needed, the KPIs displayed, and how it connects to other modules.  
+ 
+4.1 CE O Dashboard (Overview)  
+ 
+Attribute  Detail  
+Purpose  High-level snapshot of the entire business at a glance  
+Replaces  Notion: 00. Company Home, Company Dashboard  
+Access  CEO / Admin only (configurable to share specific widgets)  
+Default View  Grid of KPI cards + trend charts + activity feed  
+ 
+4.1.1 KPI Cards (Top Row)  
+Display 6 -8 KPI cards in a responsive grid. Each card shows: metric name, current value, 
+comparison to previous period (%, arrow), and a sparkline mini -chart.  
+ 
+KPI Source Module  Calculation  Update 
+Frequency  
+Total Revenue (MTD)  Finance  Sum of all revenue entries this 
+month  Real-time 
+Total Orders (MTD)  Sales & Orders  Count of orders this month  Real-time 
+Avg. Order Value  Sales & Orders  Revenue / Order count  Real-time 
+Inventory Value  Inventory  Sum (qty × unit cost) all finished 
+products  Real-time 
+Production Output 
+(MTD)  Production  Total kg produced this month  Daily 
+Gross Margin %  Finance  (Revenue - COGS) / Revenue × 
+100 Real-time 
+Open Tasks  Tasks  Count of tasks with status ≠ Done  Real-time 
+Active Clients  CRM Clients with orders in last 90 days  Daily 
+ 
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 11 4.1.2 Charts Section  
+Below the KPI cards, display 2 -3 charts in a 2 -column grid:  
+• Revenue Trend: Line chart showing daily/weekly/monthly revenue for the selected 
+period. Toggle between periods.  
+• Sales by Channel: Donut chart breaking down B2B vs B2C vs Events vs Export 
+revenue.  
+• Inventory Status: Horizontal stacked bar showing stock levels by product vs . reorder 
+thresholds.  
+ 
+4.1.3 Activity Feed  
+Right column (or below charts on smaller screens): a real -time activity feed showing the last 20 
+actions across all modules. Each entry shows: timestamp, user avatar, action type (icon), 
+description, and a link to  the relevant record. Examples: “Aziz created Order #1042”, “Fay 
+updated Inventory: Palm Leaf Powder -50kg”, “Malik completed Task: SIGEP booth layout”.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 12 4.2 Sales & Orders  
+ 
+Attribute  Detail  
+Purpose  Track all B2B and B2C orders, wholesale accounts, export deals, and 
+invoicing  
+Replaces  Notion: Wholesale section, Export section, Safcha_CRM_v2.xlsx, Zoho 
+Event Leads, Wholesale Inquiry Handling  
+Access  CEO (full), Operations (read/write), Marketing (read -only) 
+ 
+4.2.1 Orders List View  
+A filterable, sortable table of all orders with the following columns:  
+ 
+Field  Type  Description  
+Order ID  Auto-generated  Sequential ID with prefix: ORD -2026 -0001 
+Date DateTime  Order creation date  
+Client Name  Relation → CRM  Linked to client record  
+Channel  Select  B2B Wholesale | B2C Direct | Event | Export  
+Products  Multi -relation → 
+Products  List of products in order with quantities  
+Total Amount (SAR)  Calculated  Sum of line items  
+Status  Select  Draft | Confirmed | Processing | Shipped | 
+Delivered | Cancelled  
+Payment Status  Select  Pending | Partial | Paid | Overdue  
+Fulfillment  Select  Pending | Packed | Shipped | Delivered  
+Notes  Rich Text  Internal notes on order  
+Assigned To  Relation → Users  Team member handling the order  
+Created By  Auto User who created the record  
+ 
+4.2.2 Order Detail View  
+Slide -in drawer or full page showing complete order details:  
+• Header: Order ID, status badge, client name (linked), channel badge, dates.  
+• Line Items Table: Product name, variant, quantity (kg), unit price (SAR), line total, 
+discount applied.  
+• Pricing Summary: Subtotal, discount, VAT (15%), shipping, total.  
+• Payment Timeline: Visual timeline of payment events (invoice sent, payment received, 
+etc.).  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 13 • Activity Log: Timestamped history of all changes to this order.  
+• Actions: Generate Invoice (PDF), Duplicate Order, Change Status, Add Note, Cancel 
+Order.  
+ 
+4.2.3 Wholesale Management  
+A sub-section specifically for B2B wholesale operations:  
+• Wholesale Client List: Table of all wholesale accounts with: company name, contact 
+person, email, phone, city, pricing tier (Standard/Silver/Gold/Strategic), contract status, 
+last order date, total li fetime value.  
+• Pricing Tier Reference: Display the wholesale pricing structure (500 SAR/kg base 
+down to 175 SAR/kg strategic) so the team can quickly reference tier pricing when 
+processing orders.  
+• Wholesale Inquiry Pipeline: Kanban board with stages: New Inquiry → Qualified → 
+Sample Sent → Negotiation → Contract → Active Account → Churned.  
+ 
+4.2.4 Export Management  
+Track international sales and export operations:  
+• Export Orders: Filtered view of orders where channel = Export, wi th additional fields: 
+destination country, shipping method (air/sea), customs docs status, export license 
+reference.  
+• Export Client Directory: International distributors and importers with country, import 
+regulations notes, preferred shipping terms.  
+ 
+4.2.5 Sales KPIs  
+KPI Calculation  
+Monthly Revenue  Sum of delivered order totals this month  
+Orders This Month  Count of orders created this month  
+Average Order Value  Revenue / Order count  
+Conversion Rate  Confirmed orders / Total inquiries  
+Revenue by Channel  Breakdown: B2B, B2C, Events, Export  
+Top 5 Clients by Revenue  Ranked by total order value (trailing 12 months)  
+New Clients This Month  Count of first -time buyers  
+Repeat Order Rate  Clients with 2+ orders / Total clients  
+ 
+4.2.6 Workflow: New Order Flow  
+When a new order is created, the system should trigger the following automated sequence:  
+1. Order created with status “Draft”  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 14 2. On status change to “Confirmed”: automatically deduct reserved inventory quantities  
+3. If stock insufficient: flag order with “Low Stock  Warning” and create a production task  
+4. Generate invoice (auto -populated with client details and pricing tier)  
+5. On status change to “Shipped”: update fulfillment status, send notification  
+6. On status change to “Delivered”: update financial records with revenue  entry  
+7. If payment overdue > 7 days: auto -notify assigned team member  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 15 4.3 Inventory & Stock Management  
+ 
+Attribute  Detail  
+Purpose  Track raw materials, finished products, stock movements, and reorder 
+alerts  
+Replaces  Notion: Inventory Management page, manual tracking  
+Access  CEO (full), Operations (full), Factory (read/write), Production (read)  
+ 
+4.3.1 Raw Materials Inventory  
+Field  Type  Description  
+Material Name  Text e.g., Palm Leaf Powder, Matcha Powder, Vanilla 
+Extract  
+SKU Auto-generated  RM-001, RM -002, etc.  
+Category  Select  Base Powder | Flavoring | Packaging | Other  
+Current Stock (kg)  Number  Current quantity in warehouse  
+Unit Cost (SAR)  Number  Cost per kg  
+Reorder Threshold  Number  Minimum stock before alert triggers  
+Reorder Quantity  Number  Standard reorder amount  
+Supplier  Relation → Suppliers  Linked supplier record  
+Location  Select  Al-Ahsa Warehouse | Khobar Office  
+Last Restocked  Date Most recent stock -in date  
+Expiry Date  Date For perishable materials  
+ 
+4.3.2 Finished Products Inventory  
+Field  Type  Description  
+Product Name  Relation → Products  Linked to product catalog  
+Variant  Text e.g., 30g pouch, 100g tin, 1kg bulk  
+SKU Auto-generated  FP-SAF-001 
+Current Stock (units)  Number  Finished units ready to ship  
+Reserved Stock  Number  Units allocated to confirmed orders  
+Available Stock  Calculated  Current - Reserved  
+Unit Cost (SAR)  Number  COGS per unit  
+Retail Price (SAR)  Number  Standard retail price  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 16 Location  Select  Al-Ahsa Warehouse | Khobar Office  
+Batch Number  Relation → 
+Production  Which batch produced this stock  
+Expiry Date  Date Product expiry  
+ 
+4.3.3 Stock Movements Log  
+Every inventory change is logged as a stock movement record. This creates a complete audit 
+trail. 
+Field  Type  Description  
+Movement ID  Auto-generated  SM-2026 -0001 
+Date DateTime  When the movement occurred  
+Type Select  Stock In | Stock Out | Adjustment | Transfer | 
+Return  
+Material/Product  Relation  Which item was affected  
+Quantity  Number  Amount (+/ -) in kg or units  
+Reason  Select  Purchase | Production Input | Order Fulfillment | 
+Damage | Sample | Event  
+Reference  Relation  Link to related Order, Batch, or Event  
+Performed By  Relation → Users  Who executed the movement  
+Notes  Text Additional context  
+ 
+4.3.4 Inventory KPIs & Alerts  
+KPI / Alert  Description  
+Total Inventory Value  Sum of (qty × unit cost) for all items  
+Low Stock Alerts  Items below reorder threshold (displayed as red badges)  
+Days of Stock Remaining  Current stock / average daily consumption  
+Stock Turnover Rate  COGS / Average inventory value  
+Expiring Soon  Items expiring within 30 days  
+Top Moving Products  Ranked by outbound stock movements in period  
+ 
+4.3.5 Workflow: Automated Inventory  
+8. When order status changes to “Confirmed”: reserve finished product stock  
+9. When order status changes to “Shipped”: deduct reserved stock, create Stock Out 
+movement  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 17 10. When production batch completes: add finished product stock, create Stock In 
+movement, deduct raw material stock  
+11. When any item drops below reorder threshold: create alert notification, optionally auto -
+create purchase order draft  
+12. When stock adjustment is made: require a reason code and notes  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 18 4.4 Production & Manufacturing  
+ 
+Attribute  Detail  
+Purpose  Track production batches, quality control, R&D formulations, and 
+manufacturing capacity  
+Replaces  Notion: Product Formulation, New Product Development (Raw Powder 
+Supplier, New Flavor Ideas, Palm Dye, Date Pit Hojicha)  
+Access  CEO (full), Manufacturing/Father (full), Factory/Fay (read/write production), 
+Operations (read)  
+ 
+4.4.1 Production Batches  
+Field  Type  Description  
+Batch ID  Auto-generated  BATCH -2026 -0001 
+Product  Relation → Products  Which product is being produced  
+Target Quantity (kg)  Number  Planned production amount  
+Actual Quantity (kg)  Number  Actual output (filled post -production)  
+Yield %  Calculated  (Actual / Target) × 100  
+Status  Select  Planned | In Progress | Quality Check | Completed 
+| Failed  
+Start Date  DateTime  Production start  
+End Date  DateTime  Production end  
+Raw Materials Used  Multi -relation  List of materials with quantities consumed  
+Quality Score  Number  QC rating (1 -10) 
+Produced By  Relation → Users  Production manager  
+Notes  Rich Text  Production notes, issues encountered  
+ 
+4.4.2 R&D / Product Development  
+Track new product formulations and experimental batches:  
+Field  Type  Description  
+Project Name  Text e.g., Yuzu Lemon Blend, Palm Dye, Date Pit 
+Hojicha  
+Category  Select  New Flavor | New Product Line | Improvement | 
+Research  
+Status  Select  Ideation | Formulation | Testing | SFDA 
+Submission | Approved | Archived  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 19 Lead Relation → Users  Who is leading this R&D project  
+Formulation Details  Rich Text  Ingredients, ratios, process steps  
+Test Results  Rich Text  Taste tests, lab results, feedback  
+Cost Estimate  Number  Projected COGS per kg  
+Target Launch Date  Date When this should be market -ready  
+Related Suppliers  Multi -relation  Suppliers for new ingredients  
+Attachments  File Lab reports, photos, research PDFs  
+ 
+4.4.3 Quality Control  
+Every completed production batch should go through a QC checklist:  
+• Visual inspection: Color consistency, powder fineness, packaging integrity  
+• Weight verification: Sample units weighed against target  
+• Taste/aroma test: Subjective quality rating  
+• Lab analysis: If applicable, nutritional content verification  
+• SFDA compliance: Labeling, batch number, expiry date check  
+QC results are stored on the batch  record. Failed batches cannot be moved to inventory.  
+ 
+4.4.4 Production KPIs  
+KPI Calculation  
+Monthly Output (kg)  Sum of actual quantity for completed batches this month  
+Capacity Utilization %  Actual output / Max capacity (target: 2 -3 tons)  
+Average Yield %  Mean yield across batches  
+QC Pass Rate  Batches passed / Total batches  
+Production Cost per kg  Total raw material cost / Total output kg  
+R&D Pipeline Count  Active R&D projects by status  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 20 4.5 Product Catalog  
+ 
+Attribute  Detail  
+Purpose  Central catalog of all Safcha products, variants, pricing tiers, and 
+formulations  
+Replaces  Notion: Product Formulation section, Safcha_Pricing_Strategy doc, Cafe 
+Add-Ons / Menu Options  
+Access  CEO (full), all team (read), Marketing (read/write for content fields)  
+ 
+4.5.1 Product Records  
+Field  Type  Description  
+Product Name  Text e.g., Safcha Ceremonial Blend, Safcha Vanilla, 
+Safcha Karak  
+Category  Select  Pure Safcha | Ceremonial Blend | Flavored Blend | 
+Karak | Palm Dye | Specialty  
+SKU Prefix  Text Used for generating variant SKUs  
+Description  Rich Text  Product description for internal reference  
+Key Ingredients  Text Ingredient list summary  
+Caffeine Free  Checkbox  Always true for Safcha core, may vary for ceremonial 
+blends  
+SFDA Status  Select  Approved | Pending | Not Submitted  
+SFDA Reference  Text Approval document reference number  
+Base Cost (SAR/kg)  Number  Production COGS  
+Base Retail Price (SAR)  Number  Standard consumer price  
+Image  File Product photo for reference  
+Status  Select  Active | In Development | Discontinued  
+Launch Date  Date Market launch date  
+ 
+4.5.2 Pricing Tiers  
+Each product should have linked pricing tier records for wholesale:  
+Tier Min. Order (kg)  Price (SAR/kg)  Discount %  Margin %  
+Retail (Base)  0 500 0% 97% 
+Standard 
+Wholesale  10 375 25% 95% 
+Silver Partner  50 300 40% 94% 
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 21 Gold Partner  100 250 50% 92% 
+Strategic Partner  500+ 175 65% 88% 
+Note: These are reference values based on current pricing strategy. The system should allow 
+editing these tiers per product.  
+ 
+4.5.3 Cafe Add -Ons / Menu Builder  
+For cafe partnerships, maintain a menu options reference showing: suggested drink 
+preparations, recommended serving sizes, pricing recommendations for cafe menus, and 
+pairing suggestions. This helps the sales team when onboarding new cafe partners.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 22 4.6 Finance & Accounting  
+ 
+Attribute  Detail  
+Purpose  Track all revenue, expenses, P&L, margins, financial statements, and team 
+subscriptions  
+Replaces  Notion: Financial Tracker, Financial Statement, Team Subscription Tracker, 
+Safcha_Pricing_Strategy doc  
+Access  CEO (full), Finance role (full), Operations (read limited summary), others 
+(no access)  
+ 
+4.6.1 Revenue Tracking  
+Automatically populated from delivered orders. Each revenue entry includes: date, order 
+reference, client, channel, product breakdown, gross amount, VAT, net amount, payment 
+method, and payment status.  
+ 
+4.6.2 Expense Tracking  
+Field  Type  Description  
+Expense ID  Auto EXP-2026 -0001 
+Date Date When expense was incurred  
+Category  Select  Raw Materials | Packaging | Shipping | Marketing | 
+Salaries | Rent | Equipment | Subscriptions | Events | 
+Travel | Other  
+Amount (SAR)  Number  Expense amount  
+VAT (SAR)  Number  VAT paid if applicable  
+Vendor  Text Who was paid  
+Payment Method  Select  Bank Transfer | Cash | Credit Card  
+Receipt  File Upload receipt/invoice image  
+Recurring  Checkbox  Is this a recurring monthly expense?  
+Approved By  Relation → 
+Users  Approval chain for expenses above threshold  
+Notes  Text Additional context  
+ 
+4.6.3 P&L Dashboard  
+Auto-generated profit & loss view with configurable time periods (monthly, quarterly, yearly):  
+• Revenue: Total revenue by channel, product line, and client segment  
+• COGS: Raw material costs, production labor, packaging costs  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 23 • Gross Profit: Revenue - COGS  
+• Operating Expenses: Marketing, salaries, rent, subscriptions, travel  
+• Net Profit: Gross Profit - Operating Expenses  
+• Margin Analysis: Per-product margins, per -channel margins, trend over time  
+ 
+4.6.4 Team Subscription Tracker  
+Track all SaaS and tool subscriptions the company pays for: tool name, monthly/annual cost, 
+billing date, category  (design, dev, marketing, operations), who uses it, renewal date, and 
+cancellation status. This replaces the existing Notion subscription tracker.  
+ 
+4.6.5 Financial KPIs  
+KPI Calculation  
+Gross Margin %  (Revenue - COGS) / Revenue × 100  
+Net Margin %  Net Profit / Revenue × 100  
+Monthly Burn Rate  Total operating expenses per month  
+Revenue Growth %  (This month revenue - Last month) / Last month × 100  
+Average Revenue per Client  Total revenue / Active client count  
+Expense by Category  Breakdown pie chart of spending categories  
+Cash Flow  Revenue received - Expenses paid (actual cash movement)  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 24 4.7 CRM (Customer Relationship Management)  
+ 
+Attribute  Detail  
+Purpose  Central database of all contacts, companies, deals, and relationship 
+management  
+Replaces  Notion: CRM under Operations, Safcha_CRM_v2.xlsx, Zoho Event Leads, 
+wholesale list  
+Access  CEO (full), Sales/Operations (read/write), Marketing (read + lead creation)  
+ 
+4.7.1 Contact Records  
+Field  Type  Description  
+Name  Text Full name of the contact  
+Email  Email  Primary email  
+Phone  Phone  Primary phone (with country code)  
+Company  Relation → 
+Companies  Which company they belong to  
+Role/Title  Text Their position  
+Type Select  Client | Lead | Supplier | Partner | Investor | Other  
+Source  Select  Website | Event | Referral | Cold Outreach | Social 
+Media | Zoho Import  
+Tags Multi -select  Cafe Owner, Distributor, Retailer, International, etc.  
+City / Region  Text Location  
+Last Contacted  Date Most recent interaction  
+Notes  Rich Text  Relationship notes, preferences  
+Assigned To  Relation → Users  Team member managing this contact  
+ 
+4.7.2 Companies  
+Company records for B2B relationships: company name, industry (Cafe, Retail, Distribution, 
+Hotel, etc.), city, website, pricing tier assigned, contract status, total lifetime value (auto -
+calculated), and linked contacts.  
+ 
+4.7.3 Deals Pipeline  
+Visual Kanban  board for tracking deal progression:  
+Stage  Description  Actions Available  
+New Lead  Initial inquiry or contact made  Qualify, assign, add notes  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 25 Qualified  Confirmed interest and budget fit  Send samples, schedule call  
+Sample Sent  Product samples shipped for evaluation  Track delivery, follow up  
+Proposal  Pricing and terms sent  Negotiate, adjust pricing tier  
+Negotiation  Active back -and-forth on terms  Update terms, involve CEO if needed  
+Closed Won  Deal signed, first order placed  Create order, set up recurring 
+schedule  
+Closed Lost  Deal fell through  Record reason, set follow -up 
+reminder  
+ 
+4.7.4 Event Leads  
+Leads captured at events (SIGEP, Global Village, local expos) flow into the CRM with event 
+source tagged. This replaces the Zoho Event Leads system and the current manual wholesale 
+inquiry handling process.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 26 4.8 Marketing  
+ 
+Attribute  Detail  
+Purpose  Manage marketing campaigns, ad spend tracking, content planning, and 
+ROI analysis  
+Replaces  Notion: Marketing page, Ads Budget Planner & ROI Calculator, Benchmark: 
+Perfect Ted  
+Access  CEO (full), Marketing (read/write), Operations (read)  
+ 
+4.8.1 Campaign Tracker  
+Field  Type  Description  
+Campaign Name  Text e.g., Ramadan 2026 Push, SIGEP Follow -up 
+Channel  Select  Instagram | TikTok | Google Ads | Influencer | 
+Email | Event | PR  
+Status  Select  Planning | Active | Paused | Completed  
+Start Date / End Date  Date Range  Campaign duration  
+Budget (SAR)  Number  Allocated spend  
+Actual Spend (SAR)  Number  Actual spend to date  
+Impressions  Number  Total reach  
+Clicks / Engagement  Number  Click -throughs or engagement actions  
+Conversions  Number  Orders attributable to this campaign  
+Revenue Generated  Number  Total revenue from campaign conversions  
+ROI %  Calculated  (Revenue - Spend) / Spend × 100  
+Notes  Rich Text  Learnings, screenshots, performance notes  
+ 
+4.8.2 Ad Budget & ROI Dashboard  
+Visual dashboard showing: monthly ad spend by channel (stacked bar chart), ROI by channel 
+(bar chart), spend vs. budget progress (gauge chart), and a running comparison to competitor 
+benchmarks.  
+ 
+4.8.3 Content Calendar  
+Monthly calendar view of planned cont ent posts: date, platform, content type (image, video, 
+story, reel), topic, status (draft, approved, published), assigned creator, and link to published 
+post. Filterable by platform.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 27 4.9 Events & Expos  
+ 
+Attribute  Detail  
+Purpose  Plan, execute, and track ROI for trade shows, exhibitions, and events  
+Replaces  Notion: Events section (Booth Designs, Event Inventory Need Plan, Event 
+Leads), Global Village Strategy  
+Access  CEO (full), Operations (full), Marketing (read/write)  
+ 
+4.9.1 Event Records  
+Field  Type  Description  
+Event Name  Text e.g., SIGEP 2026, Global Village 2026  
+Type Select  Trade Show | Exhibition | Pop -up | Festival | 
+Conference  
+Location  Text Venue, city, country  
+Dates  Date Range  Start and end dates  
+Status  Select  Planning | Confirmed | Active | Completed | 
+Cancelled  
+Budget (SAR)  Number  Total allocated budget  
+Actual Cost (SAR)  Number  Total actual spend  
+Booth Number / Size  Text Assigned booth details  
+Team Attending  Multi -relation → 
+Users  Who is going  
+Objectives  Rich Text  What we aim to achieve  
+Results Summary  Rich Text  Post-event: leads collected, sales, learnings  
+ 
+4.9.2 Event Inventory Planning  
+For each event, create an inventory plan listing: products to bring (linked to product catalog), 
+quantities, packaging type, display materials, booth equipment, marketing collateral (brochures, 
+business cards, banners), and shipping logistics. This should auto-check against current 
+finished product inventory and flag any shortages.  
+ 
+4.9.3 Event Lead Capture  
+Leads collected at events should auto -flow into the CRM with the event tagged as the source. 
+Track: name, company, email, phone, interest level (hot/war m/cold), products interested in, and 
+follow -up notes. After the event, these leads enter the Deals Pipeline for follow -up. 
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 28 4.10 Team & Tasks  
+ 
+Attribute  Detail  
+Purpose  Task management, project tracking, team directory, onboarding, and SOPs  
+Replaces  Notion: Tasks Dashboard, Project Dashboard, Team Directory, Feedback & 
+Roadmap, Hiring Plan, Employee Onboarding  
+Access  All team members (own tasks read/write), Managers (team tasks), CEO (all)  
+ 
+4.10.1 Task Board  
+Kanban board view with columns: To Do, In Progress, In Review, Done. Each task card shows:  
+Field  Type  Description  
+Task Title  Text Clear, action -oriented task name  
+Description  Rich Text  Detailed instructions  
+Status  Select  To Do | In Progress | In Review | Done | Blocked  
+Priority  Select  Urgent | High | Medium | Low  
+Assigned To  Relation → Users  Responsible person  
+Due Date  Date Deadline  
+Project  Relation → Projects  Parent project if applicable  
+Related Module  Select  Sales | Inventory | Production | Marketing | Event | 
+General  
+Tags Multi -select  Custom tags for filtering  
+Attachments  File Supporting files  
+Comments  Rich Text Thread  Discussion thread on the task  
+ 
+4.10.2 Projects  
+Group related tasks into projects: project name, description, owner, start/end dates, status 
+(Planning, Active, On Hold, Completed), progress % (auto -calculated from task completion), and 
+linked tasks. Replaces the current Project Dashboard in Notion.  
+ 
+4.10.3 Team Directory  
+Internal team directory showing: name, role, department, email, phone, profile photo, start date, 
+and access role in the dashboard. Links to their assigned tasks and activity history.  
+ 
+4.10.4 Employee Onboarding  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 29 When a new team member  is added, generate an onboarding checklist from a template. This 
+replaces the current Safcha_Employee_Onboarding and Safcha_Onboarding_Malik docs. 
+Checklist items include: account setup, tool access, reading materials, training schedule, and 
+role-specific  tasks.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 30 4.11 Document Vault  
+ 
+Attribute  Detail  
+Purpose  Centralized storage for all company documents with categorization and 
+version tracking  
+Replaces  Notion: Legal Docs section, all scattered PDFs and uploaded files, Packing 
+Partnership docs, contracts  
+Access  CEO (full), per -document permissions configurable  
+ 
+4.11.1 Document Categories  
+Category  Examples from Current Notion  Access Default  
+Legal & Contracts  AL HALA AL MUKHTAS.pdf, Safcha 
+Contract Strategy, Wholesale Contract  CEO + Legal  
+SFDA & Compliance  SFDA approval documents, product 
+certifications  CEO + Production  
+Business Plans  Business Plan, One -Pager, Value 
+Proposition Canvas, Portfolio Map  CEO only  
+Financial Docs  Financial Statements, Pricing Strategy doc  CEO + Finance  
+HR & Onboarding  Hiring doc, Employee Needs, Onboarding 
+docs CEO + HR  
+Research  SafchaStudy.pdf, Palm Tree Tea Research  CEO + R&D  
+Marketing  Brand guidelines, campaign assets, 
+competitor benchmarks  CEO + Marketing  
+SOPs & Templates  Process documents, reusable templates  All team  
+Strategy  B2B Strategy Guide, Global Village 
+Strategy, Ithra Strategy  CEO only  
+ 
+Each document record should track: file name, category, upload date, uploaded by, version 
+number, description, related module, and access permissions. Support PDF preview within the 
+dashboard.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 31 4.12 Strategy & Planning  
+ 
+Attribute  Detail  
+Purpose  OKRs, goals tracking, business plan references, roadmap, and growth 
+planning  
+Replaces  Notion: Plan section (Goals & Objectives, Company OKRs, Team 
+Alignment Map, Culture Map), Launch section (Strategic Plan, Project 
+Plan), Grow section (Capital, Investors Relationship Management)  
+Access  CEO (full), Managers (read + own OKRs), Team (own goals only)  
+ 
+4.12.1 OKRs (Objectives & Key Results)  
+Quarterly OKR tracker with: Objective name, owner, quarter, key results (each with target 
+metric, current value, progress %), status (on track, at risk, behind), and linked tasks/projects 
+that contribute to this OKR.  
+ 
+4.12.2 Roadmap  
+Visual timeline (Gantt -style) showing major initiatives plotted across quarters. Categories: 
+Product Development, Market Expansion, Operations, Hiring, Technology. Replaces the current 
+Feedback & Roadmap page.  
+ 
+4.12.3 Investor Relations  
+Track investor contacts, meeting history, pitch deck versions, funding rounds, and cap table. 
+This is CEO -only access and replaces the Investors Relationship Management page under the 
+Grow section.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 32 4.13 Settings & Administration  
+ 
+The settings module is CEO/Admin only and includes:  
+ 
+• User Management: Add/remove users, assign roles, reset passwords, set section -level 
+permissions.  
+• Company Profile: Company name, logo, address, CR number, VAT number, SFDA 
+license info. This data auto -populates into invoices and contracts.  
+• Notification Settings: Configure which events trigger email/in -app notifications per role.  
+• Integration Settings: Future: connect to accounting software (Qoyod, Wafeq), shipping 
+APIs (Aramex, SMSA), payment gateways.  
+• Data Export: Export any module’s data as  CSV/Excel for external reporting.  
+• Audit Log: Complete log of all user actions across the system for accountability.  
+• Backup & Data: Database backup schedule, data retention policies.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 33 CROSS -MODULE WORKFLOWS  
+ 
+5. Cross -Module Workflows  
+The power of this da shboard comes from interconnected modules. Below are the key 
+automated workflows that connect multiple modules:  
+ 
+5.1 Order -to-Cash Flow  
+13. New inquiry comes in (CRM: New Lead created)  
+14. Lead qualified, samples sent (CRM: stage update, Inventory: sample stock deduction)  
+15. Deal closed (CRM: Closed Won, Order: new order created)  
+16. Order confirmed (Inventory: stock reserved)  
+17. Order fulfilled (Inventory: stock deducted, Finance: revenue entry creat ed) 
+18. Invoice generated (Finance: invoice PDF with company details)  
+19. Payment received (Finance: payment recorded, Order: payment status updated)  
+ 
+5.2 Production -to-Inventory Flow  
+20. Low stock alert triggers (Inventory: finished product below threshold)  
+21. Productio n batch planned (Production: new batch with target quantity)  
+22. Raw materials allocated (Inventory: raw materials reserved for batch)  
+23. Production completed (Production: batch status = completed)  
+24. QC passed (Production: quality check approved)  
+25. Inventory updated (Inventory: finished product stock increased, raw materials deducted)  
+ 
+5.3 Event Lifecycle Flow  
+26. Event created (Events: new event record with dates and budget)  
+27. Inventory planned (Events: product list created, cross -checked with Inventory)  
+28. Production order i f needed (Production: batch created for event stock)  
+29. Event executed (Events: status = Active)  
+30. Leads captured (CRM: new contacts with event source tag)  
+31. Post-event (Events: results summary, Finance: actual costs recorded, CRM: leads enter 
+pipeline)  
+ 
+5.4 Employee Onboarding Flow  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 34 32. New hire added (Team: new user record with role)  
+33. Onboarding checklist generated from template (Tasks: task list created)  
+34. Dashboard access provisioned based on role (Settings: permissions assigned)  
+35. Onboarding tasks completed over first 2 weeks (Tasks: progress tracked)  
+36. Manager review (Tasks: onboarding marked complete)  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 35 MIGRATION & DATA MAPPING  
+ 
+6. Notion to Dashboard Migration Map  
+This section maps every item from the current Notion workspace to i ts new home in the 
+dashboard, ensuring nothing is lost during migration.  
+ 
+Current Notion Section  Migrates To  Data Action  
+Home > Company Home  Settings > Company Profile  Migrate company info  
+Home > Company Dashboard  CEO Dashboard  Rebuild as live KPI dashboard  
+Home > Tasks Dashboard  Team & Tasks > Task Board  Migrate all tasks  
+Home > Project Dashboard  Team & Tasks > Projects  Migrate projects  
+Home > Team Directory  Team & Tasks > Team Directory  Migrate team records  
+Home > Feedback & Roadmap  Strategy > Roadmap  Migrate roadmap items  
+Plan > Business Plan  Documents > Business Plans  Upload as document  
+Plan > Goals & Objectives  Strategy > OKRs  Convert to OKR format  
+Plan > Company Profile  Settings > Company Profile  Merge with company info  
+Plan > Business Plan One -Pager  Documents > Business Plans  Upload as document  
+Plan > Value Proposition Canvas  Documents > Strategy  Upload as document  
+Plan > Business Portfolio Map  Documents > Strategy  Upload as document  
+Plan > Company OKRs  Strategy > OKRs  Migrate to OKR tracker  
+Plan > Company Culture Map  Documents > HR & Onboarding  Upload as document  
+Plan > Team Alignment Map  Documents > Strategy  Upload as document  
+Launch > Product Launch Plan  Strategy > Roadmap  Convert to roadmap items  
+Launch > Website Launch 
+Checklist  Team & Tasks > Projects  Convert to project + tasks  
+Launch > Strategic Plan  Strategy > Roadmap  Merge into roadmap  
+Launch > Project Plan  Team & Tasks > Projects  Convert to project  
+Events > Booth Designs  Events > Event Records 
+(attachments)  Attach to event records  
+Events > Event Inventory Plan  Events > Event Inventory 
+Planning  Migrate to event inventory  
+Events > Event Leads - Zoho CRM > Event Leads  Import all leads  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 36 Events > Wholesale Inquiry 
+Handling  CRM > Deals Pipeline  Convert to pipeline process  
+Wholesale > strategy + list + 
+CRM xlsx  Sales > Wholesale Management  Import all clients and data  
+Wholesale > B2B Strategy Guide  Documents > Strategy  Upload as document  
+Export > strategy + list  Sales > Export Management  Import export clients  
+NPD > Raw Powder Supplier  Production > R&D (supplier 
+records)  Create supplier records  
+NPD > New Flavor Ideas  Production > R&D  Create R&D project records  
+NPD > Palm Dye Development  Production > R&D  Create R&D project  
+NPD > Date Pit Hojicha  Production > R&D  Create R&D project  
+Product Formulation  Products > Product Catalog 
+(formulations)  Migrate to product records  
+Cafe Add -Ons > Menu Options  Products > Cafe Menu Builder  Migrate menu options  
+Palm Tree Tea Research  Documents > Research  Upload as document  
+Global Village Strategy  Documents > Strategy  Upload as document  
+Ithra Gets Creative  Documents > Strategy  Upload as document  
+Inventory > Inventory 
+Management  Inventory module  Migrate all data to new 
+schema  
+Financials > Financial Tracker  Finance > Revenue + Expenses  Migrate data  
+Financials > Financial Statement  Documents > Financial Docs  Upload as document  
+Financials > Team Subscription 
+Tracker  Finance > Subscription Tracker  Migrate subscriptions  
+Financials > Pricing Strategy doc  Products > Pricing Tiers  Convert to pricing records  
+Grow > Capital  Strategy > Investor Relations  Migrate funding data  
+Grow > Investors Relationship  Strategy > Investor Relations  Migrate investor contacts  
+Marketing > all items  Marketing module  Migrate campaigns and 
+budgets  
+Legal Docs > all items  Documents > Legal & Contracts  Upload all documents  
+Hiring Plan > all items  Team & Tasks > Onboarding  Migrate hiring data  
+Operations > CRM  CRM module  Full CRM data migration  
+Resources > Tools list  Settings > Integrations 
+(reference)  Reference only  
+Databases > raw databases  Backend database (PostgreSQL)  Data migration scripts  
+Archive  Documents > Archive subfolder  Bulk upload  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 37 DEVELOPMENT ROADMAP  
+ 
+7. Development Roadmap  
+Recommended phased approach to building the dashboard:  
+ 
+7.1 Phase 1: Foundation + Sales & Inventory (Weeks 1 -4) 
+• Week 1: Project setup (Next.js, Prisma, PostgreSQL, Auth), sidebar navigation, layout 
+shell, user roles  
+• Week 2: Sales & Orders module (order CRUD, list view, detail drawer, status workflow)  
+• Week 3: Inventory module (raw materials, finished products, stock movement s, alerts)  
+• Week 4: Connect Sales → Inventory flow, basic CEO Dashboard KPIs  
+ 
+7.2 Phase 2: Finance + Production (Weeks 5 -7) 
+• Week 5: Finance module (revenue from orders, expense tracking, P&L view)  
+• Week 6: Production module (batches, QC, R&D tracker)  
+• Week 7: Connect Production → Inventory flow, Finance auto -population, CEO 
+Dashboard charts  
+ 
+7.3 Phase 3: CRM + Products + Team (Weeks 8 -10) 
+• Week 8: CRM (contacts, companies, deals pipeline Kanban)  
+• Week 9: Product Catalog (products, variants, pricing tiers) , Team & Tasks (task board, 
+projects)  
+• Week 10: Connect CRM → Sales flow, wholesale/export management sub -views  
+ 
+7.4 Phase 4: Marketing + Events + Docs + Strategy (Weeks 11 -13) 
+• Week 11: Marketing (campaigns, ad budget, content calendar)  
+• Week 12: Events & Ex pos (event records, event inventory, lead capture)  
+• Week 13: Document Vault, Strategy & OKRs, Settings & Admin, data migration from 
+Notion  
+ 
+7.5 Phase 5: Polish & Launch (Weeks 14 -16) 
+• Week 14: Full CEO Dashboard with all data sources connected, global search , 
+notifications system  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 38 • Week 15: Arabic language support (RTL), mobile responsiveness, performance 
+optimization  
+• Week 16: User acceptance testing, data migration verification, team training, go -live 
+ 
+7.6 Estimated Total Timeline  
+Approximately 16 weeks (4 mon ths) for a single developer. This can be compressed to 10 -12 
+weeks with parallel development or by using a low -code backend like Supabase with pre -built UI 
+components.  
+  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 39 APPENDIX  
+ 
+8. Appendix  
+ 
+8.1 Glossary  
+Term  Definition  
+COGS  Cost of Goods Sold — direct costs of producing Safcha products  
+CRUD  Create, Read, Update, Delete — basic data operations  
+CRM Customer Relationship Management  
+DXA Document XML Architecture units (1440 DXA = 1 inch)  
+KPI Key Performance Indicator  
+MTD Month to Date  
+OKR Objectives and Key Results  
+P&L Profit & Loss statement  
+QC Quality Control  
+R&D Research & Development  
+ROI Return on Investment  
+RTL Right -to-Left (Arabic text direction)  
+SAR Saudi Riyal  
+SFDA  Saudi Food and Drug Authority  
+SKU Stock Keeping Unit — unique product identifier  
+SOP Standard Operating Procedure  
+SSR Server -Side Rendering  
+VAT Value Added Tax (15% in Saudi Arabia)  
+ 
+8.2 Open Questions for Ameen  
+37. Hosting preference: Vercel (recommended for Next.js) or self -hosted?  
+38. Database preference: Supabase (PostgreSQL + auth + storage + real -time) or separate 
+services?  
+39. Email service: Resend, SendGrid, or existing provider?  
+40. Domain for the dashboard: e.g., app.safcha.com or dashboard.safcha.com?  
+Safcha Internal Dashboard — Technical Specification  
+Confidential — Page 40 41. Existing design system or Figma fil es to reference for brand consistency?  
+42. Any existing API integrations to consider (Zoho, payment gateways, shipping)?  
+43. Preferred deployment pipeline: GitHub Actions, Vercel CI/CD?  
+44. Budget for third -party services (Supabase, Vercel, email, file storage)?  
+ 
+8.3 Success Criteria  
+The dashboard will be considered successful when:  
+• All team members can access their relevant modules without confusion  
+• Order -to-cash flow is fully automated end -to-end 
+• CEO can view real -time business metrics without asking anyone  
+• Inventory alerts prevent stockouts before they happen  
+• Financial data is accurate and auto -generated from operations  
+• All current Notion data has been migrated with zero data loss  
+• Page load times are under 2 seconds on standard connection  
+• The team voluntaril y stops using Notion for day -to-day operations  

@@ -48,7 +48,13 @@ const translations = {
       ]
     },
     { name: 'Finance', href: '/finance', icon: DollarSign },
-    { name: 'CRM', href: '/crm', icon: Users },
+    {
+      name: 'CRM', href: '/crm', icon: Users, children: [
+        { name: 'Companies', href: '/crm/companies' },
+        { name: 'Contacts', href: '/crm/contacts' },
+        { name: 'Pipeline', href: '/crm/pipeline' },
+      ]
+    },
     { name: 'Marketing', href: '/marketing', icon: Megaphone },
     { name: 'Events', href: '/events', icon: Calendar },
     { name: 'Team & Tasks', href: '/tasks', icon: CheckSquare },
@@ -81,7 +87,13 @@ const translations = {
       ]
     },
     { name: 'المالية', href: '/finance', icon: DollarSign },
-    { name: 'إدارة العملاء', href: '/crm', icon: Users },
+    {
+      name: 'إدارة العملاء', href: '/crm', icon: Users, children: [
+        { name: 'الشركات', href: '/crm/companies' },
+        { name: 'جهات الاتصال', href: '/crm/contacts' },
+        { name: 'الفرص البيعية', href: '/crm/pipeline' },
+      ]
+    },
     { name: 'التسويق', href: '/marketing', icon: Megaphone },
     { name: 'الفعاليات', href: '/events', icon: Calendar },
     { name: 'المهام والفريق', href: '/tasks', icon: CheckSquare },
