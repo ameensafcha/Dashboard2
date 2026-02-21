@@ -1,10 +1,9 @@
-import { PageHeader } from '@/components/ui/PageHeader';
+import OrdersClient from './OrdersClient';
+
+export const metadata = {
+  title: 'Orders | Safcha',
+};
 
 export default function OrdersPage() {
-  return (
-    <div className="p-4 sm:p-6">
-      <PageHeader title="Orders" />
-      <p style={{ color: 'var(--text-muted)' }}>Orders management coming soon...</p>
-    </div>
-  );
+  return <OrdersClient />;
 }

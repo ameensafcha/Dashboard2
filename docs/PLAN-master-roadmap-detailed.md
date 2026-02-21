@@ -73,25 +73,25 @@ This document is the **Comprehensive Master Plan** for the entire Safcha Dashboa
 - [x] Run `npx prisma db push`.
 
 ### Section 4.2: Orders List View
-- [ ] Create `/orders/page.tsx` displaying a DataTable of all orders.
-- [ ] Add `StatusBadge` component for Order Status (`Draft`, `Confirmed`, `Processing`, `Shipped`, `Delivered`, `Cancelled`).
-- [ ] Add Filter dropdowns for `Channel` and `Status`.
+- [x] Create `/orders/page.tsx` displaying a DataTable of all orders.
+- [x] Add `StatusBadge` component for Order Status (`Draft`, `Confirmed`, `Processing`, `Shipped`, `Delivered`, `Cancelled`).
+- [x] Add Filter dropdowns for `Channel` and `Status`.
 
 ### Section 4.3: New Order Form (Complex)
-- [ ] Create `/orders/new/page.tsx` (Full page form, not a modal).
-- [ ] Auto-generate `ORD-2026-XXXX` ID.
-- [ ] Build "Select Client" dropdown (searches CRM).
-- [ ] **Logic:** Auto-fetch Client's assigned `PricingTier` upon selection.
-- [ ] Build dynamic "Line Items" section to add multiple products.
-- [ ] **Logic:** Auto-calculate Line Item Total = (Qty * Tier Price) - Discount.
-- [ ] **Logic:** Auto-calculate Order Subtotal, VAT (15%), Shipping, and Grand Total.
-- [ ] Build Server Action `createOrder` saving Order and OrderItems simultaneously.
+- [x] Create `/orders/new/page.tsx` (Full page form, not a modal).
+- [x] Auto-generate `ORD-2026-XXXX` ID.
+- [x] Build "Select Client" dropdown (searches CRM).
+- [x] **Logic:** Auto-fetch Client's assigned `PricingTier` upon selection.
+- [x] Build dynamic "Line Items" section to add multiple products.
+- [x] **Logic:** Auto-calculate Line Item Total = (Qty * Tier Price) - Discount.
+- [x] **Logic:** Auto-calculate Order Subtotal, VAT (15%), Shipping, and Grand Total.
+- [x] Build Server Action `createOrder` saving Order and OrderItems simultaneously.
 
 ### Section 4.4: Order Details & Invoicing
-- [ ] Create `/orders/[id]/page.tsx` or Slide-in Drawer for Order Details.
-- [ ] Add "Generate Invoice" button.
-- [ ] Build PDF generation logic for the Invoice (using `jspdf` or similar).
-- [ ] Build Payment Timeline UI component.
+- [x] Create `/orders/[id]/page.tsx` or Slide-in Drawer for Order Details.
+- [x] Add "Generate Invoice" button.
+- [x] Build PDF generation logic for the Invoice (using `jspdf` or similar).
+- [x] Build Payment Timeline UI component.
 
 ---
 
