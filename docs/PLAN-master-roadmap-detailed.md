@@ -98,24 +98,25 @@ This document is the **Comprehensive Master Plan** for the entire Safcha Dashboa
 ## ⏳ Phase 5: Inventory Core
 **Goal:** Build the tables and UI to track raw materials and finished goods.
 ### Section 5.1: Database Foundation
-- [ ] Add `RawMaterial` model to Prisma (Name, SKU, Category, CurrentStock, UnitCost, ReorderThreshold).
-- [ ] Add `FinishedProduct` model to Prisma (Name, Variant, SKU, CurrentStock, ReservedStock, UnitCost, Location).
-- [ ] Add `StockMovement` model to Prisma (MovementID, Date, Type, Quantity, Reason, Notes).
-- [ ] Run `npx prisma db push`.
+- [x] Add `RawMaterial` model to Prisma (Name, SKU, Category, CurrentStock, UnitCost, ReorderThreshold).
+- [x] Add `FinishedProduct` model to Prisma (Name, Variant, SKU, CurrentStock, ReservedStock, UnitCost, Location).
+- [x] Add `StockMovement` model to Prisma (MovementID, Date, Type, Quantity, Reason, Notes).
+- [x] Run `npx prisma db push`.
 
 ### Section 5.2: Raw Materials UI
-- [ ] Create `/inventory/raw-materials/page.tsx` DataTable.
-- [ ] Build `NewMaterialModal.tsx`.
-- [ ] Build Low Stock Alert logic: If `CurrentStock` < `ReorderThreshold`, render row text in red / show warning badge.
+- [x] Create `/inventory/raw-materials/page.tsx` DataTable.
+- [x] Build `NewMaterialModal` with auto-SKU, category, supplier dropdown.
+- [x] Implement Low Stock Alert logic (red badge when stock ≤ threshold).
+- [x] Build `/products/suppliers` page with `NewSupplierModal` for supplier CRUD.
 
 ### Section 5.3: Finished Products UI
-- [ ] Create `/inventory/finished/page.tsx` DataTable.
-- [ ] Display `AvailableStock` as `CurrentStock - ReservedStock`.
+- [x] Create `/inventory/finished/page.tsx` DataTable.
+- [x] Display `AvailableStock` as `CurrentStock - ReservedStock`.
 
 ### Section 5.4: Manual Adjustments
-- [ ] Create `LogMovementModal.tsx` accessible from both UI pages.
-- [ ] Build form to select Type (`Stock In`, `Stock Out`, `Adjustment`), input Quantity, and Reason.
-- [ ] Build Server Action `logMovement` that updates Inventory balances and saves log in a single transaction.
+- [x] Create `LogMovementModal.tsx` accessible from both UI pages.
+- [x] Build form to select Type (`Stock In`, `Stock Out`, `Adjustment`), input Quantity, and Reason.
+- [x] Build Server Action `logMovement` that updates Inventory balances and saves log in a single transaction.
 
 ---
 

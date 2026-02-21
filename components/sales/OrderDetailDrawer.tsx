@@ -154,22 +154,22 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                 <div className="p-6 space-y-8">
                     {/* Quick Metrics */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)] flex flex-col items-center justify-center text-center">
                             <p className="text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider mb-2">Total Amount</p>
-                            <p className="text-lg font-bold text-[var(--text-primary)]">{formatCurrency(order.grandTotal)}</p>
+                            <p className="text-lg font-bold text-[var(--text-primary)] whitespace-nowrap">{formatCurrency(order.grandTotal)}</p>
                         </div>
-                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)] flex flex-col items-center justify-center text-center">
                             <p className="text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider mb-2">Channel</p>
                             <Badge variant="outline" className="uppercase bg-[var(--background)]">{order.channel}</Badge>
                         </div>
-                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)] flex flex-col items-center justify-center text-center">
                             <p className="text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider mb-2">Payment</p>
                             <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                                 <CreditCard className="w-4 h-4 text-[var(--text-secondary)]" />
                                 <span className="capitalize">{order.paymentStatus.replace('_', ' ')}</span>
                             </div>
                         </div>
-                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                        <div className="p-4 rounded-lg bg-[var(--card)] border border-[var(--border)] flex flex-col items-center justify-center text-center">
                             <p className="text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider mb-2">Fulfillment</p>
                             <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                                 <Truck className="w-4 h-4 text-[var(--text-secondary)]" />
@@ -220,9 +220,9 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                                         <tr key={item.id} className="text-[var(--text-primary)] hover:bg-[var(--background)]/80">
                                             <td className="px-4 py-3 font-mono text-xs text-[var(--text-secondary)]">{item.productId.substring(0, 8)}...</td>
                                             <td className="px-4 py-3 text-center">{item.quantity}</td>
-                                            <td className="px-4 py-3 text-right">{formatCurrency(item.unitPrice)}</td>
-                                            <td className="px-4 py-3 text-right text-red-500 font-medium">{item.discount > 0 ? `-${formatCurrency(item.discount)}` : '-'}</td>
-                                            <td className="px-4 py-3 text-right font-bold text-[var(--text-primary)]">{formatCurrency(item.total)}</td>
+                                            <td className="px-4 py-3 text-right whitespace-nowrap">{formatCurrency(item.unitPrice)}</td>
+                                            <td className="px-4 py-3 text-right text-red-500 font-medium whitespace-nowrap" dir="ltr">{item.discount > 0 ? formatCurrency(item.discount) : '-'}</td>
+                                            <td className="px-4 py-3 text-right font-bold text-[var(--text-primary)] whitespace-nowrap">{formatCurrency(item.total)}</td>
                                         </tr>
                                     ))}
                                 </tbody>

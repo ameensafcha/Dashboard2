@@ -1,69 +1,18 @@
-import { Suspense } from 'react';
+import { Metadata } from 'next';
+import SuppliersClient from './SuppliersClient';
 import { getSuppliers } from '@/app/actions/suppliers';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/PageHeader';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Suppliers - Safcha Dashboard',
-  description: 'Manage your suppliers',
+  description: 'Manage raw material and packaging suppliers.',
 };
 
-async function SuppliersList() {
-  const suppliers = await getSuppliers();
-  
-  return (
-    <div>
-      {suppliers.length === 0 ? (
-        <div className="text-center py-12">
-          <p style={{ color: 'var(--text-muted)' }}>No suppliers yet</p>
-        </div>
-      ) : (
-        <div className="rounded-lg border overflow-hidden" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-          <table className="w-full">
-            <thead style={{ background: 'var(--muted)' }}>
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Contact Person</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Phone</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {suppliers.map((supplier) => (
-                <tr key={supplier.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--foreground)' }}>{supplier.name}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{supplier.contactPerson || '-'}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{supplier.email || '-'}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{supplier.phone || '-'}</td>
-                  <td className="px-4 py-3">
-                    <Badge className={supplier.isActive ? 'bg-[#2D6A4F] text-white' : 'bg-gray-400 text-white'}>
-                      {supplier.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Button variant="ghost" size="sm">Edit</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default async function SuppliersPage() {
+  const suppliers = await getSuppliers();
+
   return (
     <div className="p-4 sm:p-6">
-      <PageHeader title="Suppliers" />
-
-      <Suspense fallback={<div>Loading...</div>}>
-        <SuppliersList />
-      </Suspense>
+      <SuppliersClient initialSuppliers={suppliers} />
     </div>
   );
 }

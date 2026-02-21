@@ -21,7 +21,7 @@ export default function RootLayout({
   }, [language, isRTL, theme]);
 
   return (
-    <html lang={language} dir={isRTL ? 'rtl' : 'ltr'} data-theme={theme}>
+    <html lang={language} dir={isRTL ? 'rtl' : 'ltr'} data-theme={theme} suppressHydrationWarning>
       <body>
         <div className="flex h-screen overflow-hidden">
           <Sidebar />

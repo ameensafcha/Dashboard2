@@ -56,6 +56,7 @@ model Product {
   pricingTiers      PricingTier[]
   productionBatches ProductionBatch[]
   orderItems        OrderItem[]
+  finishedProduct   FinishedProduct?
 
   @@map("products")
 }
@@ -423,4 +424,106 @@ model Invoice {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("invoices")
+}
+
+// ==========================================
+// Phase 5: Inventory
+// ==========================================
+
+enum StockMovementType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+  TRANSFER
+  RETURN
+}
+
+enum StockMovementReason {
+  PURCHASE
+  PRODUCTION_INPUT
+  ORDER_FULFILLMENT
+  DAMAGE
+  SAMPLE
+  EVENT
+}
+
+enum MaterialCategory {
+  BASE_POWDER
+  FLAVORING
+  PACKAGING
+  OTHER
+}
+
+enum InventoryLocation {
+  AL_AHSA_WAREHOUSE
+  KHOBAR_OFFICE
+}
+
+model RawMaterial {
+  id               String            @id @default(uuid())
+  name             String
+  sku              String            @unique
+  category         MaterialCategory
+  currentStock     Decimal           @default(0) @map("current_stock") @db.Decimal(10, 3) // Need 3 decimal places for kg precision
+  unitCost         Decimal           @map("unit_cost") @db.Decimal(10, 2)
+  reorderThreshold Decimal?          @map("reorder_threshold") @db.Decimal(10, 3)
+  reorderQuantity  Decimal?          @map("reorder_quantity") @db.Decimal(10, 3)
+  location         InventoryLocation
+  lastRestocked    DateTime?         @map("last_restocked")
+  expiryDate       DateTime?         @map("expiry_date")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  // Optional string reference until full Supplier module is ready
+  supplierId String? @map("supplier_id")
+
+  stockMovements StockMovement[]
+
+  @@map("raw_materials")
+}
+
+model FinishedProduct {
+  id            String            @id @default(uuid())
+  productId     String            @unique @map("product_id")
+  variant       String
+  sku           String            @unique
+  currentStock  Decimal           @default(0) @map("current_stock") @db.Decimal(10, 2)
+  reservedStock Decimal           @default(0) @map("reserved_stock") @db.Decimal(10, 2)
+  unitCost      Decimal           @map("unit_cost") @db.Decimal(10, 2)
+  retailPrice   Decimal           @map("retail_price") @db.Decimal(10, 2)
+  location      InventoryLocation
+  expiryDate    DateTime?         @map("expiry_date")
+  batchNumber   String?           @map("batch_number")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  stockMovements StockMovement[]
+
+  @@map("finished_products")
+}
+
+model StockMovement {
+  id                String              @id @default(uuid())
+  movementId        String              @unique @map("movement_id") // e.g., SM-2026-0001
+  date              DateTime            @default(now())
+  type              StockMovementType
+  quantity          Decimal             @db.Decimal(10, 3) // allow negative or positive, up to 3 decimal places
+  reason            StockMovementReason
+  notes             String?             @db.Text
+  referenceId       String?             @map("reference_id") // stores OrderId, BatchId, etc.
+  performedById     String?             @map("performed_by_id")
+  rawMaterialId     String?             @map("raw_material_id")
+  finishedProductId String?             @map("finished_product_id")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  rawMaterial     RawMaterial?     @relation(fields: [rawMaterialId], references: [id], onDelete: Restrict)
+  finishedProduct FinishedProduct? @relation(fields: [finishedProductId], references: [id], onDelete: Restrict)
+
+  @@index([rawMaterialId])
+  @@index([finishedProductId])
+  @@map("stock_movements")
 }

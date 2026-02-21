@@ -31,7 +31,12 @@ const translations = {
         { name: 'Clients', href: '/sales/clients' },
       ]
     },
-    { name: 'Inventory', href: '/inventory', icon: Package },
+    {
+      name: 'Inventory', href: '/inventory', icon: Package, children: [
+        { name: 'Raw Materials', href: '/inventory/raw-materials' },
+        { name: 'Finished Products', href: '/inventory/finished' },
+      ]
+    },
     {
       name: 'Production', href: '/production', icon: Factory, children: [
         { name: 'Batches', href: '/production/batches' },
@@ -70,7 +75,12 @@ const translations = {
         { name: 'العملاء', href: '/sales/clients' },
       ]
     },
-    { name: 'المخزون', href: '/inventory', icon: Package },
+    {
+      name: 'المخزون', href: '/inventory', icon: Package, children: [
+        { name: 'المواد الخام', href: '/inventory/raw-materials' },
+        { name: 'المنتجات الجاهزة', href: '/inventory/finished' },
+      ]
+    },
     {
       name: 'الإنتاج', href: '/production', icon: Factory, children: [
         { name: 'دفعات الإنتاج', href: '/production/batches' },
