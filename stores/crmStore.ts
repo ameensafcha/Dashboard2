@@ -44,6 +44,29 @@ export type Company = {
     }
 };
 
+export type Contact = {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    companyId: string | null;
+    role: string | null;
+    type: string;
+    source: string;
+    tags: string[];
+    city: string | null;
+    notes: string | null;
+    createdAt: Date;
+    company?: {
+        id: string;
+        name: string;
+        industry: string | null;
+    } | null;
+    _count?: {
+        deals: number;
+    }
+};
+
 interface CrmStore {
     // Companies
     companies: Company[];
@@ -59,6 +82,17 @@ interface CrmStore {
     setIsNewCompanyModalOpen: (isOpen: boolean) => void;
     setIsCompanyDrawerOpen: (isOpen: boolean) => void;
     setSelectedCompany: (company: Company | null) => void;
+
+    // Contacts
+    contacts: Contact[];
+    isNewContactModalOpen: boolean;
+    isContactDrawerOpen: boolean;
+    selectedContact: Contact | null;
+
+    setContacts: (contacts: Contact[]) => void;
+    setIsNewContactModalOpen: (isOpen: boolean) => void;
+    setIsContactDrawerOpen: (isOpen: boolean) => void;
+    setSelectedContact: (contact: Contact | null) => void;
 }
 
 export const useCrmStore = create<CrmStore>((set) => ({
@@ -75,4 +109,14 @@ export const useCrmStore = create<CrmStore>((set) => ({
     setIsNewCompanyModalOpen: (isOpen) => set({ isNewCompanyModalOpen: isOpen }),
     setIsCompanyDrawerOpen: (isOpen) => set({ isCompanyDrawerOpen: isOpen }),
     setSelectedCompany: (company) => set({ selectedCompany: company }),
+
+    contacts: [],
+    isNewContactModalOpen: false,
+    isContactDrawerOpen: false,
+    selectedContact: null,
+
+    setContacts: (contacts) => set({ contacts }),
+    setIsNewContactModalOpen: (isOpen) => set({ isNewContactModalOpen: isOpen }),
+    setIsContactDrawerOpen: (isOpen) => set({ isContactDrawerOpen: isOpen }),
+    setSelectedContact: (contact) => set({ selectedContact: contact }),
 }));
