@@ -34,6 +34,12 @@ const statusColors: Record<string, string> = {
   discontinued: 'bg-[#D32F2F] text-white',
 };
 
+const sfdaStatusColors: Record<string, string> = {
+  approved: 'bg-[#2D6A4F] text-white',
+  pending: 'bg-[#E8A838] text-black',
+  not_submitted: 'bg-[#9E9E9E] text-white',
+};
+
 export default function ProductTable({ products, isLoading }: ProductTableProps) {
   const { setSelectedProduct, setModalOpen, setProductToDelete, setDeleteModalOpen, isModalOpen } = useProductStore();
   const { isRTL } = useAppStore();
@@ -95,6 +101,7 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
               <TableHead className="font-semibold hidden md:table-cell">{isRTL ? 'الفئة' : 'Category'}</TableHead>
               <TableHead className="font-semibold text-center hidden sm:table-cell">{isRTL ? 'متغيرات' : 'Variants'}</TableHead>
               <TableHead className="font-semibold hidden sm:table-cell">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+              <TableHead className="font-semibold hidden lg:table-cell">{isRTL ? 'SFDA' : 'SFDA Status'}</TableHead>
               <TableHead className="font-semibold text-right">{isRTL ? 'السعر' : 'Price'}</TableHead>
             </TableRow>
           </TableHeader>
@@ -106,6 +113,7 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
                 <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
                 <TableCell className="hidden sm:table-cell text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-24" /></TableCell>
+                <TableCell className="hidden lg:table-cell"><Skeleton className="h-6 w-24" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
               </TableRow>
             ))}
@@ -126,12 +134,13 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
               <TableHead className="font-semibold hidden md:table-cell">{isRTL ? 'الفئة' : 'Category'}</TableHead>
               <TableHead className="font-semibold text-center hidden sm:table-cell">{isRTL ? 'الحجم' : 'Size'}</TableHead>
               <TableHead className="font-semibold hidden sm:table-cell">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+              <TableHead className="font-semibold hidden lg:table-cell">{isRTL ? 'SFDA' : 'SFDA Status'}</TableHead>
               <TableHead className="font-semibold text-right">{isRTL ? 'السعر' : 'Price'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
+              <TableCell colSpan={7} className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
                 {isRTL ? 'لا توجد منتجات' : 'No products found'}
               </TableCell>
             </TableRow>
@@ -152,6 +161,7 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
               <TableHead className="font-semibold hidden md:table-cell">{isRTL ? 'الفئة' : 'Category'}</TableHead>
               <TableHead className="font-semibold text-center hidden sm:table-cell">{isRTL ? 'الحجم' : 'Size'}</TableHead>
               <TableHead className="font-semibold hidden sm:table-cell">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+              <TableHead className="font-semibold hidden lg:table-cell">{isRTL ? 'SFDA' : 'SFDA Status'}</TableHead>
               <TableHead className="font-semibold text-right">{isRTL ? 'السعر' : 'Price'}</TableHead>
             </TableRow>
           </TableHeader>
@@ -172,6 +182,11 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
                 <TableCell className="hidden sm:table-cell">
                   <Badge className={statusColors[product.status]}>
                     {productStatuses.find(s => s.value === product.status)?.label}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <Badge className={sfdaStatusColors[product.sfdaStatus] || 'bg-gray-500'}>
+                    {sfdaStatuses.find(s => s.value === product.sfdaStatus)?.label || product.sfdaStatus}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right" style={{ color: 'var(--foreground)' }}>SAR {Number(product.baseRetailPrice).toFixed(2)}</TableCell>
