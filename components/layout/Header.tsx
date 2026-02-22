@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Globe, Moon, Sun, Menu, ArrowRight, Loader2 } from 'lucide-react';
+import { Search, Globe, Moon, Sun, Menu, ArrowRight, Loader2, Info } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useTranslation } from '@/lib/i18n';
 import { performGlobalSearch, SearchResult } from '@/app/actions/globalSearch';
+import { SoftwareFlowDialog } from './SoftwareFlowDialog';
 
 export default function Header() {
   const {
@@ -182,6 +183,18 @@ export default function Header() {
 
       {/* Right Side */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Workflow Info */}
+        <SoftwareFlowDialog>
+          <button
+            className="p-2 rounded-lg transition-colors flex items-center gap-1.5"
+            style={{ color: 'var(--text-secondary)' }}
+            title="How it works"
+          >
+            <Info className="w-5 h-5" />
+            <span className="text-xs font-semibold hidden md:inline">Flow</span>
+          </button>
+        </SoftwareFlowDialog>
+
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}

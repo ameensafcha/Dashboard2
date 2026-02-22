@@ -27,7 +27,7 @@ import { createSupplier } from '@/app/actions/suppliers-create';
 
 interface NewMaterialModalProps {
     onSuccess: () => void;
-    suppliers: { id: string; name: string }[];
+    suppliers: { id: string; name: string; isActive: boolean }[];
 }
 
 export default function NewMaterialModal({ onSuccess, suppliers: initialSuppliers }: NewMaterialModalProps) {
@@ -65,7 +65,7 @@ export default function NewMaterialModal({ onSuccess, suppliers: initialSupplier
         const result = await createSupplier({ name: newSupplierName.trim() });
         setIsSavingSupplier(false);
         if (result.success && result.id) {
-            const newSup = { id: result.id, name: newSupplierName.trim() };
+            const newSup = { id: result.id, name: newSupplierName.trim(), isActive: true };
             setSupplierList(prev => [...prev, newSup]);
             handleChange('supplierId', result.id);
             setNewSupplierName('');

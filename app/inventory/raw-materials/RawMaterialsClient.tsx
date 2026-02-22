@@ -30,7 +30,7 @@ import LogMovementModal from '@/components/inventory/LogMovementModal';
 
 interface Props {
     initialMaterials: RawMaterialData[];
-    suppliers?: { id: string; name: string }[];
+    suppliers?: { id: string; name: string; isActive: boolean }[];
 }
 
 export default function RawMaterialsClient({ initialMaterials, suppliers = [] }: Props) {

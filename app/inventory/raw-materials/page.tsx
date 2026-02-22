@@ -13,5 +13,10 @@ export default async function RawMaterialsPage() {
     const initialData = await getRawMaterials();
     const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true, isActive: true }, where: { isActive: true }, orderBy: { name: 'asc' } });
 
-    return <RawMaterialsClient initialMaterials={initialData.success ? initialData.materials : []} suppliers={suppliers} />;
+    const props = {
+        initialMaterials: (initialData.success && initialData.materials) ? initialData.materials : [],
+        suppliers
+    };
+
+    return <RawMaterialsClient {...(props as any)} />;
 }
