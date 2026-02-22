@@ -37,7 +37,8 @@
 safcha-dashboard/
 ├── app/                          # Next.js App Router pages
 │   ├── layout.tsx                # Root layout (Sidebar + Header + theme)
-│   ├── page.tsx                  # CEO Overview dashboard
+│   ├── page.tsx                  # CEO Dashboard (server → DashboardClient)
+│   ├── DashboardClient.tsx       # KPIs + Recharts + Activity Feed
 │   ├── globals.css               # CSS variables + theme definitions
 │   ├── actions/                  # Server Actions (all data mutations)
 │   │   ├── product/actions.ts    # Product CRUD
@@ -316,7 +317,7 @@ Settings
 | 6 | Inventory + Orders Automation (Reserve, Ship, Cancel) | ✅ Complete |
 | 7 | Production Completion (BatchItems, QC Form, Auto-Inventory) | ✅ Complete |
 | 8 | Finance API (Transactions, Expenses, P&L) | ✅ Complete |
-| 9 | CEO Dashboard (KPIs, Charts, Activity Feed) | ⏳ Pending |
+| 9 | CEO Dashboard (KPIs, Charts, Activity Feed) | ✅ Complete |
 | 10 | Extra Modules (Marketing, Events, Tasks, Documents) | ⏳ Pending |
 
 ### Phase 8: Finance API (NEXT)
@@ -375,4 +376,4 @@ npx prisma studio
 
 ---
 
-*Last updated: 2026-02-22 — After Phase 8 completion*
+*Last updated: 2026-02-22 — After Phase 9 completion*

@@ -166,11 +166,11 @@ This document is the **Comprehensive Master Plan** for the entire Safcha Dashboa
 
 ---
 
-## ⏳ Phase 9: CEO Dashboard (Overview)
+## ✅ Phase 9: CEO Dashboard (Overview)
 **Goal:** Connect all modules into a single real-time snapshot.
-- [ ] **Global KPIs:** Wire up the KPI cards for Total Revenue (Phase 8), Gross Margin (Phase 8), and Inventory Value (Phase 5).
-- [ ] **Charts:** Build Revenue Trend line chart (Recharts) and Sales by Channel donut chart.
-- [ ] **Activity Feed:** Aggregate the latest 20 actions from Orders, Movements, and Batches into a live feed scrolling component.
+- [x] **Global KPIs:** Wire up the KPI cards for Total Revenue (Phase 8), Gross Margin (Phase 8), and Inventory Value (Phase 5).
+- [x] **Charts:** Build Revenue Trend line chart (Recharts) and Sales by Channel donut chart.
+- [x] **Activity Feed:** Aggregate the latest 20 actions from Orders, Movements, and Batches into a live feed scrolling component.
 
 ---
 
