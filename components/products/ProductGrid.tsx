@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useProductStore } from '@/stores/productStore';
 import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from '@/lib/i18n';
 import { productStatuses, sfdaStatuses } from '@/app/actions/product/types';
 import { Edit, Trash2, Package, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -26,12 +27,13 @@ const statusColors: Record<string, string> = {
 };
 
 export function ProductCard({ product, onClick }: { product: ProductType; onClick: () => void }) {
-  const { isRTL } = useAppStore();
+  const { t, isRTL } = useTranslation();
 
   return (
     <Card
-      className="hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+      className="hover:shadow-lg transition-shadow duration-200 cursor-pointer overflow-hidden border-[var(--border)]"
       onClick={onClick}
+      style={{ background: 'var(--card)' }}
     >
       <div className="aspect-square flex items-center justify-center relative" style={{ background: 'var(--muted)' }}>
         {product.image ? (
@@ -42,13 +44,13 @@ export function ProductCard({ product, onClick }: { product: ProductType; onClic
         <Badge
           className={`absolute top-3 ${isRTL ? 'left-3' : 'right-3'} ${statusColors[product.status]}`}
         >
-          {productStatuses.find(s => s.value === product.status)?.label}
+          {t[product.status as keyof typeof t] || product.status}
         </Badge>
       </div>
       <CardContent className="p-4">
-        <p className="font-mono text-sm mb-1" style={{ color: 'var(--text-muted)' }}>{product.skuPrefix}</p>
-        <h3 className="font-semibold text-lg mb-1 truncate" style={{ color: 'var(--foreground)' }}>{product.name}</h3>
-        <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
+        <p className="font-mono text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>{product.skuPrefix}</p>
+        <h3 className="font-semibold text-lg mb-1 truncate" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
+        <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
           {product.category?.name || '-'}
         </p>
         <div className="flex items-center justify-between mt-auto pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
@@ -79,7 +81,7 @@ function ProductCardSkeleton() {
 }
 
 export default function ProductGrid({ products, isLoading }: ProductGridProps) {
-  const { isRTL } = useAppStore();
+  const { t, isRTL } = useTranslation();
   const { setSelectedProduct, setModalOpen, setProductToDelete, setDeleteModalOpen, isModalOpen } = useProductStore();
   const [selectedProduct, setSelectedProductState] = useState<ProductType | null>(null);
 
@@ -130,7 +132,7 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {[...Array(5)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <ProductCardSkeleton key={i} />
         ))}
       </div>
@@ -139,11 +141,19 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
 
   if (products.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Package className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
-        <p style={{ color: 'var(--text-muted)' }}>
-          {isRTL ? 'لا توجد منتجات' : 'No products found'}
-        </p>
+      <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-[var(--muted)]/20 shadow-sm" style={{ borderColor: 'var(--border)' }}>
+        <div className="w-16 h-16 bg-[var(--muted)] rounded-full flex items-center justify-center mx-auto mb-4 border shadow-inner" style={{ borderColor: 'var(--border)' }}>
+          <Package className="w-8 h-8 opacity-40 text-[var(--text-secondary)]" />
+        </div>
+        <h3 className="text-lg font-semibold mb-1 text-[var(--text-primary)]">{t.noProductsYet || 'No products yet'}</h3>
+        <p className="text-sm max-w-xs mx-auto text-[var(--text-secondary)]">{t.addFirstProduct || 'Add your first product to get started'}</p>
+        <Button
+          onClick={() => setModalOpen(true)}
+          variant="outline"
+          className="mt-6 border-[#E8A838] text-[#E8A838] hover:bg-[#E8A838]/10 shadow-sm transition-all active:scale-95"
+        >
+          {t.addNewProduct || 'Add Product'}
+        </Button>
       </div>
     );
   }
@@ -167,7 +177,7 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
           <div className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-xl" style={{ background: 'var(--card)' }}>
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border)' }}>
-              <h2 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{selectedProduct.name}</h2>
+              <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{selectedProduct.name}</h2>
               <div className="flex items-center gap-2">
 
                 <Button onClick={handleEdit} className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2">
@@ -199,51 +209,51 @@ export default function ProductGrid({ products, isLoading }: ProductGridProps) {
               <div className="w-full md:w-1/2 p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'الرمز' : 'SKU'}</p>
-                    <p className="font-mono font-medium" style={{ color: 'var(--foreground)' }}>{selectedProduct.skuPrefix}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'الرمز' : 'SKU'}</p>
+                    <p className="font-mono font-medium" style={{ color: 'var(--text-primary)' }}>{selectedProduct.skuPrefix}</p>
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'الحالة' : 'Status'}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'الحالة' : 'Status'}</p>
                     <Badge className={statusColors[selectedProduct.status]}>
-                      {productStatuses.find(s => s.value === selectedProduct.status)?.label}
+                      {t[selectedProduct.status as keyof typeof t] || selectedProduct.status}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'الفئة' : 'Category'}</p>
-                    <p style={{ color: 'var(--foreground)' }}>{selectedProduct.category?.name || '-'}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'الفئة' : 'Category'}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{selectedProduct.category?.name || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'الحالة FDA' : 'SFDA Status'}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'الحالة FDA' : 'SFDA Status'}</p>
                     <Badge className={selectedProduct.sfdaStatus === 'approved' ? 'bg-[#2D6A4F] text-white' : selectedProduct.sfdaStatus === 'pending' ? 'bg-[#E8A838] text-black' : 'bg-gray-400 text-white'}>
-                      {sfdaStatuses.find(s => s.value === selectedProduct.sfdaStatus)?.label}
+                      {t[selectedProduct.sfdaStatus as keyof typeof t] || selectedProduct.sfdaStatus}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'التكلفة' : 'Base Cost'}</p>
-                    <p style={{ color: 'var(--foreground)' }}>SAR {Number(selectedProduct.baseCost).toFixed(2)}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'التكلفة' : 'Base Cost'}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>SAR {Number(selectedProduct.baseCost).toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'سعر البيع' : 'Retail Price'}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'سعر البيع' : 'Retail Price'}</p>
                     <p className="font-semibold" style={{ color: 'var(--accent-gold)' }}>SAR {Number(selectedProduct.baseRetailPrice).toFixed(2)}</p>
                   </div>
                 </div>
 
                 {selectedProduct.description && (
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'الوصف' : 'Description'}</p>
-                    <p style={{ color: 'var(--foreground)' }}>{selectedProduct.description}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'الوصف' : 'Description'}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{selectedProduct.description}</p>
                   </div>
                 )}
 
                 {selectedProduct.keyIngredients && (
                   <div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'المكونات' : 'Key Ingredients'}</p>
-                    <p style={{ color: 'var(--foreground)' }}>{selectedProduct.keyIngredients}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'المكونات' : 'Key Ingredients'}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{selectedProduct.keyIngredients}</p>
                   </div>
                 )}
 
                 <div className="flex items-center gap-2">
-                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{isRTL ? 'خالي من الكافيين' : 'Caffeine-free'}:</span>
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'خالي من الكافيين' : 'Caffeine-free'}:</span>
                   <Badge className={selectedProduct.caffeineFree ? 'bg-[#2D6A4F] text-white' : 'bg-gray-400 text-white'}>
                     {selectedProduct.caffeineFree ? (isRTL ? 'نعم' : 'Yes') : (isRTL ? 'لا' : 'No')}
                   </Badge>

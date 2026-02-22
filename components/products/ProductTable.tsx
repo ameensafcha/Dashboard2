@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useProductStore } from '@/stores/productStore';
 import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from '@/lib/i18n';
 import { productStatuses, sfdaStatuses } from '@/app/actions/product/types';
 import { Edit, Trash2, Package, X } from 'lucide-react';
 import {
@@ -42,7 +43,7 @@ const sfdaStatusColors: Record<string, string> = {
 
 export default function ProductTable({ products, isLoading }: ProductTableProps) {
   const { setSelectedProduct, setModalOpen, setProductToDelete, setDeleteModalOpen, isModalOpen } = useProductStore();
-  const { isRTL } = useAppStore();
+  const { t, isRTL } = useTranslation();
   const [selectedProductForModal, setSelectedProductForModal] = useState<ProductType | null>(null);
 
   useEffect(() => {
@@ -96,13 +97,13 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
         <Table>
           <TableHeader>
             <TableRow style={{ background: 'var(--muted)' }}>
-              <TableHead className="font-semibold">{isRTL ? 'الرمز' : 'SKU'}</TableHead>
-              <TableHead className="font-semibold">{isRTL ? 'اسم المنتج' : 'Product Name'}</TableHead>
-              <TableHead className="font-semibold hidden md:table-cell">{isRTL ? 'الفئة' : 'Category'}</TableHead>
-              <TableHead className="font-semibold text-center hidden sm:table-cell">{isRTL ? 'متغيرات' : 'Variants'}</TableHead>
-              <TableHead className="font-semibold hidden sm:table-cell">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-              <TableHead className="font-semibold hidden lg:table-cell">{isRTL ? 'SFDA' : 'SFDA Status'}</TableHead>
-              <TableHead className="font-semibold text-right">{isRTL ? 'السعر' : 'Price'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)]">{t.sku || 'SKU'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)]">{t.productName || 'Product Name'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] hidden md:table-cell">{t.category || 'Category'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-center hidden sm:table-cell">{t.size || 'Size'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] hidden sm:table-cell">{t.status || 'Status'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] hidden lg:table-cell">{t.sfdaStatus || 'SFDA Status'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">{t.price || 'Price'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -125,27 +126,19 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
 
   if (products.length === 0) {
     return (
-      <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-        <Table>
-          <TableHeader>
-            <TableRow style={{ background: 'var(--muted)' }}>
-              <TableHead className="font-semibold">{isRTL ? 'الرمز' : 'SKU'}</TableHead>
-              <TableHead className="font-semibold">{isRTL ? 'اسم المنتج' : 'Product Name'}</TableHead>
-              <TableHead className="font-semibold hidden md:table-cell">{isRTL ? 'الفئة' : 'Category'}</TableHead>
-              <TableHead className="font-semibold text-center hidden sm:table-cell">{isRTL ? 'الحجم' : 'Size'}</TableHead>
-              <TableHead className="font-semibold hidden sm:table-cell">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-              <TableHead className="font-semibold hidden lg:table-cell">{isRTL ? 'SFDA' : 'SFDA Status'}</TableHead>
-              <TableHead className="font-semibold text-right">{isRTL ? 'السعر' : 'Price'}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
-                {isRTL ? 'لا توجد منتجات' : 'No products found'}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+      <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-[var(--muted)]/20" style={{ borderColor: 'var(--border)' }}>
+        <div className="w-16 h-16 bg-[var(--muted)] rounded-full flex items-center justify-center mx-auto mb-4 border shadow-inner" style={{ borderColor: 'var(--border)' }}>
+          <Package className="w-8 h-8 opacity-40 text-[var(--text-secondary)]" />
+        </div>
+        <h3 className="text-lg font-semibold mb-1 text-[var(--text-primary)]">{t.noProductsYet || 'No products yet'}</h3>
+        <p className="text-sm max-w-xs mx-auto text-[var(--text-secondary)]">{t.addFirstProduct || 'Add your first product to get started'}</p>
+        <Button
+          onClick={() => setModalOpen(true)}
+          variant="outline"
+          className="mt-6 border-[#E8A838] text-[#E8A838] hover:bg-[#E8A838]/10"
+        >
+          {t.addNewProduct || 'Add Product'}
+        </Button>
       </div>
     );
   }
@@ -156,13 +149,13 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
         <Table>
           <TableHeader>
             <TableRow style={{ background: 'var(--muted)' }}>
-              <TableHead className="font-semibold">{isRTL ? 'الرمز' : 'SKU'}</TableHead>
-              <TableHead className="font-semibold">{isRTL ? 'اسم المنتج' : 'Product Name'}</TableHead>
-              <TableHead className="font-semibold hidden md:table-cell">{isRTL ? 'الفئة' : 'Category'}</TableHead>
-              <TableHead className="font-semibold text-center hidden sm:table-cell">{isRTL ? 'الحجم' : 'Size'}</TableHead>
-              <TableHead className="font-semibold hidden sm:table-cell">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-              <TableHead className="font-semibold hidden lg:table-cell">{isRTL ? 'SFDA' : 'SFDA Status'}</TableHead>
-              <TableHead className="font-semibold text-right">{isRTL ? 'السعر' : 'Price'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)]">{t.sku || 'SKU'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)]">{t.productName || 'Product Name'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] hidden md:table-cell">{t.category || 'Category'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-center hidden sm:table-cell">{t.size || 'Size'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] hidden sm:table-cell">{t.status || 'Status'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] hidden lg:table-cell">{t.sfdaStatus || 'SFDA Status'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">{t.price || 'Price'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -173,10 +166,10 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
                 onClick={() => handleRowClick(product)}
                 className="hover:bg-[var(--muted)] transition-colors"
               >
-                <TableCell className="font-mono text-sm" style={{ color: 'var(--foreground)' }}>{product.skuPrefix}</TableCell>
-                <TableCell className="font-medium" style={{ color: 'var(--foreground)' }}>{product.name}</TableCell>
-                <TableCell className="hidden md:table-cell" style={{ color: 'var(--foreground)' }}>{product.category?.name || '-'}</TableCell>
-                <TableCell className="hidden sm:table-cell text-center" style={{ color: 'var(--foreground)' }}>
+                <TableCell className="font-mono text-sm" style={{ color: 'var(--text-primary)' }}>{product.skuPrefix}</TableCell>
+                <TableCell className="font-medium" style={{ color: 'var(--text-primary)' }}>{product.name}</TableCell>
+                <TableCell className="hidden md:table-cell" style={{ color: 'var(--text-primary)' }}>{product.category?.name || '-'}</TableCell>
+                <TableCell className="hidden sm:table-cell text-center" style={{ color: 'var(--text-primary)' }}>
                   {product.size ? `${Number(product.size)} ${product.unit || ''}` : '-'}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
@@ -189,7 +182,7 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
                     {sfdaStatuses.find(s => s.value === product.sfdaStatus)?.label || product.sfdaStatus}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right" style={{ color: 'var(--foreground)' }}>SAR {Number(product.baseRetailPrice).toFixed(2)}</TableCell>
+                <TableCell className="text-right font-medium" style={{ color: 'var(--text-primary)' }}>SAR {Number(product.baseRetailPrice).toFixed(2)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

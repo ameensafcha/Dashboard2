@@ -51,7 +51,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             value={product.productId || ''}
             onChange={(e) => onChange('productId', e.target.value)}
             placeholder="e.g., 101"
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
           />
         </div>
         <div className="space-y-2">
@@ -64,7 +64,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             value={product.name || ''}
             onChange={(e) => onChange('name', e.target.value)}
             placeholder={t.enterProductName}
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
           />
         </div>
       </div>
@@ -82,9 +82,9 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11">
               <SelectValue placeholder={t.status} />
             </SelectTrigger>
-            <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)]" position="popper" sideOffset={4}>
+            <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)] shadow-xl" position="popper" sideOffset={4}>
               {productStatusOptions.map((status) => (
-                <SelectItem key={status.value} value={status.value} className="cursor-pointer text-[var(--text-primary)] hover:bg-[var(--muted)]">
+                <SelectItem key={status.value} value={status.value} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">
                   {status.label}
                 </SelectItem>
               ))}
@@ -106,7 +106,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
               <SelectValue placeholder={t.allCategories} />
             </SelectTrigger>
             <SelectContent
-              className="z-[100] max-h-60 overflow-auto bg-[var(--card)] border-[var(--border)]"
+              className="z-[100] max-h-60 overflow-auto bg-[var(--card)] border-[var(--border)] shadow-xl"
               position="popper"
               sideOffset={4}
             >
@@ -114,7 +114,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
                 <div className="p-2 text-sm text-[var(--text-secondary)]">{t.noCategoriesYet}</div>
               ) : (
                 categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id} className="cursor-pointer text-[var(--text-primary)] hover:bg-[var(--muted)]">
+                  <SelectItem key={cat.id} value={cat.id} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">
                     {cat.name}
                   </SelectItem>
                 ))
@@ -170,9 +170,9 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11">
               <SelectValue placeholder={t.unit} />
             </SelectTrigger>
-            <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)]" position="popper" sideOffset={4}>
+            <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)] shadow-xl" position="popper" sideOffset={4}>
               {['gm', 'kg', 'ml', 'L'].map(u => (
-                <SelectItem key={u} value={u} className="cursor-pointer text-[var(--text-primary)] hover:bg-[var(--muted)]">{u}</SelectItem>
+                <SelectItem key={u} value={u} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">{u}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -189,7 +189,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
             value={(product as any).size ? Number((product as any).size) : ''}
             onChange={(e) => onChange('size', parseFloat(e.target.value) || 0)}
             placeholder="e.g. 500"
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
           />
         </div>
       </div>
@@ -206,9 +206,9 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
           <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11">
             <SelectValue placeholder={t.sfdaStatus} />
           </SelectTrigger>
-          <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)]" position="popper" sideOffset={4}>
+          <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)] shadow-xl" position="popper" sideOffset={4}>
             {sfdaStatusOptions.map((status) => (
-              <SelectItem key={status.value} value={status.value} className="cursor-pointer text-[var(--text-primary)] hover:bg-[var(--muted)]">
+              <SelectItem key={status.value} value={status.value} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">
                 {status.label}
               </SelectItem>
             ))}
@@ -226,7 +226,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
           value={product.sfdaReference || ''}
           onChange={(e) => onChange('sfdaReference', e.target.value)}
           placeholder="e.g., SFDA-2024-001"
-          className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+          className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
         />
       </div>
 
@@ -241,7 +241,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
           onChange={(e) => onChange('description', e.target.value)}
           placeholder={t.enterProductDescription}
           rows={3}
-          className="w-full px-3 py-2 bg-[var(--muted)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] resize-none transition-all"
+          className="w-full px-3 py-2 bg-[var(--muted)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] resize-none transition-all"
         />
       </div>
 
@@ -255,7 +255,7 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
           value={product.keyIngredients || ''}
           onChange={(e) => onChange('keyIngredients', e.target.value)}
           placeholder="e.g., Natural herbs, spices"
-          className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+          className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
         />
       </div>
 

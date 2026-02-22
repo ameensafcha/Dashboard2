@@ -1,14 +1,14 @@
 'use client';
 
 import { useProductStore } from '@/stores/productStore';
-import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from '@/lib/i18n';
 import { Search, X, Filter } from 'lucide-react';
 import { productStatuses } from '@/app/actions/product/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ProductFilters() {
   const { filters, setFilters, resetFilters } = useProductStore();
-  const { isRTL } = useAppStore();
+  const { t, isRTL } = useTranslation();
 
   const hasFilters = filters.search || filters.status;
 
@@ -18,16 +18,15 @@ export default function ProductFilters() {
         <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 ${isRTL ? 'right-3' : 'left-3'}`} style={{ color: 'var(--text-muted)' }} />
         <input
           type="text"
-          placeholder={isRTL ? 'بحث...' : 'Search products...'}
+          placeholder={t.searchProducts || 'Search products...'}
           value={filters.search}
           onChange={(e) => setFilters({ search: e.target.value })}
-          className={`w-full pl-10 pr-10 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E8A838] focus:border-transparent ${
-            isRTL ? 'pr-10 pl-4' : 'pl-10 pr-10'
-          }`}
-          style={{ 
-            background: 'var(--muted)', 
+          className={`w-full py-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E8A838] focus:border-transparent placeholder:text-[var(--text-secondary)] ${isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'
+            }`}
+          style={{
+            background: 'var(--muted)',
             border: '1px solid var(--border)',
-            color: 'var(--foreground)'
+            color: 'var(--text-primary)'
           }}
         />
         {filters.search && (
@@ -41,14 +40,23 @@ export default function ProductFilters() {
       </div>
 
       <Select value={filters.status || "all"} onValueChange={(value) => setFilters({ status: value === "all" ? "" : value })}>
-        <SelectTrigger className="w-[150px]" style={{ background: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}>
-          <SelectValue placeholder={isRTL ? 'كل الحالات' : 'All Status'} />
+        <SelectTrigger className="w-[160px] h-10 shadow-sm border-[var(--border)]" style={{ background: 'var(--muted)', color: 'var(--text-primary)' }}>
+          <SelectValue placeholder={t.allStatus || 'All Statuses'} />
         </SelectTrigger>
-        <SelectContent style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-          <SelectItem value="all">{isRTL ? 'كل الحالات' : 'All Status'}</SelectItem>
+        <SelectContent className="bg-[var(--card)] border-[var(--border)] min-w-[160px] z-[60] shadow-xl">
+          <SelectItem
+            value="all"
+            className="focus:bg-[#E8A838] focus:text-black text-[var(--text-primary)] cursor-pointer py-2.5"
+          >
+            {t.allStatus || 'All Statuses'}
+          </SelectItem>
           {productStatuses.map((status) => (
-            <SelectItem key={status.value} value={status.value}>
-              {status.label}
+            <SelectItem
+              key={status.value}
+              value={status.value}
+              className="focus:bg-[#E8A838] focus:text-black text-[var(--text-primary)] cursor-pointer py-2.5"
+            >
+              {t[status.value as keyof typeof t] || status.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -57,18 +65,18 @@ export default function ProductFilters() {
       {hasFilters && (
         <button
           onClick={resetFilters}
-          className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg transition-colors"
+          className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg transition-colors hover:bg-[var(--error)]/10"
           style={{ color: 'var(--error)' }}
         >
           <X className="w-4 h-4" />
-          {isRTL ? 'مسح' : 'Clear'}
+          {t.clear || 'Clear'}
         </button>
       )}
 
-      <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-        <Filter className="w-4 h-4" />
-        <span>
-          {hasFilters ? (isRTL ? 'مُفعّل' : 'Active filters') : (isRTL ? 'لا فلتر' : 'No filters')}
+      <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-[var(--muted)]/50 border border-[var(--border)]" style={{ color: 'var(--text-secondary)' }}>
+        <Filter className="w-4 h-4 opacity-70" />
+        <span className="font-medium text-[var(--text-primary)]">
+          {hasFilters ? (t.activeFilters || 'Active filters') : (t.noFilters || 'No filters')}
         </span>
       </div>
     </div>
