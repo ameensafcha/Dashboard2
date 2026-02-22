@@ -22,6 +22,7 @@ type ProductFormState = Partial<Omit<Product, 'baseCost' | 'baseRetailPrice' | '
 };
 
 export default function ProductModal() {
+  const { t, isRTL } = useTranslation();
   const { isModalOpen, setModalOpen, selectedProduct, setSelectedProduct } = useProductStore();
 
   const [formData, setFormData] = useState<ProductFormState>({
@@ -140,33 +141,49 @@ export default function ProductModal() {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {selectedProduct ? 'Edit Product' : 'Add New Product'}
-          </DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0 bg-[var(--card)] border-[var(--border)] shadow-2xl flex flex-col">
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E8A838]/10 flex items-center justify-center text-[#E8A838] border border-[#E8A838]/20 shadow-sm">
+              {selectedProduct ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+            </div>
+            <DialogTitle className="text-2xl font-bold text-[var(--text-primary)]">
+              {selectedProduct ? t.editProduct : t.addNewProduct}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <ProductForm product={formData as any} onChange={handleFieldChange} />
+        <div className="flex-1 overflow-y-auto p-6 pt-2">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <ProductForm product={formData as any} onChange={handleFieldChange} />
+        </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+        <div className="flex justify-end gap-3 p-6 bg-[var(--muted)]/50 border-t" style={{ borderColor: 'var(--border)' }}>
           <Button
             variant="outline"
             onClick={handleClose}
             disabled={isSaving}
+            className="border-[var(--border)] hover:bg-[var(--card)] w-28 text-[var(--text-primary)] transition-all"
           >
-            Cancel
+            {t.cancel}
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving || !formData.name}
-            className="bg-[#E8A838] hover:bg-[#d49a2d] text-black"
+            className="bg-[#E8A838] hover:bg-[#d49a2d] text-black font-semibold px-10 shadow-md transition-all active:scale-95"
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                {selectedProduct ? 'Updating...' : 'Saving...'}
+              </div>
+            ) : t.saveChanges}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+import { Edit, Plus } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';

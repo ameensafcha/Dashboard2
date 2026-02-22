@@ -25,6 +25,8 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useTranslation } from '@/lib/i18n';
+import { Tag, FileText, Info } from 'lucide-react';
 
 function truncateWords(text: string, wordCount: number = 5) {
   if (!text) return '-';
@@ -34,6 +36,7 @@ function truncateWords(text: string, wordCount: number = 5) {
 }
 
 export function CategoriesContent() {
+  const { t, isRTL } = useTranslation();
   const urlSearchParams = useSearchParams();
   const urlSearch = urlSearchParams.get('search') || undefined;
 
@@ -85,7 +88,10 @@ export function CategoriesContent() {
   };
 
   const handleSave = async () => {
-    if (!newCategory.name) return;
+    if (!newCategory.name) {
+      toast({ title: 'Error', description: t.nameRequired, type: 'error' });
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -113,53 +119,63 @@ export function CategoriesContent() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <PageHeader title="Categories" />
+    <div className="p-4 sm:p-6 space-y-6">
+      <PageHeader title={t.categories} />
 
-      <div className="mb-4 flex justify-end">
+      <div className="flex justify-end">
         <Button
           onClick={() => handleOpenModal()}
-          className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2"
+          className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2 font-medium shadow-sm transition-all active:scale-95"
         >
           <Plus className="w-4 h-4" />
-          Add Category
+          {t.addCategory}
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="border rounded-lg" style={{ borderColor: 'var(--border)' }}>
+        <div className="border rounded-xl overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
           <Table>
             <TableHeader>
-              <TableRow style={{ background: 'var(--muted)' }}>
-                <TableHead className="font-semibold">Name</TableHead>
-                <TableHead className="font-semibold">Description</TableHead>
-                <TableHead className="text-right font-semibold">Actions</TableHead>
+              <TableRow style={{ background: 'var(--muted)' }} className="hover:bg-transparent">
+                <TableHead className="font-semibold text-[var(--text-primary)] py-4 px-6">{t.name}</TableHead>
+                <TableHead className="font-semibold text-[var(--text-primary)] py-4">{t.categoryDescription}</TableHead>
+                <TableHead className="text-right font-semibold text-[var(--text-primary)] py-4 px-6">{t.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...Array(3)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-20" /></TableCell>
+                <TableRow key={i} className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
+                  <TableCell className="py-4 px-6"><Skeleton className="h-5 w-32" /></TableCell>
+                  <TableCell className="py-4"><Skeleton className="h-5 w-48" /></TableCell>
+                  <TableCell className="py-4 px-6 text-right"><Skeleton className="h-8 w-8 ml-auto rounded-lg" /></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
       ) : categories.length === 0 ? (
-        <div className="text-center py-12 border rounded-lg" style={{ borderColor: 'var(--border)' }}>
-          <p className="mb-4" style={{ color: 'var(--text-muted)' }}>No categories yet</p>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Add your first category to get started</p>
+        <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-muted/30" style={{ borderColor: 'var(--border)' }}>
+          <div className="w-16 h-16 bg-[var(--muted)] rounded-full flex items-center justify-center mx-auto mb-4 border shadow-inner" style={{ borderColor: 'var(--border)' }}>
+            <Tag className="w-8 h-8 opacity-40 text-[var(--text-secondary)]" />
+          </div>
+          <h3 className="text-lg font-semibold mb-1 text-[var(--text-primary)]">{t.noCategoriesYet}</h3>
+          <p className="text-sm max-w-xs mx-auto text-[var(--text-secondary)]">{t.addFirstCategory}</p>
+          <Button
+            onClick={() => handleOpenModal()}
+            variant="outline"
+            className="mt-6 border-[#E8A838] text-[#E8A838] hover:bg-[#E8A838]/10"
+          >
+            {t.addCategory}
+          </Button>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+        <div className="border rounded-xl overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
           <Table>
             <TableHeader>
-              <TableRow style={{ background: 'var(--muted)' }}>
-                <TableHead className="font-semibold">Name</TableHead>
-                <TableHead className="font-semibold">Description</TableHead>
-                <TableHead className="text-right font-semibold">Actions</TableHead>
+              <TableRow style={{ background: 'var(--muted)' }} className="hover:bg-transparent">
+                <TableHead className="font-semibold text-[var(--text-primary)] py-4 px-6">{t.name}</TableHead>
+                <TableHead className="font-semibold text-[var(--text-primary)] py-4">{t.categoryDescription}</TableHead>
+                <TableHead className="text-right font-semibold text-[var(--text-primary)] py-4 px-6">{t.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -168,17 +184,24 @@ export function CategoriesContent() {
                   key={category.id}
                   style={{ background: 'var(--card)', cursor: 'pointer' }}
                   onClick={() => handleViewCategory(category)}
-                  className="hover:bg-[var(--muted)] transition-colors"
+                  className="hover:bg-[var(--muted)] transition-colors border-b last:border-0"
                 >
-                  <TableCell className="font-medium" style={{ color: 'var(--foreground)' }}>{category.name}</TableCell>
-                  <TableCell style={{ color: 'var(--text-muted)' }}>{truncateWords(category.description || '')}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium py-4 px-6 text-[var(--text-primary)]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--muted)] flex items-center justify-center text-[var(--primary)] border" style={{ borderColor: 'var(--border)' }}>
+                        <Tag className="w-4 h-4" />
+                      </div>
+                      {category.name}
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4 text-[var(--text-secondary)]">{truncateWords(category.description || '')}</TableCell>
+                  <TableCell className="py-4 px-6">
                     <div className="flex items-center justify-end">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleOpenModal(category); }}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ color: 'var(--text-secondary)' }}
-                        title="Edit"
+                        className="p-2 rounded-lg transition-colors hover:bg-[var(--muted)] shadow-sm border"
+                        style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)', background: 'var(--card)' }}
+                        title={t.edit}
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -193,21 +216,38 @@ export function CategoriesContent() {
 
       {/* View Category Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{viewingCategory?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="pt-4">
-            <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Description</p>
-            <p style={{ color: 'var(--foreground)' }}>{viewingCategory?.description || '-'}</p>
+        <DialogContent className="max-w-md bg-[var(--card)] border-[var(--border)] overflow-hidden p-0 tabular-nums">
+          <div className="p-6 pb-0">
+            <DialogHeader className="mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)] border border-[var(--primary)]/20 shadow-sm">
+                  <Info className="w-5 h-5" />
+                </div>
+                <DialogTitle className="text-2xl font-bold text-[var(--text-primary)]">{t.viewCategory}</DialogTitle>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-xs uppercase tracking-wider font-bold text-[var(--text-secondary)] opacity-80 block mb-2">{t.name}</label>
+                <p className="text-lg font-semibold bg-[var(--muted)] p-3 rounded-lg border text-[var(--text-primary)]" style={{ borderColor: 'var(--border)' }}>{viewingCategory?.name}</p>
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wider font-bold text-[var(--text-secondary)] opacity-80 block mb-2">{t.categoryDescription}</label>
+                <div className="bg-[var(--muted)] p-4 rounded-lg border min-h-[100px]" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-[var(--text-primary)] leading-relaxed">{viewingCategory?.description || '-'}</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end pt-4">
+
+          <div className="flex justify-end p-6 bg-[var(--muted)]/50 mt-6 border-t" style={{ borderColor: 'var(--border)' }}>
             <Button
               onClick={() => { setIsViewModalOpen(false); handleOpenModal(viewingCategory ?? undefined); }}
-              className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2"
+              className="bg-[#E8A838] hover:bg-[#d49a2d] text-black gap-2 font-medium px-6"
             >
               <Edit className="w-4 h-4" />
-              Edit
+              {t.edit}
             </Button>
           </div>
         </DialogContent>
@@ -215,49 +255,65 @@ export function CategoriesContent() {
 
       {/* Add/Edit Category Modal */}
       <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</DialogTitle>
+        <DialogContent className="max-w-md bg-[var(--card)] border-[var(--border)] p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#E8A838]/10 flex items-center justify-center text-[#E8A838] border border-[#E8A838]/20 shadow-sm">
+                {editingCategory ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+              </div>
+              <DialogTitle className="text-2xl font-bold text-[var(--text-primary)]">{editingCategory ? t.editCategory : t.addCategory}</DialogTitle>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-4 pt-4">
-            <div>
-              <label className="text-sm font-medium">Name *</label>
+          <div className="p-6 space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                <Tag className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                {t.name} <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={newCategory.name}
                 onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                 placeholder="e.g., Pure Safcha"
-                className="mt-1"
+                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium">Description</label>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                <FileText className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                {t.categoryDescription}
+              </label>
               <Textarea
                 value={newCategory.description}
                 onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                placeholder="Category description"
-                className="mt-1"
-                rows={3}
+                placeholder="Write a brief description about this category..."
+                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] min-h-[120px] resize-none"
               />
             </div>
+          </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={handleCloseModal}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving || !newCategory.name}
-                className="bg-[#E8A838] hover:bg-[#d49a2d] text-black"
-              >
-                {isSaving ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
+          <div className="flex justify-end gap-3 p-6 bg-[var(--muted)]/50 border-t" style={{ borderColor: 'var(--border)' }}>
+            <Button
+              variant="outline"
+              onClick={handleCloseModal}
+              disabled={isSaving}
+              className="border-[var(--border)] hover:bg-[var(--card)] w-24 text-[var(--text-primary)]"
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !newCategory.name}
+              className="bg-[#E8A838] hover:bg-[#d49a2d] text-black font-semibold px-8 shadow-md transition-all active:scale-95"
+            >
+              {isSaving ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  Saving...
+                </div>
+              ) : t.saveChanges}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

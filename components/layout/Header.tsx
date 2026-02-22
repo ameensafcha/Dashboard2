@@ -25,23 +25,23 @@ export default function Header() {
   const [isSearching, setIsSearching] = useState(false);
 
   const searchModules = [
-    { name: t.dashboard || 'Dashboard', href: '/' },
-    { name: t.sales || 'Sales & Orders', href: '/sales' },
-    { name: t.inventory || 'Inventory', href: '/inventory' },
-    { name: t.productionOverview || 'Production Overview', href: '/production' },
-    { name: t.productionBatches || 'Production Batches', href: '/production/batches' },
-    { name: t.qualityControl || 'Quality Control', href: '/production/quality' },
-    { name: t.rnd || 'R&D', href: '/production/rnd' },
-    { name: t.productsDashboard || 'Products', href: '/products' },
-    { name: t.allCategories || 'Categories', href: '/products/categories' },
-    { name: t.pricing || 'Pricing Tiers', href: '/products/pricing' },
-    { name: t.finance || 'Finance', href: '/finance' },
-    { name: t.crm || 'CRM', href: '/crm' },
-    { name: t.settings || 'Settings', href: '/settings' },
+    { name: t.dashboard, href: '/' },
+    { name: t.salesOrders, href: '/sales' },
+    { name: t.inventory, href: '/inventory' },
+    { name: t.productionOverview, href: '/production' },
+    { name: t.productionBatches, href: '/production/batches' },
+    { name: t.qualityControl, href: '/production/quality' },
+    { name: t.rnd, href: '/production/rnd' },
+    { name: t.productsDashboard, href: '/products' },
+    { name: t.categories, href: '/products/categories' },
+    { name: t.pricing, href: '/products/pricing' },
+    { name: t.financeOverview || t.finance, href: '/finance' },
+    { name: t.crm, href: '/crm' },
+    { name: t.settings, href: '/settings' },
   ];
 
   const filteredModules = searchModules.filter(m =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase())
+    m.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Debounce search query to hit the database
