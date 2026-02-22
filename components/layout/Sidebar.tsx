@@ -166,7 +166,7 @@ export default function Sidebar() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center h-14 px-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center justify-center h-14 px-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <h1 className="text-2xl font-black tracking-widest uppercase" style={{ color: 'var(--accent-gold)' }}>SAFCHA</h1>
           <button
             onClick={() => setMobileOpen(false)}

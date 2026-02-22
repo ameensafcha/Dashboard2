@@ -1,40 +1,26 @@
-'use client';
-
-import { useEffect } from 'react';
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
-import { useAppStore } from '@/stores/appStore';
-import { ToastContainer } from '@/components/ui/toast';
+import { Metadata } from 'next';
+import RootClientLayout from '@/components/layout/RootClientLayout';
 import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'Safcha Dashboard',
+  description: 'Premium Manufacturing & Sales Management System',
+  icons: {
+    icon: '/favicon.ico',
+  },
+};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { theme, isRTL, language } = useAppStore();
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [language, isRTL, theme]);
-
   return (
-    <html lang={language} dir={isRTL ? 'rtl' : 'ltr'} data-theme={theme} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Header />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ background: 'var(--background)' }}>
-              <div className="max-w-[1400px] mx-auto">
-                {children}
-              </div>
-            </main>
-          </div>
-        </div>
-        <ToastContainer />
+        <RootClientLayout>
+          {children}
+        </RootClientLayout>
       </body>
     </html>
   );

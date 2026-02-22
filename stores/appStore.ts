@@ -56,8 +56,8 @@ export const useAppStore = create<AppState>()(
       // User - Default CEO for demo
       user: {
         id: '1',
-        name: 'Aziz',
-        email: 'aziz@safcha.com',
+        name: 'Hardcoded',
+        email: 'test@safcha.com',
         role: 'ceo',
         avatar: undefined,
       },
