@@ -68,7 +68,7 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
             <div className="rounded-xl p-5 border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                        <Package className="w-4 h-4" style={{ color: '#E8A838' }} /> All Stock — Konsa Product Kitna Hai
+                        <Package className="w-4 h-4" style={{ color: '#E8A838' }} /> All Stock
                     </h2>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{data.stockBreakdown.length} items</span>
                 </div>
