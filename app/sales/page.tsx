@@ -1,10 +1,7 @@
-import { PageHeader } from '@/components/ui/PageHeader';
+import { getSalesOverview } from '@/app/actions/sales/overview';
+import SalesOverviewClient from './SalesOverviewClient';
 
-export default function SalesPage() {
-  return (
-    <div className="p-4 sm:p-6">
-      <PageHeader title="Sales & Orders" />
-      <p style={{ color: 'var(--text-muted)' }}>Sales module coming soon...</p>
-    </div>
-  );
+export default async function SalesPage() {
+  const data = await getSalesOverview();
+  return <SalesOverviewClient data={data} />;
 }

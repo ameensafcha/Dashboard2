@@ -27,18 +27,20 @@ const translations = {
     { name: 'Overview', href: '/', icon: LayoutDashboard },
     {
       name: 'Sales & Orders', href: '/sales', icon: ShoppingCart, children: [
+        { name: 'Overview', href: '/sales' },
         { name: 'Orders', href: '/sales/orders' },
-        { name: 'Clients', href: '/sales/clients' },
       ]
     },
     {
       name: 'Inventory', href: '/inventory', icon: Package, children: [
+        { name: 'Overview', href: '/inventory' },
         { name: 'Raw Materials', href: '/inventory/raw-materials' },
         { name: 'Finished Products', href: '/inventory/finished' },
       ]
     },
     {
       name: 'Production', href: '/production', icon: Factory, children: [
+        { name: 'Overview', href: '/production' },
         { name: 'Batches', href: '/production/batches' },
         { name: 'Quality Control', href: '/production/quality' },
         { name: 'R&D', href: '/production/rnd' },
@@ -60,6 +62,7 @@ const translations = {
     },
     {
       name: 'CRM', href: '/crm', icon: Users, children: [
+        { name: 'Overview', href: '/crm' },
         { name: 'Companies', href: '/crm/companies' },
         { name: 'Contacts', href: '/crm/contacts' },
         { name: 'Pipeline', href: '/crm/pipeline' },
@@ -76,18 +79,20 @@ const translations = {
     { name: 'نظرة عامة', href: '/', icon: LayoutDashboard },
     {
       name: 'المبيعات والطلبات', href: '/sales', icon: ShoppingCart, children: [
+        { name: 'نظرة عامة', href: '/sales' },
         { name: 'الطلبات', href: '/sales/orders' },
-        { name: 'العملاء', href: '/sales/clients' },
       ]
     },
     {
       name: 'المخزون', href: '/inventory', icon: Package, children: [
+        { name: 'نظرة عامة', href: '/inventory' },
         { name: 'المواد الخام', href: '/inventory/raw-materials' },
         { name: 'المنتجات الجاهزة', href: '/inventory/finished' },
       ]
     },
     {
       name: 'الإنتاج', href: '/production', icon: Factory, children: [
+        { name: 'نظرة عامة', href: '/production' },
         { name: 'دفعات الإنتاج', href: '/production/batches' },
         { name: 'ضبط الجودة', href: '/production/quality' },
         { name: 'البحث والتطوير', href: '/production/rnd' },
@@ -109,6 +114,7 @@ const translations = {
     },
     {
       name: 'إدارة العملاء', href: '/crm', icon: Users, children: [
+        { name: 'نظرة عامة', href: '/crm' },
         { name: 'الشركات', href: '/crm/companies' },
         { name: 'جهات الاتصال', href: '/crm/contacts' },
         { name: 'الفرص البيعية', href: '/crm/pipeline' },

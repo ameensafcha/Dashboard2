@@ -126,8 +126,10 @@ export default function FinishedProductsClient({ initialProducts, catalogProduct
                                 </TableRow>
                             ) : (
                                 sorted.map((fp) => {
-                                    const isLow = fp.availableStock <= 0;
-                                    const isWarn = !isLow && fp.currentStock > 0 && fp.availableStock < fp.currentStock * 0.2;
+                                    const available = fp.currentStock - fp.reservedStock;
+                                    const threshold = (fp as any).reorderThreshold ?? null;
+                                    const isLow = available <= 0;
+                                    const isWarn = !isLow && threshold !== null && available <= threshold;
                                     return (
                                         <TableRow key={fp.id} className={`border-b-[var(--border)] hover:bg-[var(--background)]/50 ${isLow ? 'bg-red-500/5' : isWarn ? 'bg-amber-500/5' : ''}`}>
                                             <TableCell className="font-medium text-[var(--text-primary)]">{fp.product.name}</TableCell>

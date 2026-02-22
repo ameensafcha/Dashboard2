@@ -31,6 +31,7 @@ export async function getFinishedProducts(search?: string, location?: string) {
                 reservedStock: p.reservedStock ? Number(p.reservedStock.toString()) : 0,
                 unitCost: p.unitCost ? Number(p.unitCost.toString()) : 0,
                 retailPrice: p.retailPrice ? Number(p.retailPrice.toString()) : 0,
+                reorderThreshold: p.reorderThreshold ? Number(p.reorderThreshold.toString()) : null,
                 availableStock: Number(p.currentStock.toString()) - Number(p.reservedStock.toString()),
             })),
         };

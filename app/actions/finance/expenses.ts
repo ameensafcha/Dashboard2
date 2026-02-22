@@ -1,7 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
-import { ExpenseCategory } from '@prisma/client';
+import { ExpenseCategory, PaymentMethod } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 // ==========================================
@@ -37,6 +37,7 @@ export async function getExpenses(category?: ExpenseCategory | 'all') {
         return expenses.map(e => ({
             ...e,
             amount: Number(e.amount),
+            vat: Number(e.vat),
         }));
     } catch (error) {
         console.error('Error fetching expenses:', error);
@@ -47,8 +48,10 @@ export async function getExpenses(category?: ExpenseCategory | 'all') {
 export async function createExpense(data: {
     category: ExpenseCategory;
     amount: number;
+    vat?: number;
     description: string;
     vendor?: string;
+    paymentMethod?: PaymentMethod;
     date: Date;
     notes?: string;
 }) {
@@ -65,8 +68,10 @@ export async function createExpense(data: {
                     expenseId,
                     category: data.category,
                     amount: data.amount,
+                    vat: data.vat || 0,
                     description: data.description,
                     vendor: data.vendor || null,
+                    paymentMethod: data.paymentMethod || null,
                     date: data.date,
                     notes: data.notes || null,
                 },
@@ -97,8 +102,10 @@ export async function createExpense(data: {
 export async function updateExpense(id: string, data: {
     category: ExpenseCategory;
     amount: number;
+    vat?: number;
     description: string;
     vendor?: string;
+    paymentMethod?: PaymentMethod;
     date: Date;
     notes?: string;
 }) {
@@ -112,8 +119,10 @@ export async function updateExpense(id: string, data: {
                 data: {
                     category: data.category,
                     amount: data.amount,
+                    vat: data.vat || 0,
                     description: data.description,
                     vendor: data.vendor || null,
+                    paymentMethod: data.paymentMethod || null,
                     date: data.date,
                     notes: data.notes || null,
                 },

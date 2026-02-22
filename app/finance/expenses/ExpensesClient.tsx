@@ -26,6 +26,12 @@ const CATEGORIES = [
     { value: 'other', label: 'Other' },
 ];
 
+const PAYMENT_METHODS = [
+    { value: 'bank_transfer', label: 'Bank Transfer' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'credit_card', label: 'Credit Card' },
+];
+
 const catColors: Record<string, string> = {
     raw_materials: 'bg-orange-500',
     production: 'bg-blue-500',
@@ -43,13 +49,15 @@ interface ExpenseItem {
     expenseId: string;
     category: string;
     amount: number;
+    vat: number;
     description: string;
     vendor: string | null;
+    paymentMethod: string | null;
     date: Date;
     notes: string | null;
 }
 
-const defaultForm = { category: 'other', amount: 0, description: '', vendor: '', date: new Date().toISOString().split('T')[0], notes: '' };
+const defaultForm = { category: 'other', amount: 0, vat: 0, description: '', vendor: '', paymentMethod: '', date: new Date().toISOString().split('T')[0], notes: '' };
 
 export default function ExpensesClient({ initialExpenses }: { initialExpenses: ExpenseItem[] }) {
     const [expenses, setExpenses] = useState(initialExpenses);
@@ -77,8 +85,10 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
         setForm({
             category: e.category,
             amount: e.amount,
+            vat: e.vat || 0,
             description: e.description,
             vendor: e.vendor || '',
+            paymentMethod: e.paymentMethod || '',
             date: new Date(e.date).toISOString().split('T')[0],
             notes: e.notes || '',
         });
@@ -95,8 +105,10 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
         const payload = {
             category: form.category as any,
             amount: form.amount,
+            vat: form.vat || 0,
             description: form.description,
             vendor: form.vendor || undefined,
+            paymentMethod: form.paymentMethod ? form.paymentMethod as any : undefined,
             date: new Date(form.date),
             notes: form.notes || undefined,
         };
@@ -224,12 +236,26 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: E
                             <Input type="number" min={0} step={0.01} value={form.amount || ''} onChange={(e) => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} placeholder="0.00" />
                         </div>
                         <div>
+                            <Label>VAT (SAR)</Label>
+                            <Input type="number" min={0} step={0.01} value={form.vat || ''} onChange={(e) => setForm(f => ({ ...f, vat: parseFloat(e.target.value) || 0 }))} placeholder="0.00 (15%)" />
+                        </div>
+                        <div>
                             <Label>Description *</Label>
                             <Input value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What was this expense for?" />
                         </div>
                         <div>
                             <Label>Vendor</Label>
                             <Input value={form.vendor} onChange={(e) => setForm(f => ({ ...f, vendor: e.target.value }))} placeholder="Supplier / vendor name" />
+                        </div>
+                        <div>
+                            <Label>Payment Method</Label>
+                            <Select value={form.paymentMethod || 'none'} onValueChange={(v) => setForm(f => ({ ...f, paymentMethod: v === 'none' ? '' : v }))}>
+                                <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Not specified</SelectItem>
+                                    {PAYMENT_METHODS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <Label>Date</Label>

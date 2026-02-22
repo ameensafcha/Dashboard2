@@ -1,10 +1,7 @@
-import { PageHeader } from '@/components/ui/PageHeader';
+import { getInventoryOverview } from '@/app/actions/inventory/overview';
+import InventoryOverviewClient from './InventoryOverviewClient';
 
-export default function InventoryPage() {
-  return (
-    <div className="p-4 sm:p-6">
-      <PageHeader title="Inventory" />
-      <p style={{ color: 'var(--text-muted)' }}>Inventory module coming soon...</p>
-    </div>
-  );
+export default async function InventoryPage() {
+  const data = await getInventoryOverview();
+  return <InventoryOverviewClient data={data} />;
 }

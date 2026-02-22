@@ -1,10 +1,7 @@
-import { PageHeader } from '@/components/ui/PageHeader';
+import { getCrmOverview } from '@/app/actions/crm/overview';
+import CrmOverviewClient from './CrmOverviewClient';
 
-export default function CRMPage() {
-  return (
-    <div className="p-4 sm:p-6">
-      <PageHeader title="CRM" />
-      <p style={{ color: 'var(--text-muted)' }}>CRM module coming soon...</p>
-    </div>
-  );
+export default async function CRMPage() {
+  const data = await getCrmOverview();
+  return <CrmOverviewClient data={data} />;
 }
