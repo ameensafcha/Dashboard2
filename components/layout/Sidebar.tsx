@@ -22,6 +22,7 @@ import {
   X
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -97,12 +98,13 @@ export default function Sidebar() {
   return (
     <>
       <div
+        dir={isRTL ? 'rtl' : 'ltr'}
         className={`
           fixed lg:static inset-y-0 z-40
           flex flex-col h-screen w-64 
           transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${isRTL ? 'left-auto right-0' : 'left-0 right-auto'}
+          ${mobileOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')}
+          ${isRTL ? 'right-0' : 'left-0'}
         `}
         style={{
           background: 'var(--sidebar)',
@@ -111,12 +113,11 @@ export default function Sidebar() {
           borderLeft: isRTL ? '1px solid var(--border)' : 'none'
         }}
       >
-        <div className="flex items-center justify-center h-14 px-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center justify-between h-14 px-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <h1 className="text-2xl font-black tracking-widest uppercase" style={{ color: 'var(--accent-gold)' }}>SAFCHA</h1>
           <button
             onClick={() => setMobileOpen(false)}
             className="lg:hidden p-1.5 rounded-md hover:bg-white/10 transition-colors"
-            style={{ marginLeft: isRTL ? 0 : 'auto', marginRight: isRTL ? 'auto' : 0 }}
           >
             <X className="w-5 h-5 opacity-70" />
           </button>
@@ -133,47 +134,66 @@ export default function Sidebar() {
               return (
                 <li key={item.name} className="flex flex-col">
                   {item.children ? (
-                    <div className={`flex items-center w-full rounded-lg transition-all duration-200 ease-in-out cursor-pointer group ${isActive
-                      ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
-                      : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                      }`}>
+                    <div className={cn(
+                      "flex items-center w-full rounded-lg transition-all duration-200 ease-in-out cursor-pointer group",
+                      isActive
+                        ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
+                        : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                    )}>
                       <Link
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
-                        className="flex items-center flex-1 px-3 py-2.5"
+                        className="flex items-center flex-1 pr-3 pl-3 py-2.5 gap-3"
                       >
-                        <item.icon className={`w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity ${isActive ? 'text-black' : ''}`} style={{ marginRight: isRTL ? 0 : 12, marginLeft: isRTL ? 12 : 0 }} />
-                        <span className="truncate flex-1 text-left" style={{ textAlign: isRTL ? 'right' : 'left' }}>{item.name}</span>
+                        <item.icon className={cn(
+                          "w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity",
+                          isActive ? 'text-black' : ''
+                        )} />
+                        <span className="truncate flex-1 text-start font-medium">{item.name}</span>
                       </Link>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           toggleMenu(item.name);
                         }}
-                        className="p-2.5 flex items-center justify-center hover:bg-black/10 rounded-r-lg"
+                        className={cn(
+                          "p-2.5 flex items-center justify-center hover:bg-black/10 transition-colors",
+                          isRTL ? "rounded-l-lg border-r border-white/5" : "rounded-r-lg border-l border-white/5"
+                        )}
                       >
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 opacity-70 ${isMenuOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={cn(
+                          "w-4 h-4 transition-transform duration-200 opacity-70",
+                          isMenuOpen ? 'rotate-180' : ''
+                        )} />
                       </button>
                     </div>
                   ) : (
                     <Link
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer group ${isActive
-                        ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
-                        : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                        }`}
+                      className={cn(
+                        "flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer group gap-3",
+                        isActive
+                          ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
+                          : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                      )}
                     >
-                      <item.icon className={`w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity ${isActive ? 'text-black' : ''}`} style={{ marginRight: isRTL ? 0 : 12, marginLeft: isRTL ? 12 : 0 }} />
-                      <span className="truncate text-left flex-1" style={{ textAlign: isRTL ? 'right' : 'left' }}>{item.name}</span>
+                      <item.icon className={cn(
+                        "w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity",
+                        isActive ? 'text-black' : ''
+                      )} />
+                      <span className="truncate text-start flex-1 font-medium">{item.name}</span>
                     </Link>
                   )}
 
                   {item.children && (
                     <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${isMenuOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+                      className={cn(
+                        "overflow-hidden transition-all duration-300 ease-in-out",
+                        isMenuOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                      )}
                     >
-                      <ul className="space-y-0.5 py-1" style={{ paddingLeft: isRTL ? 0 : 42, paddingRight: isRTL ? 42 : 0 }}>
+                      <ul className="space-y-0.5 py-1" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: 28 }}>
                         {item.children.map((child) => {
                           const isChildActive = pathname === child.href;
                           return (
@@ -181,13 +201,20 @@ export default function Sidebar() {
                               <Link
                                 href={child.href}
                                 onClick={() => setMobileOpen(false)}
-                                className={`flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer ${isChildActive
-                                  ? 'text-[var(--accent-gold)] font-medium bg-white/10'
-                                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                  }`}
+                                className={cn(
+                                  "flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer gap-3",
+                                  isChildActive
+                                    ? 'text-[var(--accent-gold)] font-medium bg-white/10'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                )}
                               >
-                                <div className={`w-1.5 h-1.5 rounded-full ${isRTL ? 'ml-3' : 'mr-3'} ${isChildActive ? 'bg-[var(--accent-gold)] shadow-[0_0_5px_var(--accent-gold)]' : 'bg-transparent border border-gray-600'}`} />
-                                {child.name}
+                                <div className={cn(
+                                  "w-1.5 h-1.5 rounded-full transition-all duration-300 flex-shrink-0",
+                                  isChildActive
+                                    ? "bg-[var(--accent-gold)] scale-110 shadow-[0_0_8px_var(--accent-gold)]"
+                                    : "bg-transparent border border-gray-600 group-hover:border-gray-400"
+                                )} />
+                                <span className="truncate text-start">{child.name}</span>
                               </Link>
                             </li>
                           );
@@ -202,11 +229,11 @@ export default function Sidebar() {
         </nav>
 
         <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <div className="flex items-center hover:bg-white/10 p-2 rounded-xl cursor-pointer transition-all duration-200 ease-in-out border border-transparent hover:border-white/10">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-bold flex-shrink-0 shadow-sm" style={{ background: 'var(--accent-gold)' }}>
+          <div className="flex items-center hover:bg-white/10 p-2 rounded-xl cursor-pointer transition-all duration-200 ease-in-out border border-transparent hover:border-white/10 group">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-bold flex-shrink-0 shadow-md group-hover:scale-105 transition-transform" style={{ background: 'var(--accent-gold)' }}>
               {user?.name?.[0] || 'A'}
             </div>
-            <div className="ml-3 truncate" style={{ marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0 }}>
+            <div className={cn("truncate", isRTL ? "mr-3" : "ml-3")}>
               <p className="text-sm font-semibold truncate text-white">{user?.name || 'Ameen Safcha'}</p>
               <p className="text-xs text-gray-400 capitalize truncate mt-0.5">{user?.role || 'Admin User'}</p>
             </div>

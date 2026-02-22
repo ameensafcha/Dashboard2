@@ -6,6 +6,8 @@ import { PricingTierWithCategory } from '@/app/actions/pricing';
 import { Button } from '@/components/ui/button';
 import { PricingTierDialog } from './PricingTierDialog';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
+import { Layers, Plus, Edit2, AlertCircle } from 'lucide-react';
 
 interface PricingPageContentProps {
     categories: Category[];
@@ -13,6 +15,7 @@ interface PricingPageContentProps {
 }
 
 export function PricingPageContent({ categories, initialTiers }: PricingPageContentProps) {
+    const { t, isRTL } = useTranslation();
     const [activeCategoryId, setActiveCategoryId] = useState<string>(
         categories.length > 0 ? categories[0].id : ''
     );
@@ -35,8 +38,12 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
 
     if (categories.length === 0) {
         return (
-            <div className="text-center py-12">
-                <p style={{ color: 'var(--text-muted)' }}>No categories found. Please create categories first.</p>
+            <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-[var(--muted)]/20" style={{ borderColor: 'var(--border)' }}>
+                <div className="w-16 h-16 bg-[var(--muted)] rounded-full flex items-center justify-center mx-auto mb-4 border shadow-inner" style={{ borderColor: 'var(--border)' }}>
+                    <AlertCircle className="w-8 h-8 opacity-40 text-[var(--text-secondary)]" />
+                </div>
+                <h3 className="text-lg font-semibold mb-1 text-[var(--text-primary)]">{t.noCategoriesYet}</h3>
+                <p className="text-sm max-w-xs mx-auto text-[var(--text-secondary)]">{t.addFirstCategory}</p>
             </div>
         )
     }
@@ -50,10 +57,10 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
                         key={category.id}
                         onClick={() => setActiveCategoryId(category.id)}
                         className={cn(
-                            "px-4 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-all border",
+                            "px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border shadow-sm",
                             activeCategoryId === category.id
-                                ? "bg-[#E8A838] text-black border-[#E8A838] shadow-sm"
-                                : "bg-background text-muted-foreground border-border hover:bg-secondary/50 hover:text-foreground"
+                                ? "bg-[#E8A838] text-black border-[#E8A838] shadow-md scale-105"
+                                : "bg-[var(--card)] text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--muted)] hover:text-[var(--text-primary)]"
                         )}
                     >
                         {category.name}
@@ -64,9 +71,10 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
             <div className="flex justify-end">
                 <Button
                     onClick={handleAddNew}
-                    className="bg-[#E8A838] hover:bg-[#d49a2d] text-black"
+                    className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-md transition-all active:scale-95 gap-2"
                 >
-                    Add Tier
+                    <Plus className="w-4 h-4" />
+                    {t.addTier}
                 </Button>
                 <PricingTierDialog
                     key={editingTier?.id ?? 'new'}
@@ -79,42 +87,65 @@ export function PricingPageContent({ categories, initialTiers }: PricingPageCont
             </div>
 
             {/* Pricing Tiers Table */}
-            <div>
+            <div className="overflow-hidden">
                 {filteredTiers.length === 0 ? (
-                    <div className="text-center py-12 rounded-lg border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-                        <p style={{ color: 'var(--text-muted)' }}>No pricing tiers for this category</p>
+                    <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-[var(--muted)]/20 shadow-sm" style={{ borderColor: 'var(--border)' }}>
+                        <div className="w-16 h-16 bg-[var(--muted)] rounded-full flex items-center justify-center mx-auto mb-4 border shadow-inner" style={{ borderColor: 'var(--border)' }}>
+                            <Layers className="w-8 h-8 opacity-40 text-[var(--text-secondary)]" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-1 text-[var(--text-primary)]">{t.noTiersForCategory || 'No pricing tiers for this category'}</h3>
+                        <p className="text-sm max-w-xs mx-auto text-[var(--text-secondary)]">{t.addFirstProduct || 'Add your first tier to get started'}</p>
+                        <Button
+                            onClick={handleAddNew}
+                            variant="outline"
+                            className="mt-6 border-[#E8A838] text-[#E8A838] hover:bg-[#E8A838]/10"
+                        >
+                            {t.addTier}
+                        </Button>
                     </div>
                 ) : (
-                    <div className="rounded-lg border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                    <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                         <table className="w-full">
-                            <thead className="" style={{ background: 'var(--muted)' }}>
+                            <thead style={{ background: 'var(--muted)' }}>
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold">Tier Name</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold">Min Order (kg)</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold">Max Order (kg)</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold">Price/kg</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold">Discount</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">{t.tierName}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">{t.minOrder}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">{t.maxOrder}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">{t.pricePerKg}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">{t.discount}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">{t.actions}</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-[var(--border)]">
                                 {filteredTiers.map((tier) => (
-                                    <tr key={tier.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
-                                        <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tier.tierName}</td>
-                                        <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tier.minOrderKg.toString()}</td>
-                                        <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>
+                                    <tr
+                                        key={tier.id}
+                                        className="hover:bg-[var(--muted)]/40 transition-colors group cursor-pointer"
+                                        onClick={() => handleEdit(tier)}
+                                    >
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--text-primary)]">{tier.tierName}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-secondary)]">{tier.minOrderKg.toString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-secondary)]">
                                             {tier.maxOrderKg ? tier.maxOrderKg.toString() : '-'}
                                         </td>
-                                        <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>SAR {tier.pricePerKg.toString()}</td>
-                                        <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tier.discountPercent.toString()}%</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[var(--accent-gold)]">SAR {tier.pricePerKg.toString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-secondary)]">
+                                            <span className="px-2 py-1 rounded-full bg-[var(--muted)] text-[var(--text-primary)] text-xs font-bold">
+                                                {tier.discountPercent.toString()}%
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="cursor-pointer hover:bg-[#E8A838]/20 hover:text-[#E8A838]"
-                                                onClick={() => handleEdit(tier)}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E8A838]/20 hover:text-[#E8A838] gap-1"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEdit(tier);
+                                                }}
                                             >
-                                                Edit
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                                {t.edit}
                                             </Button>
                                         </td>
                                     </tr>

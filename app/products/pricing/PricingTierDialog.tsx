@@ -1,8 +1,10 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus } from 'lucide-react';
+import { Plus, Hash, Layers, DollarSign, Percent, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -22,16 +24,11 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { createPricingTier, updatePricingTier, PricingTierWithCategory } from '@/app/actions/pricing';
 import { toast } from '@/components/ui/toast';
 import { Category } from '@prisma/client';
+import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
     categoryId: z.string().min(1, 'Category is required'),
@@ -52,6 +49,7 @@ interface PricingTierDialogProps {
 }
 
 export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: controlledOpen, onOpenChange }: PricingTierDialogProps) {
+    const { t, isRTL } = useTranslation();
     const [internalOpen, setInternalOpen] = useState(false);
     const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const setOpen = onOpenChange || setInternalOpen;
@@ -77,11 +75,11 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
             form.reset({
                 categoryId: tierToEdit.categoryId || '',
                 tierName: tierToEdit.tierName,
-                minOrderKg: tierToEdit.minOrderKg,
-                maxOrderKg: tierToEdit.maxOrderKg,
-                pricePerKg: tierToEdit.pricePerKg,
-                discountPercent: tierToEdit.discountPercent,
-                marginPercent: tierToEdit.marginPercent,
+                minOrderKg: Number(tierToEdit.minOrderKg),
+                maxOrderKg: tierToEdit.maxOrderKg ? Number(tierToEdit.maxOrderKg) : 0,
+                pricePerKg: Number(tierToEdit.pricePerKg),
+                discountPercent: Number(tierToEdit.discountPercent),
+                marginPercent: Number(tierToEdit.marginPercent),
             });
         } else if (defaultCategoryId) {
             form.reset({
@@ -107,19 +105,18 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
 
             if (result.success) {
                 toast({
-                    title: 'Success',
-                    description: `Pricing tier ${tierToEdit ? 'updated' : 'created'} successfully`,
+                    title: t.success,
+                    description: tierToEdit ? t.tierUpdated : t.tierCreated,
                     type: 'success',
                 });
                 setOpen(false);
                 form.reset();
-                // Re-set the default category after reset if adding new
                 if (!tierToEdit && defaultCategoryId) {
                     form.setValue('categoryId', defaultCategoryId);
                 }
             } else {
                 toast({
-                    title: 'Error',
+                    title: t.error,
                     description: result.error || 'Failed to save pricing tier',
                     type: 'error',
                 });
@@ -127,7 +124,7 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
         } catch (err) {
             console.error(err);
             toast({
-                title: 'Error',
+                title: t.error,
                 description: 'Something went wrong',
                 type: 'error',
             });
@@ -138,22 +135,24 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
         <Dialog open={isOpen} onOpenChange={setOpen}>
             {controlledOpen === undefined && (
                 <DialogTrigger asChild>
-                    <Button className="bg-[#E8A838] hover:bg-[#d49a2d] text-black">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Tier
+                    <Button className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-md transition-all active:scale-95 gap-2">
+                        <Plus className="w-4 h-4" />
+                        {t.addTier}
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[425px]" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-                <DialogHeader>
-                    <DialogTitle>{tierToEdit ? 'Edit Pricing Tier' : 'Add Pricing Tier'}</DialogTitle>
-                    <DialogDescription>
-                        {tierToEdit ? 'Update the details for this pricing tier.' : 'Create a new pricing tier linked to a category.'}
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="sm:max-w-[500px] border-[var(--border)] shadow-2xl p-0 overflow-hidden" style={{ background: 'var(--card)' }}>
+                <div className="bg-[var(--muted)]/50 p-6 border-b border-[var(--border)]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-[var(--text-primary)]">{tierToEdit ? t.editTier : t.addNewTier}</DialogTitle>
+                        <DialogDescription className="text-[var(--text-secondary)]">
+                            {tierToEdit ? (t.editTier) : (t.addNewTier)}
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        {/* Hidden category field */}
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-6">
                         <FormField
                             control={form.control}
                             name="categoryId"
@@ -167,9 +166,16 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
                             name="tierName"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Tier Name</FormLabel>
+                                    <FormLabel className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                                        <Layers className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                                        {t.tierName}
+                                    </FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g. Standard Wholesale" {...field} />
+                                        <Input
+                                            placeholder="e.g. Standard Wholesale"
+                                            {...field}
+                                            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -182,9 +188,17 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
                                 name="minOrderKg"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Min Order (kg)</FormLabel>
+                                        <FormLabel className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                                            <Hash className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                                            {t.minOrder}
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.01" {...field} />
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                {...field}
+                                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -195,14 +209,18 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
                                 name="maxOrderKg"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Max Order (kg)</FormLabel>
+                                        <FormLabel className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                                            <Hash className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                                            {t.maxOrder}
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
                                                 step="0.01"
                                                 value={field.value ?? ''}
                                                 onChange={field.onChange}
-                                                placeholder="Optional"
+                                                placeholder={t.optional || "Optional"}
+                                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -217,9 +235,17 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
                                 name="pricePerKg"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Price / kg (SAR)</FormLabel>
+                                        <FormLabel className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                                            <DollarSign className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                                            {t.pricePerKg} (SAR)
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.01" {...field} />
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                {...field}
+                                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -230,9 +256,17 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
                                 name="discountPercent"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Discount (%)</FormLabel>
+                                        <FormLabel className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                                            <Percent className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                                            {t.discount} (%)
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.1" {...field} />
+                                            <Input
+                                                type="number"
+                                                step="0.1"
+                                                {...field}
+                                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -245,18 +279,30 @@ export function PricingTierDialog({ defaultCategoryId, tierToEdit, open: control
                             name="marginPercent"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Margin (%)</FormLabel>
+                                    <FormLabel className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                                        <Percent className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
+                                        {t.margin} (%)
+                                    </FormLabel>
                                     <FormControl>
-                                        <Input type="number" step="0.1" {...field} />
+                                        <Input
+                                            type="number"
+                                            step="0.1"
+                                            {...field}
+                                            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <DialogFooter>
-                            <Button type="submit" className="bg-[#E8A838] hover:bg-[#d49a2d] text-black">
-                                {tierToEdit ? 'Update Tier' : 'Save Tier'}
+                        <DialogFooter className="pt-4 border-t border-[var(--border)]">
+                            <Button
+                                type="submit"
+                                className="w-full bg-[#E8A838] hover:bg-[#d49a2d] text-black font-bold h-11 shadow-lg shadow-[#E8A838]/20 transition-all active:scale-95 gap-2"
+                            >
+                                {tierToEdit ? t.updateTier : t.saveTier}
+                                <ChevronRight className={cn("w-4 h-4 transition-transform", isRTL ? "rotate-180" : "")} />
                             </Button>
                         </DialogFooter>
                     </form>
