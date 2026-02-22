@@ -48,6 +48,7 @@ const translations = {
     },
     {
       name: 'Products', href: '/products', icon: Coffee, children: [
+        { name: 'Overview', href: '/products' },
         { name: 'Product Catalog', href: '/products/catalog' },
         { name: 'Categories', href: '/products/categories' },
         { name: 'Pricing Tiers', href: '/products/pricing' },
@@ -100,6 +101,7 @@ const translations = {
     },
     {
       name: 'المنتجات', href: '/products', icon: Coffee, children: [
+        { name: 'نظرة عامة', href: '/products' },
         { name: 'كتالوج المنتجات', href: '/products/catalog' },
         { name: 'الفئات', href: '/products/categories' },
         { name: 'فئات التسعير', href: '/products/pricing' },

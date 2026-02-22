@@ -66,10 +66,14 @@ export const translations = {
         allStatuses: 'All Statuses',
         active: 'Active',
         draft: 'Draft',
-        archived: 'Archived', 
+        archived: 'Archived',
         name: 'Name',
         sku: 'SKU',
         price: 'Price',
+        totalProducts: 'Total Products',
+        categories: 'Categories',
+        sfdaApproved: 'SFDA Approved',
+        activeProducts: 'Active Products',
     },
     ar: {
         dashboard: 'لوحة التحكم',
@@ -139,6 +143,10 @@ export const translations = {
         name: 'الاسم',
         sku: 'رمز التخزين',
         price: 'السعر',
+        totalProducts: 'إجمالي المنتجات',
+        categories: 'الفئات',
+        sfdaApproved: 'معتمد من الغذاء والدواء',
+        activeProducts: 'المنتجات النشطة',
     }
 };
 

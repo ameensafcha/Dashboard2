@@ -122,8 +122,8 @@ export default function ProductModal() {
       if (selectedProduct) {
         await updateProduct(selectedProduct, dataToSave as unknown as Partial<Product>);
         toast({ title: 'Success', description: 'Product updated successfully', type: 'success' });
-        await loadProduct(selectedProduct);
         window.dispatchEvent(new Event('refresh-products'));
+        handleClose();
       } else {
         await createProduct(dataToSave as unknown as Partial<Product>);
         toast({ title: 'Success', description: 'Product created successfully', type: 'success' });
