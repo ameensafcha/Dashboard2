@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getProducts, ProductsResponse } from '@/app/actions/product/actions';
 import { getProductionBatches, createProductionBatch, ProductionBatchWithProduct } from '@/app/actions/production';
+import { getRawMaterials } from '@/app/actions/inventory/raw-materials';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/toast';
 import { useProductionStore } from '@/stores/productionStore';
 import { useTranslation } from '@/lib/i18n';
-import { Trash2, Edit2, Save } from 'lucide-react';
+import { Trash2, Edit2, Save, Plus, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,13 +59,22 @@ export default function ProductionBatchesPage() {
     setIsDeleteDialogOpen,
   } = useProductionStore();
 
+  // Raw material rows for batch creation
+  type MaterialRow = { rawMaterialId: string; materialName: string; quantityUsed: number };
+  const [materialRows, setMaterialRows] = useState<MaterialRow[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<{ id: string; name: string; currentStock: number }[]>([]);
+
   const loadData = async () => {
-    const [batchesData, productsData] = await Promise.all([
+    const [batchesData, productsData, rmData] = await Promise.all([
       getProductionBatches(),
       getProducts({ page: 1, limit: 100, search: '', status: '' }) as Promise<ProductsResponse>,
+      getRawMaterials(),
     ]);
     setBatches(batchesData);
     setProducts(productsData.products || []);
+    if (rmData.success && rmData.materials) {
+      setRawMaterials(rmData.materials.map((m: any) => ({ id: m.id, name: m.name, currentStock: m.currentStock })));
+    }
   };
 
   useEffect(() => {
@@ -91,12 +100,14 @@ export default function ProductionBatchesPage() {
         qualityScore: formData.qualityScore >= 1 && formData.qualityScore <= 10 ? formData.qualityScore : undefined,
         producedBy: formData.producedBy || undefined,
         notes: formData.notes || undefined,
+        batchItems: materialRows.filter(r => r.rawMaterialId && r.quantityUsed > 0),
       });
 
       if (result.success) {
         toast({ title: 'Success', description: 'Batch created successfully' });
         setIsModalOpen(false);
         resetForm();
+        setMaterialRows([]);
         loadData();
       } else {
         toast({ title: 'Error', description: result.error || 'Failed to create batch', type: 'error' });
@@ -343,6 +354,48 @@ export default function ProductionBatchesPage() {
                 onChange={(e) => setFormData({ notes: e.target.value })}
                 placeholder="Production notes, issues encountered"
               />
+            </div>
+
+            {/* Raw Materials Used (Phase 7.1) */}
+            <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="font-semibold">Raw Materials Used</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => setMaterialRows(prev => [...prev, { rawMaterialId: '', materialName: '', quantityUsed: 0 }])}>
+                  <Plus className="w-3 h-3 mr-1" /> Add Material
+                </Button>
+              </div>
+              {materialRows.length === 0 && (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No raw materials added. Click &quot;Add Material&quot; to track consumption.</p>
+              )}
+              {materialRows.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <Select value={row.rawMaterialId} onValueChange={(v) => {
+                    const mat = rawMaterials.find(m => m.id === v);
+                    setMaterialRows(prev => prev.map((r, i) => i === idx ? { ...r, rawMaterialId: v, materialName: mat?.name || '' } : r));
+                  }}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select material" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rawMaterials.map(m => (
+                        <SelectItem key={m.id} value={m.id}>{m.name} ({m.currentStock} kg)</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    placeholder="Qty (kg)"
+                    className="w-24"
+                    value={row.quantityUsed || ''}
+                    min={0}
+                    step={0.1}
+                    onChange={(e) => setMaterialRows(prev => prev.map((r, i) => i === idx ? { ...r, quantityUsed: parseFloat(e.target.value) || 0 } : r))}
+                  />
+                  <button type="button" onClick={() => setMaterialRows(prev => prev.filter((_, i) => i !== idx))} className="p-1 rounded hover:bg-red-500/10 text-red-500">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">

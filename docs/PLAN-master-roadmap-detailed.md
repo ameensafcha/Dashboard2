@@ -154,15 +154,15 @@ This document is the **Comprehensive Master Plan** for the entire Safcha Dashboa
 
 ---
 
-## ⏳ Phase 8: Finance API
+## ✅ Phase 8: Finance API
 **Goal:** Generate Revenue automatically when orders are delivered.
 ### Section 8.1: Transactions
-- [ ] Add `Transaction`, `Expense` models to Prisma.
-- [ ] Map logic in `updateOrderStatus`: If changing to `Delivered`, auto-create a Revenue `Transaction` equal to the Grand Total.
+- [x] Add `Transaction`, `Expense` models to Prisma.
+- [x] Map logic in `updateOrderStatus`: If changing to `Delivered`, auto-create a Revenue `Transaction` equal to the Grand Total.
 
 ### Section 8.2: Expenses & P&L
-- [ ] Create `/finance/expenses` DataTable and `NewExpenseModal.tsx`.
-- [ ] Create P&L Dashboard calculating (Total Revenue - Total Expenses). 
+- [x] Create `/finance/expenses` DataTable and `NewExpenseModal.tsx`.
+- [x] Create P&L Dashboard calculating (Total Revenue - Total Expenses). 
 
 ---
 

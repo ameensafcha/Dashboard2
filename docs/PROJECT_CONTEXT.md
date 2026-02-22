@@ -77,7 +77,11 @@ safcha-dashboard/
 │   │   ├── batches/page.tsx      # Production Batches DataTable + Modals
 │   │   ├── quality/              # QC Checklist form + History
 │   │   └── rnd/                  # R&D Projects
-│   ├── finance/                  # Finance (placeholder)
+│   ├── finance/                  # Finance module
+│   │   ├── page.tsx              # P&L Dashboard (KPIs + Transactions)
+│   │   └── expenses/
+│   │       ├── page.tsx          # Expenses DataTable
+│   │       └── ExpensesClient.tsx # Client-side table + modal
 │   ├── marketing/                # Marketing (placeholder)
 │   ├── events/                   # Events (placeholder)
 │   ├── tasks/                    # Team & Tasks (placeholder)
@@ -246,6 +250,21 @@ Manual stock adjustments using `prisma.$transaction`:
 1. Creates `StockMovement` record
 2. Updates `RawMaterial.currentStock` or `FinishedProduct.currentStock` atomically
 
+### 4.4 Order Delivered → Revenue (Phase 8)
+**File:** `app/actions/sales/update-order-status.ts`
+
+When order status → `delivered`:
+1. Auto-creates `Transaction(type: revenue, amount: grandTotal)`
+2. Transaction ID: `TXN-YYYY-XXXX`
+3. References order number in `referenceId`
+
+### 4.5 Expense → Transaction (Phase 8)
+**File:** `app/actions/finance/expenses.ts`
+
+When expense is created/updated/deleted:
+1. Corresponding `Transaction(type: expense)` is created/updated/deleted in same `$transaction`
+2. Expense ID: `EXP-YYYY-XXXX`
+
 ---
 
 ## 5. UI PATTERNS & CONVENTIONS
@@ -296,7 +315,7 @@ Settings
 | 5 | Inventory Core (Raw Materials, Finished Products, Stock Movements) | ✅ Complete |
 | 6 | Inventory + Orders Automation (Reserve, Ship, Cancel) | ✅ Complete |
 | 7 | Production Completion (BatchItems, QC Form, Auto-Inventory) | ✅ Complete |
-| 8 | Finance API (Transactions, Expenses, P&L) | ⏳ Pending |
+| 8 | Finance API (Transactions, Expenses, P&L) | ✅ Complete |
 | 9 | CEO Dashboard (KPIs, Charts, Activity Feed) | ⏳ Pending |
 | 10 | Extra Modules (Marketing, Events, Tasks, Documents) | ⏳ Pending |
 
@@ -356,4 +375,4 @@ npx prisma studio
 
 ---
 
-*Last updated: 2026-02-21 — After Phase 7 completion*
+*Last updated: 2026-02-22 — After Phase 8 completion*

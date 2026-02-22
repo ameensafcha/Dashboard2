@@ -527,3 +527,55 @@ model StockMovement {
   @@index([finishedProductId])
   @@map("stock_movements")
 }
+
+// ==========================================
+// Phase 8: Finance
+// ==========================================
+
+enum TransactionType {
+  revenue
+  expense
+}
+
+enum ExpenseCategory {
+  raw_materials
+  production
+  shipping
+  marketing
+  salaries
+  rent
+  utilities
+  equipment
+  other
+}
+
+model Transaction {
+  id            String          @id @default(uuid())
+  transactionId String          @unique @map("transaction_id") // e.g., TXN-2026-0001
+  type          TransactionType
+  amount        Decimal         @db.Decimal(10, 2)
+  description   String
+  date          DateTime        @default(now())
+  referenceId   String?         @map("reference_id") // OrderNumber for revenue, Expense ID for expenses
+  orderId       String?         @map("order_id")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@map("transactions")
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  expenseId   String          @unique @map("expense_id") // e.g., EXP-2026-0001
+  category    ExpenseCategory
+  amount      Decimal         @db.Decimal(10, 2)
+  description String
+  vendor      String?
+  date        DateTime        @default(now())
+  receiptUrl  String?         @map("receipt_url")
+  notes       String?         @db.Text
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@map("expenses")
+}

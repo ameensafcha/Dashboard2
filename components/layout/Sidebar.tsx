@@ -52,7 +52,12 @@ const translations = {
         { name: 'Suppliers', href: '/products/suppliers' },
       ]
     },
-    { name: 'Finance', href: '/finance', icon: DollarSign },
+    {
+      name: 'Finance', href: '/finance', icon: DollarSign, children: [
+        { name: 'Overview', href: '/finance' },
+        { name: 'Expenses', href: '/finance/expenses' },
+      ]
+    },
     {
       name: 'CRM', href: '/crm', icon: Users, children: [
         { name: 'Companies', href: '/crm/companies' },
@@ -96,7 +101,12 @@ const translations = {
         { name: 'الموردون', href: '/products/suppliers' },
       ]
     },
-    { name: 'المالية', href: '/finance', icon: DollarSign },
+    {
+      name: 'المالية', href: '/finance', icon: DollarSign, children: [
+        { name: 'نظرة عامة', href: '/finance' },
+        { name: 'المصروفات', href: '/finance/expenses' },
+      ]
+    },
     {
       name: 'إدارة العملاء', href: '/crm', icon: Users, children: [
         { name: 'الشركات', href: '/crm/companies' },

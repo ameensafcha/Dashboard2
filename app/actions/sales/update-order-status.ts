@@ -124,8 +124,26 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                 }
             }
 
-            // --- DELIVERED ---
+            // --- DELIVERED: Auto-create revenue transaction ---
             if (newStatus === 'delivered') {
+                // Generate TXN ID
+                const year = new Date().getFullYear();
+                const txnCount = await tx.transaction.count({
+                    where: { transactionId: { startsWith: `TXN-${year}` } },
+                });
+                const txnId = `TXN-${year}-${String(txnCount + 1).padStart(4, '0')}`;
+
+                await tx.transaction.create({
+                    data: {
+                        transactionId: txnId,
+                        type: 'revenue',
+                        amount: order.grandTotal,
+                        description: `Revenue from order ${order.orderNumber}`,
+                        referenceId: order.orderNumber,
+                        orderId: order.id,
+                    },
+                });
+
                 await tx.order.update({
                     where: { id: orderId },
                     data: { fulfillmentStatus: 'fulfilled' },
@@ -141,6 +159,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
         revalidatePath('/sales/orders');
         revalidatePath('/inventory/finished');
+        revalidatePath('/finance');
         return { success: true };
     } catch (error) {
         console.error('Error updating order status:', error);
