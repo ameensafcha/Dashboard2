@@ -18,6 +18,7 @@ type InventoryOverviewData = {
     lowStockItems: { name: string; sku: string; type: string; currentStock: number; threshold: number }[];
     expiringItems: { name: string; sku: string; type: string; expiryDate: string }[];
     recentMovements: { movementId: string; type: string; quantity: number; reason: string; itemName: string; time: string }[];
+    stockBreakdown: { name: string; sku: string; type: string; stock: number; value: number }[];
 };
 
 function daysUntil(dateStr: string) {
@@ -61,6 +62,50 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Stock Breakdown Table — shows WHAT is in stock */}
+            <div className="rounded-xl p-5 border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                        <Package className="w-4 h-4" style={{ color: '#E8A838' }} /> All Stock — Konsa Product Kitna Hai
+                    </h2>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{data.stockBreakdown.length} items</span>
+                </div>
+                {data.stockBreakdown.length === 0 ? (
+                    <div className="py-6 text-center" style={{ color: 'var(--text-muted)' }}>No stock items yet</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <th className="text-left py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Item</th>
+                                    <th className="text-left py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>SKU</th>
+                                    <th className="text-left py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Type</th>
+                                    <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Stock</th>
+                                    <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.stockBreakdown.map(item => (
+                                    <tr key={item.sku} className="hover:bg-[var(--background)]/50" style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td className="py-2.5 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>{item.name}</td>
+                                        <td className="py-2.5 px-3 font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{item.sku}</td>
+                                        <td className="py-2.5 px-3">
+                                            <Badge className={item.type === 'Raw Material' ? 'bg-blue-500 text-white text-[10px]' : 'bg-green-500 text-white text-[10px]'}>{item.type}</Badge>
+                                        </td>
+                                        <td className={`py-2.5 px-3 text-right font-semibold ${item.stock <= 0 ? 'text-red-500' : ''}`} style={item.stock > 0 ? { color: 'var(--text-primary)' } : {}}>
+                                            {item.stock}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-right" style={{ color: 'var(--text-secondary)' }}>
+                                            SAR {item.value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             {/* Low Stock + Expiring */}

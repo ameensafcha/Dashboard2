@@ -104,6 +104,22 @@ export async function getInventoryOverview() {
                 itemName: m.rawMaterial?.name || (m.finishedProduct ? `${m.finishedProduct.product.name} - ${m.finishedProduct.variant}` : 'Unknown'),
                 time: m.createdAt.toISOString(),
             })),
+            stockBreakdown: [
+                ...rawMaterials.map(m => ({
+                    name: m.name,
+                    sku: m.sku,
+                    type: 'Raw Material' as const,
+                    stock: Number(m.currentStock),
+                    value: Math.round(Number(m.currentStock) * Number(m.unitCost) * 100) / 100,
+                })),
+                ...finishedProducts.map(p => ({
+                    name: `${p.product.name} - ${p.variant}`,
+                    sku: p.sku,
+                    type: 'Finished' as const,
+                    stock: Number(p.currentStock) - Number(p.reservedStock),
+                    value: Math.round(Number(p.currentStock) * Number(p.unitCost) * 100) / 100,
+                })),
+            ],
         };
     } catch (error) {
         console.error('Error fetching inventory overview:', error);
@@ -112,6 +128,7 @@ export async function getInventoryOverview() {
             lowStockItems: [],
             expiringItems: [],
             recentMovements: [],
+            stockBreakdown: [],
         };
     }
 }

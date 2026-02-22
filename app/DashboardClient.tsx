@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useAppStore } from '@/stores/appStore';
 import {
     DollarSign, ShoppingCart, Package, Users, TrendingUp, TrendingDown,
-    ArrowRight, Receipt, BarChart3, Activity,
+    ArrowRight, Receipt, BarChart3, Activity, AlertTriangle,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend,
@@ -42,6 +43,7 @@ type DashboardData = {
     revenueTrend: { month: string; revenue: number; expenses: number }[];
     salesByChannel: { name: string; value: number }[];
     activityFeed: { text: string; time: string; type: string }[];
+    lowStockAlerts: { name: string; sku: string; type: string; currentStock: number; threshold: number }[];
 };
 
 export default function DashboardClient({ data }: { data: DashboardData }) {
@@ -138,13 +140,13 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
                                     outerRadius={90}
                                     paddingAngle={3}
                                     dataKey="value"
-                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                                 >
                                     {data.salesByChannel.map((_, i) => (
                                         <Cell key={i} fill={CHANNEL_COLORS[i % CHANNEL_COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value: number) => `SAR ${value.toLocaleString()}`} />
+                                <Tooltip formatter={(value: any) => `SAR ${Number(value).toLocaleString()}`} />
                             </PieChart>
                         </ResponsiveContainer>
                     ) : (
@@ -154,6 +156,37 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
                     )}
                 </div>
             </div>
+
+            {/* Low Stock Alerts */}
+            {data.lowStockAlerts.length > 0 && (
+                <div className="rounded-xl p-5 border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                            <AlertTriangle className="w-4 h-4 text-red-500" /> Low Stock Alerts
+                        </h2>
+                        <Link href="/inventory" className="text-xs flex items-center gap-1" style={{ color: 'var(--primary)' }}>
+                            View Inventory <ArrowRight className="w-3 h-3" />
+                        </Link>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {data.lowStockAlerts.map(item => (
+                            <div key={item.sku} className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: 'var(--border)', background: 'rgba(239,68,68,0.05)' }}>
+                                <div>
+                                    <span className="text-sm font-medium block" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <Badge className={item.type === 'Raw Material' ? 'bg-blue-500 text-white text-[10px] px-1.5 py-0' : 'bg-green-500 text-white text-[10px] px-1.5 py-0'}>{item.type}</Badge>
+                                        <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{item.sku}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-lg font-bold text-red-500">{item.currentStock}</span>
+                                    <span className="text-xs block" style={{ color: 'var(--text-muted)' }}>min: {item.threshold}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Quick Actions + Activity Feed */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

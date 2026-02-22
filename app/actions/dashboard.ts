@@ -47,9 +47,9 @@ export async function getDashboardData() {
             // Active clients
             prisma.client.count(),
             // Raw materials for inventory value
-            prisma.rawMaterial.findMany({ select: { currentStock: true, unitCost: true } }),
+            prisma.rawMaterial.findMany({ select: { name: true, sku: true, currentStock: true, unitCost: true, reorderThreshold: true } }),
             // Finished products for inventory value
-            prisma.finishedProduct.findMany({ select: { currentStock: true, retailPrice: true } }),
+            prisma.finishedProduct.findMany({ select: { currentStock: true, reservedStock: true, retailPrice: true, reorderThreshold: true, sku: true, variant: true, product: { select: { name: true } } } }),
         ]);
 
         const revMTD = revenueThisMonth._sum.amount ? Number(revenueThisMonth._sum.amount) : 0;
@@ -164,6 +164,26 @@ export async function getDashboardData() {
             revenueTrend,
             salesByChannel,
             activityFeed,
+            lowStockAlerts: [
+                ...rawMaterials
+                    .filter(m => m.reorderThreshold && Number(m.currentStock) <= Number(m.reorderThreshold))
+                    .map(m => ({
+                        name: m.name,
+                        sku: m.sku,
+                        type: 'Raw Material' as const,
+                        currentStock: Number(m.currentStock),
+                        threshold: Number(m.reorderThreshold),
+                    })),
+                ...finishedProducts
+                    .filter(p => p.reorderThreshold && (Number(p.currentStock) - Number(p.reservedStock)) <= Number(p.reorderThreshold))
+                    .map(p => ({
+                        name: `${p.product.name} - ${p.variant}`,
+                        sku: p.sku,
+                        type: 'Finished' as const,
+                        currentStock: Number(p.currentStock) - Number(p.reservedStock),
+                        threshold: Number(p.reorderThreshold),
+                    })),
+            ],
         };
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -179,6 +199,7 @@ export async function getDashboardData() {
             revenueTrend: [],
             salesByChannel: [],
             activityFeed: [],
+            lowStockAlerts: [],
         };
     }
 }

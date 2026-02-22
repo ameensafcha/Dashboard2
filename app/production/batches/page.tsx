@@ -242,7 +242,7 @@ export default function ProductionBatchesPage() {
       </div>
 
       {/* New Batch Modal - Each input in own row */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) { resetForm(); setMaterialRows([]); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t.createNewBatch}</DialogTitle>
