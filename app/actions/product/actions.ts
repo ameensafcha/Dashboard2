@@ -20,7 +20,7 @@ const productSchema = z.object({
   unit: z.string().optional(),
   image: z.string().nullable().optional(),
   status: z.nativeEnum(ProductStatus).optional(),
-  launchDate: z.date().nullable().optional(),
+  launchDate: z.coerce.date().nullable().optional(),
 });
 
 export interface GetProductsParams {

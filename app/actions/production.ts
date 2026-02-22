@@ -1,7 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
-import { Prisma, BatchStatus, RndStatus } from '@prisma/client';
+import { Prisma, BatchStatus, RndStatus, StockMovementType, StockMovementReason } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -43,7 +43,17 @@ export type ProductionBatchWithProduct = {
   updatedAt: Date;
   product: { id: string; name: string; size?: number | null; unit?: string | null } | null;
   batchItems: { id: string; materialName: string; quantityUsed: number }[];
-  qualityChecks: { id: string; overallScore: number; passed: boolean; checkedAt: Date }[];
+  qualityChecks: {
+    id: string;
+    overallScore: number;
+    passed: boolean;
+    checkedAt: Date;
+    visualInspection?: string;
+    weightVerification?: string;
+    tasteTest?: string;
+    sfdaCompliance?: string;
+    notes?: string | null;
+  }[];
 };
 
 async function generateBatchNumber(date: Date = new Date()): Promise<string> {
@@ -101,7 +111,7 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
       return [];
     }
 
-    return batches.map((b: any) => ({
+    return batches.map((b) => ({
       ...b,
       product: b.product ? {
         ...b.product,
@@ -110,7 +120,7 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
       targetQty: b.targetQty?.toNumber() || 0,
       actualQty: b.actualQty?.toNumber() ?? null,
       yieldPercent: b.yieldPercent?.toNumber() ?? null,
-      batchItems: b.batchItems?.map((item: any) => ({
+      batchItems: b.batchItems?.map((item) => ({
         ...item,
         quantityUsed: item.quantityUsed?.toNumber() || 0,
       })) || [],
@@ -148,7 +158,7 @@ export async function getProductionBatchById(id: string) {
         ...item,
         quantityUsed: item.quantityUsed?.toNumber() || 0,
       })) || [],
-      qualityChecks: batch.qualityChecks?.map((qc: any) => ({
+      qualityChecks: batch.qualityChecks?.map((qc) => ({
         ...qc,
         overallScore: qc.overallScore || 0,
       })) || [],
@@ -367,20 +377,37 @@ export async function createQualityCheck(data: {
         });
 
         // 3a. INCREASE Finished Product stock by actualQty
-        const fp = batch.product.finishedProduct;
-        if (fp && batch.actualQty) {
-          const qty = Number(batch.actualQty);
-          await tx.finishedProduct.update({
-            where: { id: fp.id },
-            data: { currentStock: { increment: qty } },
-          });
+        let fp = batch.product.finishedProduct;
+        const qty = batch.actualQty ? Number(batch.actualQty) : 0;
+
+        if (qty > 0) {
+          if (!fp) {
+            // Auto-create FinishedProduct if missing
+            fp = await tx.finishedProduct.create({
+              data: {
+                productId: batch.productId,
+                variant: 'Standard',
+                sku: `fp-${batch.product.skuPrefix}-${Date.now().toString().slice(-4)}`,
+                currentStock: qty,
+                unitCost: Number(batch.product.baseCost),
+                retailPrice: Number(batch.product.baseRetailPrice),
+                location: 'AL_AHSA_WAREHOUSE',
+                batchNumber: batch.batchNumber,
+              },
+            });
+          } else {
+            await tx.finishedProduct.update({
+              where: { id: fp.id },
+              data: { currentStock: { increment: qty } },
+            });
+          }
 
           counter++;
           await tx.stockMovement.create({
             data: {
               movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
               type: 'STOCK_IN',
-              reason: 'PURCHASE', // closest enum for production output
+              reason: 'PURCHASE', // Closest enum for now
               quantity: qty,
               referenceId: batch.batchNumber,
               finishedProductId: fp.id,
@@ -419,6 +446,7 @@ export async function createQualityCheck(data: {
     revalidatePath('/production/batches');
     revalidatePath('/inventory/finished');
     revalidatePath('/inventory/raw-materials');
+    revalidatePath('/inventory');
     return { success: true };
   } catch (error) {
     console.error('Error creating quality check:', error);
@@ -444,6 +472,22 @@ export async function updateQualityCheck(id: string, data: {
     if (!existing) return { success: false, error: 'QC record not found.' };
 
     await prisma.$transaction(async (tx) => {
+      // 1. Get current batch and product info for inventory automation
+      const batch = await tx.productionBatch.findUnique({
+        where: { id: existing.batchId },
+        include: {
+          product: { include: { finishedProduct: true } },
+          batchItems: true,
+        },
+      });
+
+      if (!batch) throw new Error('Batch not found');
+
+      const oldPassed = existing.passed;
+      const newPassed = data.passed;
+      const actualQty = batch.actualQty ? Number(batch.actualQty) : 0;
+
+      // 2. Update QC record
       await tx.qualityCheck.update({
         where: { id },
         data: {
@@ -461,15 +505,132 @@ export async function updateQualityCheck(id: string, data: {
         },
       });
 
-      // Update batch status based on new pass/fail
+      // 3. Update batch status
       await tx.productionBatch.update({
         where: { id: existing.batchId },
         data: {
           qualityScore: data.overallScore,
-          status: data.passed ? 'completed' : 'failed',
+          status: newPassed ? 'completed' : 'failed',
         },
       });
+
+      // 4. Handle Inventory Sync if pass status changed
+      if (oldPassed !== newPassed && actualQty > 0) {
+        const year = new Date().getFullYear();
+        let counter = await tx.stockMovement.count({
+          where: { movementId: { startsWith: `SM-${year}` } },
+        });
+
+        let fp = batch.product.finishedProduct;
+
+        if (newPassed) {
+          // FAILED -> PASSED: Increase Finished Product, Decrease Raw Materials
+          if (!fp) {
+            fp = await tx.finishedProduct.create({
+              data: {
+                productId: batch.productId,
+                variant: 'Standard',
+                sku: `fp-${batch.product.skuPrefix}-${Date.now().toString().slice(-4)}`,
+                currentStock: actualQty,
+                unitCost: Number(batch.product.baseCost),
+                retailPrice: Number(batch.product.baseRetailPrice),
+                location: 'AL_AHSA_WAREHOUSE',
+                batchNumber: batch.batchNumber,
+              },
+            });
+          } else {
+            await tx.finishedProduct.update({
+              where: { id: fp.id },
+              data: { currentStock: { increment: actualQty } },
+            });
+          }
+
+          counter++;
+          await tx.stockMovement.create({
+            data: {
+              movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+              type: 'STOCK_IN',
+              reason: 'PURCHASE',
+              quantity: actualQty,
+              referenceId: batch.batchNumber,
+              finishedProductId: fp.id,
+              notes: `Auto: QC update (Fail -> Pass) for batch ${batch.batchNumber}`,
+            },
+          });
+
+          // Decrease Raw Materials
+          for (const item of batch.batchItems) {
+            if (item.rawMaterialId) {
+              await tx.rawMaterial.update({
+                where: { id: item.rawMaterialId },
+                data: { currentStock: { decrement: Number(item.quantityUsed) } },
+              });
+              counter++;
+              await tx.stockMovement.create({
+                data: {
+                  movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+                  type: 'STOCK_OUT',
+                  reason: 'PRODUCTION_INPUT',
+                  quantity: Number(item.quantityUsed),
+                  referenceId: batch.batchNumber,
+                  rawMaterialId: item.rawMaterialId,
+                  notes: `Auto: Consumption sync (QC update) for batch ${batch.batchNumber}`,
+                },
+              });
+            }
+          }
+        } else {
+          // PASSED -> FAILED: Decrease Finished Product, Increase Raw Materials
+          if (fp) {
+            await tx.finishedProduct.update({
+              where: { id: fp.id },
+              data: { currentStock: { decrement: actualQty } },
+            });
+
+            counter++;
+            await tx.stockMovement.create({
+              data: {
+                movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+                type: StockMovementType.STOCK_OUT,
+                reason: StockMovementReason.DAMAGE, // Closest reversal/adjustment
+                quantity: actualQty,
+                referenceId: batch.batchNumber,
+                finishedProductId: fp.id,
+                notes: `Auto: QC update (Pass -> Fail) reversal for batch ${batch.batchNumber}`,
+              },
+            });
+          }
+
+          // Increase Raw Materials
+          for (const item of batch.batchItems) {
+            if (item.rawMaterialId) {
+              await tx.rawMaterial.update({
+                where: { id: item.rawMaterialId },
+                data: { currentStock: { increment: Number(item.quantityUsed) } },
+              });
+              counter++;
+              await tx.stockMovement.create({
+                data: {
+                  movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+                  type: StockMovementType.STOCK_IN,
+                  reason: StockMovementReason.PRODUCTION_INPUT, // Reversing consumption
+                  quantity: Number(item.quantityUsed),
+                  referenceId: batch.batchNumber,
+                  rawMaterialId: item.rawMaterialId,
+                  notes: `Auto: Consumption reversal (QC update) for batch ${batch.batchNumber}`,
+                },
+              });
+            }
+          }
+        }
+      }
     });
+
+    revalidatePath('/production/quality');
+    revalidatePath('/production/batches');
+    revalidatePath('/inventory/finished');
+    revalidatePath('/inventory/raw-materials');
+    revalidatePath('/inventory');
 
     revalidatePath('/production/quality');
     revalidatePath('/production/batches');
@@ -486,9 +647,24 @@ export async function deleteQualityCheck(id: string) {
     if (!existing) return { success: false, error: 'QC record not found.' };
 
     await prisma.$transaction(async (tx) => {
+      // 1. Get current batch and product info for inventory reversal
+      const batch = await tx.productionBatch.findUnique({
+        where: { id: existing.batchId },
+        include: {
+          product: { include: { finishedProduct: true } },
+          batchItems: true,
+        },
+      });
+
+      if (!batch) throw new Error('Batch not found');
+
+      const wasPassed = existing.passed;
+      const actualQty = batch.actualQty ? Number(batch.actualQty) : 0;
+
+      // 2. Delete QC record
       await tx.qualityCheck.delete({ where: { id } });
 
-      // Revert batch status back to quality_check so it can be re-inspected
+      // 3. Revert batch status back to quality_check so it can be re-inspected
       await tx.productionBatch.update({
         where: { id: existing.batchId },
         data: {
@@ -496,7 +672,66 @@ export async function deleteQualityCheck(id: string) {
           qualityScore: null,
         },
       });
+
+      // 4. Handle Inventory Reversal if it was passed
+      if (wasPassed && actualQty > 0) {
+        const year = new Date().getFullYear();
+        let counter = await tx.stockMovement.count({
+          where: { movementId: { startsWith: `SM-${year}` } },
+        });
+
+        const fp = batch.product.finishedProduct;
+
+        // Decrease Finished Product
+        if (fp) {
+          await tx.finishedProduct.update({
+            where: { id: fp.id },
+            data: { currentStock: { decrement: actualQty } },
+          });
+
+          counter++;
+          await tx.stockMovement.create({
+            data: {
+              movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+              type: StockMovementType.STOCK_OUT,
+              reason: StockMovementReason.DAMAGE,
+              quantity: actualQty,
+              referenceId: batch.batchNumber,
+              finishedProductId: fp.id,
+              notes: `Auto: Reversal due to QC deletion for batch ${batch.batchNumber}`,
+            },
+          });
+        }
+
+        // Increase Raw Materials
+        for (const item of batch.batchItems) {
+          if (item.rawMaterialId) {
+            await tx.rawMaterial.update({
+              where: { id: item.rawMaterialId },
+              data: { currentStock: { increment: Number(item.quantityUsed) } },
+            });
+            counter++;
+            await tx.stockMovement.create({
+              data: {
+                movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+                type: StockMovementType.STOCK_IN,
+                reason: StockMovementReason.PRODUCTION_INPUT, // Reversing consumption
+                quantity: Number(item.quantityUsed),
+                referenceId: batch.batchNumber,
+                rawMaterialId: item.rawMaterialId,
+                notes: `Auto: Consumption reversal (QC deletion) for batch ${batch.batchNumber}`,
+              },
+            });
+          }
+        }
+      }
     });
+
+    revalidatePath('/production/quality');
+    revalidatePath('/production/batches');
+    revalidatePath('/inventory/finished');
+    revalidatePath('/inventory/raw-materials');
+    revalidatePath('/inventory');
 
     revalidatePath('/production/quality');
     revalidatePath('/production/batches');
@@ -631,9 +866,9 @@ export async function deleteRnDProject(id: string) {
 
 export async function getSystemSettings() {
   try {
-    let settings = await (prisma as any).systemSettings.findFirst();
+    let settings = await prisma.systemSettings.findFirst();
     if (!settings) {
-      settings = await (prisma as any).systemSettings.create({
+      settings = await prisma.systemSettings.create({
         data: { productionCapacityKg: 3000 },
       });
     }

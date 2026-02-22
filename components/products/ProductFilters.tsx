@@ -41,14 +41,14 @@ export default function ProductFilters() {
 
       <Select value={filters.status || "all"} onValueChange={(value) => setFilters({ status: value === "all" ? "" : value })}>
         <SelectTrigger className="w-[160px] h-10 shadow-sm border-[var(--border)]" style={{ background: 'var(--muted)', color: 'var(--text-primary)' }}>
-          <SelectValue placeholder={t.allStatus || 'All Statuses'} />
+          <SelectValue placeholder={t.all || 'All'} />
         </SelectTrigger>
         <SelectContent className="bg-[var(--card)] border-[var(--border)] min-w-[160px] z-[60] shadow-xl">
           <SelectItem
             value="all"
             className="focus:bg-[#E8A838] focus:text-black text-[var(--text-primary)] cursor-pointer py-2.5"
           >
-            {t.allStatus || 'All Statuses'}
+            {t.all || 'All'}
           </SelectItem>
           {productStatuses.map((status) => (
             <SelectItem

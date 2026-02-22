@@ -16,6 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import QualityCheckForm from '@/components/production/QualityCheckForm';
 import { getQualityChecks, updateQualityCheck, deleteQualityCheck } from '@/app/actions/production';
+import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+import { AlertCircle, Search, Filter, ArrowUpDown } from 'lucide-react';
 
 interface CheckItem {
     id: string;
@@ -38,6 +41,7 @@ interface CheckItem {
 const REQUIRED_KEYS = ['visualInspection', 'weightVerification', 'tasteTest', 'sfdaCompliance'] as const;
 
 export default function QualityPageClient({ initialChecks }: { initialChecks: CheckItem[] }) {
+    const { t, isRTL } = useTranslation();
     const [checks, setChecks] = useState(initialChecks);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -52,7 +56,7 @@ export default function QualityPageClient({ initialChecks }: { initialChecks: Ch
 
     const refresh = async () => {
         const data = await getQualityChecks();
-        setChecks(data as any);
+        setChecks(data as CheckItem[]);
     };
 
     // --- DELETE ---
@@ -118,17 +122,20 @@ export default function QualityPageClient({ initialChecks }: { initialChecks: Ch
     };
 
     const statusBadge = (val: string) => (
-        <Badge className={val === 'pass' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
-            {val}
+        <Badge className={cn(
+            "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border-0 shadow-sm",
+            val === 'pass' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        )}>
+            {val === 'pass' ? t.passed : t.failedResult}
         </Badge>
     );
 
     const QC_STEPS = [
-        { key: 'visualInspection', label: 'Visual Inspection' },
-        { key: 'weightVerification', label: 'Weight Verification' },
-        { key: 'tasteTest', label: 'Taste Test' },
-        { key: 'labAnalysis', label: 'Lab Analysis (opt)' },
-        { key: 'sfdaCompliance', label: 'SFDA Compliance' },
+        { key: 'visualInspection', label: t.visual },
+        { key: 'weightVerification', label: t.weight },
+        { key: 'tasteTest', label: t.taste },
+        { key: 'labAnalysis', label: t.labAnalysisOpt },
+        { key: 'sfdaCompliance', label: t.sfda },
     ];
 
     return (
@@ -137,50 +144,80 @@ export default function QualityPageClient({ initialChecks }: { initialChecks: Ch
             <QualityCheckForm onSuccess={refresh} />
 
             {/* History Table */}
-            <Card className="p-4 bg-[var(--card)] border-[var(--border)]">
-                <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">QC History</h2>
+            <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-700">
+                <div className={cn("p-6 border-b border-[var(--border)] flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                    <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                        <div className="w-8 h-8 rounded-lg bg-[#E8A838]/10 flex items-center justify-center">
+                            <Filter className="w-4 h-4 text-[#E8A838]" />
+                        </div>
+                        <h2 className="text-sm font-black uppercase tracking-widest text-[var(--text-primary)]">{t.qcHistory}</h2>
+                    </div>
+                </div>
+
                 {checks.length === 0 ? (
-                    <p className="text-center py-8 text-[var(--text-muted)]">No quality checks yet.</p>
+                    <div className="text-center py-20 bg-[var(--muted)]/5">
+                        <Search className="w-12 h-12 text-[var(--text-secondary)]/20 mx-auto mb-4" />
+                        <p className="text-sm font-bold text-[var(--text-secondary)]">{t.noQualityChecks}</p>
+                    </div>
                 ) : (
-                    <div className="rounded-md border border-[var(--border)] overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-[var(--background)]">
-                                <tr className="border-b border-[var(--border)]">
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Batch</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Product</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Visual</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Weight</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Taste</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">SFDA</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Score</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Result</th>
-                                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)]">Date</th>
-                                    <th className="px-4 py-3 text-center text-sm font-semibold text-[var(--text-secondary)]">Actions</th>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                            <thead className="bg-[var(--muted)]/30">
+                                <tr>
+                                    <th className={cn("px-6 py-4 text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]", isRTL ? "text-right" : "text-left")}>
+                                        <div className={cn("flex items-center gap-2", isRTL ? "justify-end" : "")}>
+                                            {t.productionBatch}
+                                            <ArrowUpDown className="w-3 h-3 opacity-30" />
+                                        </div>
+                                    </th>
+                                    <th className={cn("px-6 py-4 text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]", isRTL ? "text-right" : "text-left")}>{t.product}</th>
+                                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]">{t.visual}</th>
+                                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]">{t.weight}</th>
+                                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]">{t.taste}</th>
+                                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]">{t.sfda}</th>
+                                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]">{t.score}</th>
+                                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]">{t.result}</th>
+                                    <th className={cn("px-6 py-4 text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]", isRTL ? "text-right" : "text-left")}>{t.date}</th>
+                                    <th className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border)]">{t.actions}</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-[var(--border)]">
                                 {checks.map((c) => (
-                                    <tr key={c.id} className="border-b border-[var(--border)] hover:bg-[var(--background)]/50">
-                                        <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{c.batch?.batchNumber}</td>
-                                        <td className="px-4 py-3 text-[var(--text-secondary)]">{c.batch?.product?.name || '-'}</td>
-                                        <td className="px-4 py-3">{statusBadge(c.visualInspection)}</td>
-                                        <td className="px-4 py-3">{statusBadge(c.weightVerification)}</td>
-                                        <td className="px-4 py-3">{statusBadge(c.tasteTest)}</td>
-                                        <td className="px-4 py-3">{statusBadge(c.sfdaCompliance)}</td>
-                                        <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{c.overallScore}/10</td>
-                                        <td className="px-4 py-3">
-                                            <Badge className={c.passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
-                                                {c.passed ? 'Passed' : 'Failed'}
+                                    <tr key={c.id} className="group hover:bg-[var(--muted)]/10 transition-colors">
+                                        <td className={cn("px-6 py-4 font-black text-[#E8A838]", isRTL ? "text-right" : "text-left")}>{c.batch?.batchNumber}</td>
+                                        <td className={cn("px-6 py-4 font-bold text-[var(--text-primary)]", isRTL ? "text-right" : "text-left")}>{c.batch?.product?.name || '-'}</td>
+                                        <td className="px-4 py-4 text-center">{statusBadge(c.visualInspection)}</td>
+                                        <td className="px-4 py-4 text-center">{statusBadge(c.weightVerification)}</td>
+                                        <td className="px-4 py-4 text-center">{statusBadge(c.tasteTest)}</td>
+                                        <td className="px-4 py-4 text-center">{statusBadge(c.sfdaCompliance)}</td>
+                                        <td className="px-4 py-4 text-center">
+                                            <div className="inline-flex items-center gap-1 bg-[#E8A838]/10 px-2 py-1 rounded-lg">
+                                                <span className="font-black text-[#E8A838]">{c.overallScore}</span>
+                                                <span className="text-[9px] font-bold text-[#E8A838]/60 uppercase">/ 10</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <Badge className={cn(
+                                                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-0 shadow-lg text-white",
+                                                c.passed ? 'bg-green-500' : 'bg-red-500'
+                                            )}>
+                                                {c.passed ? t.passed : t.failedResult}
                                             </Badge>
                                         </td>
-                                        <td className="px-4 py-3 text-[var(--text-secondary)]">{new Date(c.checkedAt).toLocaleDateString()}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--text-secondary)] hover:text-blue-500 transition-colors">
-                                                    <Edit2 className="w-4 h-4" />
+                                        <td className={cn("px-6 py-4 text-xs font-bold text-[var(--text-secondary)]", isRTL ? "text-right" : "text-left")}>{new Date(c.checkedAt).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4">
+                                            <div className={cn("flex items-center justify-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                                                <button
+                                                    onClick={() => openEdit(c)}
+                                                    className="w-8 h-8 rounded-lg bg-[var(--muted)] hover:bg-[#E8A838]/10 text-[var(--text-secondary)] hover:text-[#E8A838] transition-all flex items-center justify-center group/btn"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
                                                 </button>
-                                                <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--text-secondary)] hover:text-red-500 transition-colors">
-                                                    <Trash2 className="w-4 h-4" />
+                                                <button
+                                                    onClick={() => setDeleteId(c.id)}
+                                                    className="w-8 h-8 rounded-lg bg-[var(--muted)] hover:bg-red-500/10 text-[var(--text-secondary)] hover:text-red-500 transition-all flex items-center justify-center group/btn"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
                                                 </button>
                                             </div>
                                         </td>
@@ -190,87 +227,131 @@ export default function QualityPageClient({ initialChecks }: { initialChecks: Ch
                         </table>
                     </div>
                 )}
-            </Card>
+            </div>
 
             {/* Delete Confirmation */}
             <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-                <AlertDialogContent className="bg-[var(--card)] border-[var(--border)]">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-[var(--text-primary)]">Delete Quality Check?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-[var(--text-secondary)]">
-                            This will delete the QC record and revert the batch status back to &quot;quality_check&quot; so it can be re-inspected.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="border-[var(--border)]">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700 text-white">
-                            {isDeleting ? 'Deleting...' : 'Delete'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
+                <AlertDialogContent className="bg-[var(--card)] border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden p-0">
+                    <div className="p-8">
+                        <AlertDialogHeader className={cn(isRTL ? "text-right" : "")}>
+                            <AlertDialogTitle className="text-xl font-black text-[var(--text-primary)] flex items-center gap-3">
+                                <Trash2 className="w-6 h-6 text-red-500" />
+                                {t.deleteQualityCheckTitle}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm text-[var(--text-secondary)] font-medium leading-relaxed pt-2">
+                                {t.deleteQualityCheckDesc}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className={cn("mt-8 gap-3", isRTL ? "flex-row-reverse" : "")}>
+                            <AlertDialogCancel className="border-[var(--border)] h-11 px-6 font-black uppercase tracking-widest text-[var(--text-secondary)] hover:bg-[var(--muted)] rounded-xl transition-all">{t.cancel}</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="bg-red-600 hover:bg-red-700 text-white shadow-xl shadow-red-500/20 h-11 px-8 font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                            >
+                                {isDeleting ? '...' : t.saveChanges}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </div>
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Edit Modal */}
             <Dialog open={!!editCheck} onOpenChange={(open) => !open && setEditCheck(null)}>
-                <DialogContent className="bg-[var(--card)] border-[var(--border)] max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="text-[var(--text-primary)]">Edit Quality Check</DialogTitle>
-                        <DialogDescription className="text-[var(--text-secondary)]">
-                            {editCheck?.batch?.batchNumber} — {editCheck?.batch?.product?.name}
+                <DialogContent className="bg-[var(--card)] border-[var(--border)] max-w-lg p-0 rounded-2xl shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh]">
+                    <div className={cn("p-6 border-b border-[var(--border)] bg-[var(--muted)]/30", isRTL ? "text-right" : "")}>
+                        <DialogTitle className="text-xl font-black text-[var(--text-primary)] flex items-center gap-3">
+                            <Edit2 className="w-5 h-5 text-[#E8A838]" />
+                            {t.editQualityCheck}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-widest mt-1">
+                            <span className="text-[#E8A838]">{editCheck?.batch?.batchNumber}</span> — {editCheck?.batch?.product?.name}
                         </DialogDescription>
-                    </DialogHeader>
+                    </div>
 
-                    {editError && <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-sm p-3 rounded-md">{editError}</div>}
+                    <div className="p-8 space-y-6">
+                        {editError && (
+                            <div className={cn("bg-red-500/10 border border-red-500/20 text-red-500 text-[11px] font-bold p-3 rounded-xl flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                <AlertCircle className="w-4 h-4" />
+                                {editError}
+                            </div>
+                        )}
 
-                    <div className="space-y-3">
-                        {QC_STEPS.map((step) => {
-                            const isOptional = step.key === 'labAnalysis';
-                            const val = editResults[step.key] || '';
-                            return (
-                                <div key={step.key} className="p-3 rounded-lg border border-[var(--border)] bg-[var(--background)]">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-[var(--text-primary)] text-sm font-medium">
-                                            {step.label} {isOptional && <span className="text-[var(--text-muted)] text-xs">(opt)</span>}
-                                        </span>
-                                        <div className="flex gap-2">
-                                            <button type="button" onClick={() => setEditResults(p => ({ ...p, [step.key]: 'pass' }))}
-                                                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${val === 'pass' ? 'bg-green-500 text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)]'}`}>
-                                                ✓ Pass
-                                            </button>
-                                            <button type="button" onClick={() => setEditResults(p => ({ ...p, [step.key]: 'fail' }))}
-                                                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${val === 'fail' ? 'bg-red-500 text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)]'}`}>
-                                                ✗ Fail
-                                            </button>
+                        <div className="space-y-4">
+                            {QC_STEPS.map((step) => {
+                                const val = editResults[step.key] || '';
+                                return (
+                                    <div key={step.key} className={cn(
+                                        "p-4 rounded-2xl border transition-all",
+                                        val ? "bg-[var(--muted)]/20 border-[#E8A838]/30" : "bg-[var(--muted)]/10 border-[var(--border)]"
+                                    )}>
+                                        <div className={cn("flex items-center justify-between mb-3", isRTL ? "flex-row-reverse" : "")}>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)]">
+                                                {step.label}
+                                            </span>
+                                            <div className={cn("flex gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                                <button type="button" onClick={() => setEditResults(p => ({ ...p, [step.key]: 'pass' }))}
+                                                    className={cn(
+                                                        "px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                                                        val === 'pass' ? 'bg-green-500 text-white shadow-lg' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-green-500/10'
+                                                    )}>
+                                                    ✓ {t.passed}
+                                                </button>
+                                                <button type="button" onClick={() => setEditResults(p => ({ ...p, [step.key]: 'fail' }))}
+                                                    className={cn(
+                                                        "px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                                                        val === 'fail' ? 'bg-red-500 text-white shadow-lg' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-red-500/10'
+                                                    )}>
+                                                    ✗ {t.failedResult}
+                                                </button>
+                                            </div>
                                         </div>
+                                        {val && step.key !== 'labAnalysis' && step.key !== 'sfdaCompliance' && (
+                                            <Textarea
+                                                placeholder={t.productionNotes}
+                                                value={editNotes[step.key] || ''}
+                                                onChange={(e) => setEditNotes(p => ({ ...p, [step.key]: e.target.value }))}
+                                                className={cn("mt-2 bg-[var(--card)] border-[var(--border)] min-h-[50px] text-xs rounded-xl focus:ring-[#E8A838]", isRTL ? "text-right" : "")}
+                                            />
+                                        )}
                                     </div>
-                                    {val && step.key !== 'labAnalysis' && step.key !== 'sfdaCompliance' && (
-                                        <Textarea placeholder="Notes..." value={editNotes[step.key] || ''} onChange={(e) => setEditNotes(p => ({ ...p, [step.key]: e.target.value }))}
-                                            className="mt-1 bg-[var(--card)] border-[var(--border)] min-h-[32px] text-xs" />
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {editAllFilled && (
-                        <div className={`p-3 rounded-lg border mt-2 ${editPassed ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}`}>
-                            <Badge className={editPassed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
-                                {editPassed ? 'PASSED' : 'FAILED'}
-                            </Badge>
-                            <span className="text-[var(--text-primary)] font-semibold ml-2">Score: {editScore}/10</span>
+                                );
+                            })}
                         </div>
-                    )}
 
-                    <div className="mt-2">
-                        <Label className="text-xs">General Notes</Label>
-                        <Textarea value={editGeneralNotes} onChange={(e) => setEditGeneralNotes(e.target.value)}
-                            className="mt-1 bg-[var(--background)] border-[var(--border)] min-h-[40px] text-sm" />
+                        {editAllFilled && (
+                            <div className={cn(
+                                "p-5 rounded-2xl border flex items-center justify-between shadow-inner",
+                                editPassed ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'
+                            )}>
+                                <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                                    <Badge className={cn(
+                                        "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-0 shadow-lg text-white",
+                                        editPassed ? "bg-green-500" : "bg-red-500"
+                                    )}>
+                                        {editPassed ? t.passed : t.failedResult}
+                                    </Badge>
+                                    <span className="text-xs font-black text-[var(--text-primary)] uppercase opacity-50">{t.overallScore}: {editScore}/10</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <Label className={cn("text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] px-1", isRTL ? "text-right block" : "")}>{t.generalNotes}</Label>
+                            <Textarea
+                                value={editGeneralNotes}
+                                onChange={(e) => setEditGeneralNotes(e.target.value)}
+                                className={cn("bg-[var(--muted)]/20 border-[var(--border)] min-h-[80px] rounded-2xl focus:ring-[#E8A838] p-4 text-sm resize-none", isRTL ? "text-right" : "")}
+                            />
+                        </div>
+
+                        <div className={cn("flex items-center gap-3 pt-4 border-t border-[var(--border)]", isRTL ? "flex-row-reverse" : "justify-end")}>
+                            <Button variant="ghost" onClick={() => setEditCheck(null)} className="h-11 px-8 font-black uppercase tracking-widest text-[var(--text-secondary)] rounded-xl">{t.cancel}</Button>
+                            <Button onClick={handleSaveEdit} disabled={isSaving || !editAllFilled}
+                                className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-xl shadow-[#E8A838]/20 h-11 px-10 font-black uppercase tracking-widest rounded-xl transition-all active:scale-95">
+                                {isSaving ? '...' : t.saveChanges}
+                            </Button>
+                        </div>
                     </div>
-
-                    <Button onClick={handleSaveEdit} disabled={isSaving || !editAllFilled}
-                        className="w-full bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 mt-2">
-                        {isSaving ? 'Saving...' : 'Save Changes'}
-                    </Button>
                 </DialogContent>
             </Dialog>
         </div>

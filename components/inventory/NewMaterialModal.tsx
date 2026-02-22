@@ -21,7 +21,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { createRawMaterial } from '@/app/actions/inventory/raw-materials';
 import { createSupplier } from '@/app/actions/suppliers-create';
 
@@ -118,49 +119,58 @@ export default function NewMaterialModal({ onSuccess, suppliers: initialSupplier
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button className="bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90">
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Material
+                <Button className="bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-md transition-all active:scale-95 gap-2">
+                    <Plus className="w-4 h-4" />
+                    {t.newMaterial}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[var(--card)] border-[var(--border)] max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="text-[var(--text-primary)]">Add New Raw Material</DialogTitle>
-                    <DialogDescription className="text-[var(--text-secondary)]">
-                        Enter the details for a new raw material to track in inventory.
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="sm:max-w-lg border-[var(--border)] shadow-2xl p-0 overflow-hidden" style={{ background: 'var(--card)' }}>
+                <div className="bg-[var(--muted)]/50 p-6 border-b border-[var(--border)]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-[var(--text-primary)]">{t.addRawMaterial}</DialogTitle>
+                        <DialogDescription className="text-[var(--text-secondary)]">
+                            {t.trackInventoryMsg}
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-sm p-3 rounded-md">
+                    <div className="mx-6 mt-4 bg-red-500/10 border border-red-500/50 text-red-500 text-sm p-3 rounded-xl flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
                         {error}
                     </div>
                 )}
 
-                <div className="grid gap-4 py-4">
+                <div className="p-6 grid gap-5 overflow-y-auto max-h-[60vh]">
                     {/* Name */}
                     <div className="space-y-2">
-                        <Label>Material Name <span className="text-red-500">*</span></Label>
+                        <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.materialName} <span className="text-red-500">*</span></Label>
                         <Input
-                            placeholder="e.g. Palm Leaf Powder"
+                            placeholder={t.enterMaterialName}
                             value={formData.name}
                             onChange={(e) => handleChange('name', e.target.value)}
-                            className="bg-[var(--background)] border-[var(--border)]"
+                            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
                         />
                     </div>
 
                     {/* SKU */}
                     <div className="space-y-2">
-                        <Label>SKU Number <span className="text-red-500">*</span></Label>
-                        <div className="flex">
-                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-[var(--border)] bg-[var(--background)] text-[var(--text-secondary)] text-sm">
+                        <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.skuNumber} <span className="text-red-500">*</span></Label>
+                        <div className={cn("flex", isRTL ? "flex-row-reverse" : "flex-row")}>
+                            <span className={cn(
+                                "inline-flex items-center px-4 border border-[var(--border)] bg-[var(--muted)] text-[var(--text-secondary)] text-sm font-mono opacity-60",
+                                isRTL ? "rounded-r-xl border-l-0" : "rounded-l-xl border-r-0"
+                            )}>
                                 sku-
                             </span>
                             <Input
                                 placeholder="001"
                                 value={formData.skuNumber}
                                 onChange={(e) => handleChange('skuNumber', e.target.value)}
-                                className="rounded-l-none bg-[var(--background)] border-[var(--border)]"
+                                className={cn(
+                                    "bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11",
+                                    isRTL ? "rounded-r-none rounded-l-xl" : "rounded-l-none rounded-r-xl"
+                                )}
                             />
                         </div>
                     </div>
@@ -168,29 +178,29 @@ export default function NewMaterialModal({ onSuccess, suppliers: initialSupplier
                     {/* Category + Location */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Category</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.category}</Label>
                             <Select value={formData.category} onValueChange={(val) => handleChange('category', val)}>
-                                <SelectTrigger className="bg-[var(--background)] border-[var(--border)]">
+                                <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] h-11">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="z-[105]">
-                                    <SelectItem value="BASE_POWDER">Base Powder</SelectItem>
-                                    <SelectItem value="FLAVORING">Flavoring</SelectItem>
-                                    <SelectItem value="PACKAGING">Packaging</SelectItem>
-                                    <SelectItem value="OTHER">Other</SelectItem>
+                                <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
+                                    <SelectItem value="BASE_POWDER">{t.basePowder}</SelectItem>
+                                    <SelectItem value="FLAVORING">{t.flavoring}</SelectItem>
+                                    <SelectItem value="PACKAGING">{t.packaging}</SelectItem>
+                                    <SelectItem value="OTHER">{t.other}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Location</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.location}</Label>
                             <Select value={formData.location} onValueChange={(val) => handleChange('location', val)}>
-                                <SelectTrigger className="bg-[var(--background)] border-[var(--border)]">
+                                <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] h-11">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="z-[105]">
-                                    <SelectItem value="AL_AHSA_WAREHOUSE">Al-Ahsa Warehouse</SelectItem>
-                                    <SelectItem value="KHOBAR_OFFICE">Khobar Office</SelectItem>
+                                <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
+                                    <SelectItem value="AL_AHSA_WAREHOUSE">{t.alAhsaWarehouse}</SelectItem>
+                                    <SelectItem value="KHOBAR_OFFICE">{t.khobarOffice}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -198,42 +208,41 @@ export default function NewMaterialModal({ onSuccess, suppliers: initialSupplier
 
                     {/* Supplier with inline add */}
                     <div className="space-y-2">
-                        <Label>Supplier</Label>
+                        <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.supplier}</Label>
                         {isAddingSupplier ? (
                             <div className="flex gap-2">
                                 <Input
-                                    placeholder="New supplier name..."
+                                    placeholder="Supplier name..."
                                     value={newSupplierName}
                                     onChange={(e) => setNewSupplierName(e.target.value)}
-                                    className="bg-[var(--background)] border-[var(--border)] flex-1"
+                                    className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] flex-1 h-11"
                                     autoFocus
                                 />
                                 <Button
                                     type="button"
-                                    size="sm"
-                                    className="bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 whitespace-nowrap"
+                                    className="bg-[#E8A838] text-black hover:bg-[#d49a2d] h-11 px-4"
                                     disabled={!newSupplierName.trim() || isSavingSupplier}
                                     onClick={handleQuickAddSupplier}
                                 >
-                                    {isSavingSupplier ? '...' : 'Save'}
+                                    {isSavingSupplier ? '...' : t.save || 'Save'}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    size="sm"
+                                    className="h-11 w-11 p-0 hover:bg-red-500/10 hover:text-red-500"
                                     onClick={() => { setIsAddingSupplier(false); setNewSupplierName(''); }}
                                 >
-                                    ✕
+                                    <Plus className="rotate-45 h-4 w-4" />
                                 </Button>
                             </div>
                         ) : (
                             <div className="flex gap-2">
                                 <div className="flex-1">
                                     <Select value={formData.supplierId} onValueChange={(val) => handleChange('supplierId', val)}>
-                                        <SelectTrigger className="bg-[var(--background)] border-[var(--border)]">
-                                            <SelectValue placeholder="Select Supplier" />
+                                        <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] h-11">
+                                            <SelectValue placeholder={t.supplier} />
                                         </SelectTrigger>
-                                        <SelectContent className="z-[105]">
+                                        <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
                                             <SelectItem value="none">None</SelectItem>
                                             {supplierList.map((s) => (
                                                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -244,10 +253,8 @@ export default function NewMaterialModal({ onSuccess, suppliers: initialSupplier
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    size="icon"
-                                    className="shrink-0 border-[var(--border)]"
+                                    className="shrink-0 border-[var(--border)] bg-[var(--muted)] hover:bg-[#E8A838]/20 hover:text-[#E8A838] h-11 w-11 p-0"
                                     onClick={() => setIsAddingSupplier(true)}
-                                    title="Add new supplier"
                                 >
                                     <Plus className="h-4 w-4" />
                                 </Button>
@@ -258,25 +265,25 @@ export default function NewMaterialModal({ onSuccess, suppliers: initialSupplier
                     {/* Stock + Cost */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Initial Stock (kg/units)</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.initialStock}</Label>
                             <Input
                                 type="number"
                                 min="0"
                                 step="any"
                                 value={formData.currentStock}
                                 onChange={(e) => handleChange('currentStock', parseFloat(e.target.value) || 0)}
-                                className="bg-[var(--background)] border-[var(--border)]"
+                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Unit Cost (SAR)</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.unitCostSar}</Label>
                             <Input
                                 type="number"
                                 min="0"
                                 step="any"
                                 value={formData.unitCost}
                                 onChange={(e) => handleChange('unitCost', parseFloat(e.target.value) || 0)}
-                                className="bg-[var(--background)] border-[var(--border)]"
+                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11"
                             />
                         </div>
                     </div>
@@ -284,40 +291,46 @@ export default function NewMaterialModal({ onSuccess, suppliers: initialSupplier
                     {/* Reorder thresholds */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Reorder Threshold</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.reorderThreshold}</Label>
                             <Input
                                 type="number"
                                 min="0"
                                 step="any"
                                 value={formData.reorderThreshold}
                                 onChange={(e) => handleChange('reorderThreshold', parseFloat(e.target.value) || 0)}
-                                className="bg-[var(--background)] border-[var(--border)]"
+                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11 opacity-80"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Reorder Quantity</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.reorderQuantity}</Label>
                             <Input
                                 type="number"
                                 min="0"
                                 step="any"
                                 value={formData.reorderQuantity}
                                 onChange={(e) => handleChange('reorderQuantity', parseFloat(e.target.value) || 0)}
-                                className="bg-[var(--background)] border-[var(--border)]"
+                                className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11 opacity-80"
                             />
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>
-                        Cancel
+                <DialogFooter className="p-6 pt-2 border-t border-[var(--border)] gap-2">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setIsOpen(false)}
+                        disabled={isSaving}
+                        className="flex-1 text-[var(--text-secondary)] hover:bg-[var(--muted)]"
+                    >
+                        {t.cancel}
                     </Button>
                     <Button
-                        className="bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90"
+                        className="flex-[2] bg-[#E8A838] hover:bg-[#d49a2d] text-black font-bold h-11 shadow-lg shadow-[#E8A838]/20 transition-all active:scale-95 gap-2"
                         onClick={handleSave}
                         disabled={isSaving}
                     >
-                        {isSaving ? 'Saving...' : 'Save Material'}
+                        {isSaving ? '...' : t.saveMaterial}
+                        <ChevronRight className={cn("w-4 h-4 transition-transform", isRTL ? "rotate-180" : "")} />
                     </Button>
                 </DialogFooter>
             </DialogContent>

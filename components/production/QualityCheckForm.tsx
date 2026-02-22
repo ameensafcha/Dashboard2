@@ -10,6 +10,9 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { createQualityCheck, getProductionBatches } from '@/app/actions/production';
+import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+import { Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface BatchOption {
     id: string;
@@ -19,14 +22,15 @@ interface BatchOption {
 }
 
 const QC_STEPS = [
-    { key: 'visualInspection', label: 'Visual Inspection', description: 'Check color, texture, packaging integrity' },
-    { key: 'weightVerification', label: 'Weight Verification', description: 'Verify weight matches target specifications' },
-    { key: 'tasteTest', label: 'Taste Test', description: 'Flavor profile, sweetness, aftertaste check' },
-    { key: 'labAnalysis', label: 'Lab Analysis', description: 'Microbial, moisture, heavy metals (optional)' },
-    { key: 'sfdaCompliance', label: 'SFDA Compliance', description: 'Label accuracy, ingredient list, allergen warnings' },
+    { key: 'visualInspection', label: 'visual', description: 'visualInspectionDesc' },
+    { key: 'weightVerification', label: 'weight', description: 'weightVerificationDesc' },
+    { key: 'tasteTest', label: 'taste', description: 'tasteTestDesc' },
+    { key: 'labAnalysis', label: 'labAnalysis', description: 'labAnalysisDesc' },
+    { key: 'sfdaCompliance', label: 'sfda', description: 'sfdaComplianceDesc' },
 ] as const;
 
 export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void }) {
+    const { t, isRTL } = useTranslation();
     const [batches, setBatches] = useState<BatchOption[]>([]);
     const [batchId, setBatchId] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -45,10 +49,10 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
         (async () => {
             const data = await getProductionBatches();
             // Only show batches that are in quality_check or in_progress status
-            const eligible = data.filter((b: any) =>
+            const eligible = data.filter((b) =>
                 b.status === 'quality_check' || b.status === 'in_progress'
             );
-            setBatches(eligible as any);
+            setBatches(eligible as BatchOption[]);
         })();
     }, []);
 
@@ -57,7 +61,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
         setError(null);
     };
 
-    const allRequired = ['visualInspection', 'weightVerification', 'tasteTest', 'sfdaCompliance'];
+    const allRequired = ['visualInspection', 'weightVerification', 'tasteTest', 'labAnalysis', 'sfdaCompliance'];
     const allFilled = allRequired.every(k => results[k] === 'pass' || results[k] === 'fail');
     const passed = allRequired.every(k => results[k] === 'pass');
     const failedCount = allRequired.filter(k => results[k] === 'fail').length;
@@ -67,8 +71,8 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
         : 0;
 
     const handleSubmit = async () => {
-        if (!batchId) { setError('Select a batch.'); return; }
-        if (!allFilled) { setError('Complete all required checks.'); return; }
+        if (!batchId) { setError(t.selectBatchToInspect); return; }
+        if (!allFilled) { setError(t.error); return; }
 
         setIsSaving(true);
         setError(null);
@@ -98,30 +102,60 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
             setGeneralNotes('');
             onSuccess();
         } else {
-            setError(result.error || 'Failed to submit.');
+            setError(result.error || t.error);
         }
     };
 
     return (
-        <Card className="p-6 bg-[var(--card)] border-[var(--border)]">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Submit Quality Check</h2>
+        <Card className="p-8 bg-[var(--card)] border-[var(--border)] shadow-xl overflow-hidden rounded-2xl relative">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#E8A838]/5 rounded-bl-[100px] -mr-10 -mt-10" />
 
-            {error && <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-sm p-3 rounded-md mb-4">{error}</div>}
+            <div className={cn("flex items-center gap-3 mb-8 relative", isRTL ? "flex-row-reverse" : "")}>
+                <div className="w-10 h-10 rounded-xl bg-[#E8A838]/10 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-[#E8A838]" />
+                </div>
+                <div>
+                    <h2 className={cn("text-xl font-black text-[var(--text-primary)]", isRTL ? "text-right" : "")}>{t.submitQualityCheck}</h2>
+                    <p className={cn("text-xs text-[var(--text-secondary)] font-medium", isRTL ? "text-right" : "")}>{t.trackConsumption}</p>
+                </div>
+            </div>
+
+            {error && (
+                <div className={cn(
+                    "bg-red-500/10 border border-red-500/20 text-red-500 text-[11px] font-bold p-3 rounded-xl mb-6 flex items-center gap-2 animate-in fade-in slide-in-from-top-1",
+                    isRTL ? "flex-row-reverse" : ""
+                )}>
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    {error}
+                </div>
+            )}
 
             {/* Batch Selector */}
-            <div className="mb-6">
-                <Label>Production Batch <span className="text-red-500">*</span></Label>
+            <div className="mb-8 group">
+                <Label className={cn("text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] mb-2 block px-1", isRTL ? "text-right" : "")}>
+                    {t.productionBatch} <span className="text-red-500">*</span>
+                </Label>
                 <Select value={batchId} onValueChange={setBatchId}>
-                    <SelectTrigger className="mt-1 bg-[var(--background)] border-[var(--border)]">
-                        <SelectValue placeholder="Select batch to inspect..." />
+                    <SelectTrigger className={cn(
+                        "h-12 bg-[var(--muted)]/30 border-[var(--border)] rounded-xl focus:ring-[#E8A838] transition-all hover:bg-[var(--muted)]/50 text-sm font-bold",
+                        isRTL ? "flex-row-reverse" : ""
+                    )}>
+                        <SelectValue placeholder={batches.length === 0 ? t.noBatchesToInspect : t.selectBatchToInspect} />
                     </SelectTrigger>
-                    <SelectContent className="z-[105]">
+                    <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
                         {batches.length === 0 ? (
-                            <SelectItem value="__none" disabled>No eligible batches</SelectItem>
+                            <SelectItem value="__none" disabled className="text-xs">{t.noEligibleBatches}</SelectItem>
                         ) : (
                             batches.map(b => (
-                                <SelectItem key={b.id} value={b.id}>
-                                    {b.batchNumber} — {b.product?.name || 'Unknown'} ({b.status.replace('_', ' ')})
+                                <SelectItem key={b.id} value={b.id} className="text-xs py-3">
+                                    <div className={cn("flex items-center justify-between w-full min-w-[300px]", isRTL ? "flex-row-reverse" : "")}>
+                                        <span className="font-black text-[#E8A838]">{b.batchNumber}</span>
+                                        <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                            <span className="font-bold text-[var(--text-primary)] opacity-60">•</span>
+                                            <span className="max-w-[120px] truncate text-[var(--text-secondary)]">{b.product?.name || 'Unknown'}</span>
+                                        </div>
+                                    </div>
                                 </SelectItem>
                             ))
                         )}
@@ -129,83 +163,155 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
                 </Select>
             </div>
 
-            {/* 5-Step Checklist */}
-            <div className="space-y-4 mb-6">
-                {QC_STEPS.map((step, idx) => {
-                    const isOptional = step.key === 'labAnalysis';
-                    const val = results[step.key];
-                    return (
-                        <div key={step.key} className="p-4 rounded-lg border border-[var(--border)] bg-[var(--background)]">
-                            <div className="flex items-center justify-between mb-2">
-                                <div>
-                                    <span className="text-[var(--text-primary)] font-medium">
-                                        {idx + 1}. {step.label} {isOptional && <span className="text-[var(--text-muted)] text-xs">(optional)</span>}
-                                    </span>
-                                    <p className="text-[var(--text-muted)] text-xs mt-0.5">{step.description}</p>
+            {/* Conditional Content: Only show when a batch is selected */}
+            {batchId && batchId !== '__none' && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                    {/* 5-Step Checklist */}
+                    <div className="space-y-4 mb-8">
+                        <div className={cn("flex items-center justify-between mb-2", isRTL ? "flex-row-reverse" : "")}>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#E8A838]" />
+                                {t.checklist}
+                            </h3>
+                        </div>
+                        {QC_STEPS.map((step, idx) => {
+                            const val = results[step.key];
+                            const isFilled = val === 'pass' || val === 'fail';
+
+                            return (
+                                <div key={step.key} className={cn(
+                                    "p-5 rounded-2xl border transition-all duration-300",
+                                    isFilled ? "bg-[var(--muted)]/20 border-[#E8A838]/30 overflow-hidden" : "bg-[var(--muted)]/10 border-[var(--border)] hover:border-[var(--border-hover)]"
+                                )}>
+                                    <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 items-center", isRTL ? "text-right" : "")}>
+                                        <div>
+                                            <h4 className={cn("text-xs font-black text-[var(--text-primary)] flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                                <span className="text-[#E8A838] font-mono">{idx + 1}.</span>
+                                                {t[step.label as keyof typeof t]}
+                                            </h4>
+                                            <p className="text-[var(--text-secondary)] text-[10px] mt-1 font-medium leading-relaxed">{t[step.description as keyof typeof t]}</p>
+                                        </div>
+                                        <div className={cn("flex gap-2", isRTL ? "flex-row-reverse" : "justify-end")}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setResult(step.key, 'pass')}
+                                                className={cn(
+                                                    "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                    val === 'pass'
+                                                        ? "bg-green-500 text-white shadow-lg shadow-green-500/20"
+                                                        : "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-green-500/10 border-transparent hover:border-green-500/30"
+                                                )}
+                                            >
+                                                ✓ {t.passed}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setResult(step.key, 'fail')}
+                                                className={cn(
+                                                    "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                    val === 'fail'
+                                                        ? "bg-red-500 text-white shadow-lg shadow-red-500/20"
+                                                        : "bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-red-500/10 border-transparent hover:border-red-500/30"
+                                                )}
+                                            >
+                                                ✗ {t.failedResult}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {val && step.key !== 'labAnalysis' && step.key !== 'sfdaCompliance' && (
+                                        <Textarea
+                                            placeholder={t.productionNotes}
+                                            value={notes[step.key] || ''}
+                                            onChange={(e) => setNotes(prev => ({ ...prev, [step.key]: e.target.value }))}
+                                            className={cn(
+                                                "mt-4 bg-[var(--card)] border-[var(--border)] min-h-[50px] text-xs rounded-xl focus:ring-[#E8A838] placeholder:opacity-30",
+                                                isRTL ? "text-right" : ""
+                                            )}
+                                        />
+                                    )}
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setResult(step.key, 'pass')}
-                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${val === 'pass' ? 'bg-green-500 text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-green-500/10'}`}
-                                    >
-                                        ✓ Pass
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setResult(step.key, 'fail')}
-                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${val === 'fail' ? 'bg-red-500 text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-red-500/10'}`}
-                                    >
-                                        ✗ Fail
-                                    </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Summary */}
+                    {allFilled && (
+                        <div className={cn(
+                            "p-6 rounded-2xl border mb-8 animate-in zoom-in-95 duration-300",
+                            passed
+                                ? "border-green-500/30 bg-green-500/5 shadow-inner"
+                                : "border-red-500/30 bg-red-500/5 shadow-inner"
+                        )}>
+                            <div className={cn("flex flex-col md:flex-row items-center justify-between gap-4", isRTL ? "md:flex-row-reverse" : "")}>
+                                <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
+                                    <div className={cn(
+                                        "w-12 h-12 rounded-full flex items-center justify-center text-xl font-black shadow-lg",
+                                        passed ? "bg-green-500 text-white" : "bg-red-500 text-white"
+                                    )}>
+                                        {overallScore}
+                                    </div>
+                                    <div className={isRTL ? "text-right" : ""}>
+                                        <div className={cn("flex items-center gap-2 mb-1", isRTL ? "flex-row-reverse" : "")}>
+                                            <Badge className={cn(
+                                                "px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border-0",
+                                                passed ? "bg-green-500" : "bg-red-500"
+                                            )}>
+                                                {passed ? t.passed : t.failedResult}
+                                            </Badge>
+                                            <span className="text-xs font-black text-[var(--text-primary)] lowercase opacity-50">/ 10 {t.score}</span>
+                                        </div>
+                                        <p className={cn(
+                                            "text-[10px] font-bold",
+                                            passed ? "text-green-500/80" : "text-red-500/80"
+                                        )}>
+                                            {passed ? t.batchWillBeCompleted : t.batchWillBeFailed}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                            {val && (
-                                <Textarea
-                                    placeholder={`Notes for ${step.label}...`}
-                                    value={notes[step.key] || ''}
-                                    onChange={(e) => setNotes(prev => ({ ...prev, [step.key]: e.target.value }))}
-                                    className="mt-2 bg-[var(--card)] border-[var(--border)] min-h-[40px] text-sm"
-                                />
-                            )}
                         </div>
-                    );
-                })}
-            </div>
+                    )}
 
-            {/* Summary */}
-            {allFilled && (
-                <div className={`p-4 rounded-lg border mb-4 ${passed ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}`}>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Badge className={passed ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
-                                {passed ? 'PASSED' : 'FAILED'}
-                            </Badge>
-                            <span className="text-[var(--text-primary)] font-semibold">Score: {overallScore}/10</span>
-                        </div>
-                        {passed && <span className="text-green-600 text-xs">✓ Batch will be marked Completed. Inventory will auto-update.</span>}
-                        {!passed && <span className="text-red-500 text-xs">✗ Batch will be marked Failed. No inventory change.</span>}
+                    <div className="mb-8">
+                        <Label className={cn("text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] mb-2 block px-1", isRTL ? "text-right" : "")}>
+                            {t.generalNotes}
+                        </Label>
+                        <Textarea
+                            placeholder={t.productionNotes}
+                            value={generalNotes}
+                            onChange={(e) => setGeneralNotes(e.target.value)}
+                            className={cn(
+                                "mt-1 bg-[var(--muted)]/20 border-[var(--border)] min-h-[80px] rounded-2xl focus:ring-[#E8A838] p-4 text-sm resize-none",
+                                isRTL ? "text-right" : ""
+                            )}
+                        />
                     </div>
+
+                    <Button
+                        size="lg"
+                        className={cn(
+                            "w-full h-14 text-xs font-black uppercase tracking-[0.2em] transition-all active:scale-95 shadow-2xl",
+                            passed
+                                ? "bg-[#E8A838] hover:bg-[#d49a2d] text-black shadow-[#E8A838]/20"
+                                : "bg-red-600 hover:bg-red-700 text-white shadow-red-500/20"
+                        )}
+                        onClick={handleSubmit}
+                        disabled={isSaving || !batchId || !allFilled}
+                    >
+                        {isSaving ? (
+                            <div className="flex items-center gap-3">
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                <span>...</span>
+                            </div>
+                        ) : (
+                            <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
+                                <Save className="w-4 h-4" />
+                                <span>{t.submitQC}</span>
+                            </div>
+                        )}
+                    </Button>
                 </div>
             )}
-
-            <div className="mb-4">
-                <Label>General Notes</Label>
-                <Textarea
-                    placeholder="Overall observations..."
-                    value={generalNotes}
-                    onChange={(e) => setGeneralNotes(e.target.value)}
-                    className="mt-1 bg-[var(--background)] border-[var(--border)] min-h-[60px]"
-                />
-            </div>
-
-            <Button
-                className="bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 w-full"
-                onClick={handleSubmit}
-                disabled={isSaving || !batchId || !allFilled}
-            >
-                {isSaving ? 'Submitting...' : `Submit QC — ${passed ? 'Complete Batch' : 'Reject Batch'}`}
-            </Button>
         </Card>
     );
 }

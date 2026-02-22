@@ -22,6 +22,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Search, AlertTriangle, ArrowUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useInventoryStore, RawMaterialData } from '@/stores/inventoryStore';
 import { getRawMaterials } from '@/app/actions/inventory/raw-materials';
 import { useTranslation } from '@/lib/i18n';
@@ -82,8 +83,22 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
         }).format(amount);
     };
 
-    const formatCategory = (cat: string) => {
-        return cat.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    const getTranslatedCategory = (cat: string) => {
+        switch (cat) {
+            case 'BASE_POWDER': return t.basePowder;
+            case 'FLAVORING': return t.flavoring;
+            case 'PACKAGING': return t.packaging;
+            case 'OTHER': return t.other;
+            default: return cat;
+        }
+    };
+
+    const getTranslatedLocation = (loc: string) => {
+        switch (loc) {
+            case 'AL_AHSA_WAREHOUSE': return t.alAhsaWarehouse;
+            case 'KHOBAR_OFFICE': return t.khobarOffice;
+            default: return loc;
+        }
     };
 
     // Client-side sorting
@@ -121,22 +136,28 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <PageHeader title="Raw Materials" />
+                    <PageHeader title={t.rawMaterials} />
                     <p className="text-[var(--text-secondary)] text-sm -mt-1 mb-2">
-                        Track raw ingredients and packaging supplies.
+                        {t.trackInventoryMsg}
                     </p>
                 </div>
                 <NewMaterialModal onSuccess={fetchMaterials} suppliers={suppliers} />
             </div>
 
-            <Card className="p-4 bg-[var(--card)] border-[var(--border)]">
+            <Card className="p-4 bg-[var(--card)] border-[var(--border)] overflow-hidden">
                 {/* Filters */}
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)] h-4 w-4" />
+                        <Search className={cn(
+                            "absolute top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)] h-4 w-4 opacity-50",
+                            isRTL ? "right-3" : "left-3"
+                        )} />
                         <Input
-                            placeholder="Search materials by name or SKU..."
-                            className="pl-9 bg-[var(--background)] border-[var(--border)] text-[var(--text-primary)]"
+                            placeholder={t.searchMaterials}
+                            className={cn(
+                                "bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] focus:border-[#E8A838]",
+                                isRTL ? "pr-9" : "pl-9"
+                            )}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -145,27 +166,27 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                     <div className="flex gap-4">
                         <div className="w-[180px]">
                             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                                <SelectTrigger className="bg-[var(--background)] border-[var(--border)] text-[var(--text-primary)]">
-                                    <SelectValue placeholder="Category" />
+                                <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838]">
+                                    <SelectValue placeholder={t.category} />
                                 </SelectTrigger>
-                                <SelectContent position="popper" className="z-[100]">
-                                    <SelectItem value="all">All Categories</SelectItem>
-                                    <SelectItem value="BASE_POWDER">Base Powder</SelectItem>
-                                    <SelectItem value="FLAVORING">Flavoring</SelectItem>
-                                    <SelectItem value="PACKAGING">Packaging</SelectItem>
-                                    <SelectItem value="OTHER">Other</SelectItem>
+                                <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)]">
+                                    <SelectItem value="all">{t.allCategories}</SelectItem>
+                                    <SelectItem value="BASE_POWDER">{t.basePowder}</SelectItem>
+                                    <SelectItem value="FLAVORING">{t.flavoring}</SelectItem>
+                                    <SelectItem value="PACKAGING">{t.packaging}</SelectItem>
+                                    <SelectItem value="OTHER">{t.other}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="w-[180px]">
                             <Select value={locationFilter} onValueChange={setLocationFilter}>
-                                <SelectTrigger className="bg-[var(--background)] border-[var(--border)] text-[var(--text-primary)]">
-                                    <SelectValue placeholder="Location" />
+                                <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838]">
+                                    <SelectValue placeholder={t.location} />
                                 </SelectTrigger>
-                                <SelectContent position="popper" className="z-[100]">
-                                    <SelectItem value="all">All Locations</SelectItem>
-                                    <SelectItem value="AL_AHSA_WAREHOUSE">Al-Ahsa Warehouse</SelectItem>
-                                    <SelectItem value="KHOBAR_OFFICE">Khobar Office</SelectItem>
+                                <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)]">
+                                    <SelectItem value="all">{t.allLocations}</SelectItem>
+                                    <SelectItem value="AL_AHSA_WAREHOUSE">{t.alAhsaWarehouse}</SelectItem>
+                                    <SelectItem value="KHOBAR_OFFICE">{t.khobarOffice}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -173,45 +194,54 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                 </div>
 
                 {/* Data Table */}
-                <div className="rounded-md border border-[var(--border)] overflow-hidden">
+                <div className="rounded-xl border border-[var(--border)] overflow-hidden shadow-sm">
                     <Table>
-                        <TableHeader className="bg-[var(--background)]">
+                        <TableHeader className="bg-[var(--muted)]">
                             <TableRow className="border-b-[var(--border)] hover:bg-transparent">
-                                <TableHead className="text-[var(--text-secondary)]">Item</TableHead>
-                                <TableHead className="text-[var(--text-secondary)]">Category</TableHead>
-                                <TableHead className="text-[var(--text-secondary)]">Location</TableHead>
+                                <TableHead className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider">{t.name}</TableHead>
+                                <TableHead className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider">{t.category}</TableHead>
+                                <TableHead className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider">{t.location}</TableHead>
                                 <TableHead
-                                    className="text-[var(--text-secondary)] text-right cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+                                    className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider text-right cursor-pointer hover:text-[var(--accent-gold)] transition-colors"
                                     onClick={() => handleSort('currentStock')}
                                 >
                                     <div className="flex items-center justify-end gap-1">
-                                        Stock Level
+                                        {t.stockLevel}
                                         <ArrowUpDown className="h-3 w-3" />
                                     </div>
                                 </TableHead>
                                 <TableHead
-                                    className="text-[var(--text-secondary)] text-right cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+                                    className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider text-right cursor-pointer hover:text-[var(--accent-gold)] transition-colors"
                                     onClick={() => handleSort('unitCost')}
                                 >
                                     <div className="flex items-center justify-end gap-1">
-                                        Unit Cost
+                                        {t.price}
                                         <ArrowUpDown className="h-3 w-3" />
                                     </div>
                                 </TableHead>
-                                <TableHead className="text-[var(--text-secondary)] text-right">Adjust</TableHead>
+                                <TableHead className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider text-right">{t.adjust}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-[var(--text-muted)]">
-                                        Loading inventory...
+                                    <TableCell colSpan={6} className="text-center py-12 text-[var(--text-secondary)]">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="w-8 h-8 border-2 border-[#E8A838] border-t-transparent rounded-full animate-spin" />
+                                            {t.loading || 'Loading inventory...'}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ) : sortedMaterials.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12 text-[var(--text-muted)]">
-                                        No raw materials found.
+                                    <TableCell colSpan={6} className="text-center py-20 text-[var(--text-secondary)]">
+                                        <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                        <h3 className="text-lg font-medium text-[var(--text-primary)] mb-1">
+                                            {t.noMaterialsFound || 'No materials found'}
+                                        </h3>
+                                        <p className="text-sm opacity-60">
+                                            {t.noFilters || 'Try adjusting your filters'}
+                                        </p>
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -221,34 +251,41 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                                     return (
                                         <TableRow
                                             key={material.id}
-                                            className="border-b-[var(--border)] hover:bg-[var(--background)]/50 cursor-pointer"
+                                            className="border-b-[var(--border)] hover:bg-[var(--muted)]/40 transition-colors group cursor-pointer"
                                             onClick={() => openMaterialDrawer(material.id)}
                                         >
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[var(--text-primary)] font-medium flex items-center gap-2">
+                                                    <span className="text-[var(--text-primary)] font-semibold flex items-center gap-2">
                                                         {material.name}
                                                         {isLowStock && (
-                                                            <Badge variant="destructive" className="h-5 text-[10px] px-1.5 flex items-center gap-1">
-                                                                <AlertTriangle className="h-3 w-3" /> Low Stock
+                                                            <Badge className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20 h-5 text-[10px] px-1.5 flex items-center gap-1">
+                                                                <AlertTriangle className="h-3 w-3" /> {t.lowStock}
                                                             </Badge>
                                                         )}
                                                     </span>
-                                                    <span className="text-xs text-[var(--text-muted)] font-mono mt-0.5">{material.sku}</span>
+                                                    <span className="text-[10px] text-[var(--text-secondary)] font-mono uppercase tracking-wider mt-0.5 opacity-60">
+                                                        {material.sku}
+                                                    </span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className="border-[var(--border)] bg-[var(--background)] text-[var(--text-secondary)] font-normal">
-                                                    {formatCategory(material.category)}
+                                                <Badge variant="outline" className="border-[var(--border)] bg-[var(--card)] text-[var(--text-secondary)] font-medium">
+                                                    {getTranslatedCategory(material.category)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-[var(--text-secondary)] text-sm">
-                                                {formatCategory(material.location)}
+                                                {getTranslatedLocation(material.location)}
                                             </TableCell>
-                                            <TableCell className={`text-right font-medium ${isLowStock ? 'text-red-500' : 'text-[var(--text-primary)]'}`}>
-                                                {material.currentStock} {material.category === 'PACKAGING' ? 'units' : 'kg'}
+                                            <TableCell className={cn(
+                                                "text-right font-bold transition-colors",
+                                                isLowStock ? 'text-red-500' : 'text-[var(--accent-gold)]'
+                                            )}>
+                                                {material.currentStock} <span className="text-[10px] opacity-60 uppercase ml-0.5">
+                                                    {material.category === 'PACKAGING' ? t.units : t.kg}
+                                                </span>
                                             </TableCell>
-                                            <TableCell className="text-right text-[var(--text-secondary)]">
+                                            <TableCell className="text-right text-[var(--text-primary)] font-medium font-mono">
                                                 {formatCurrency(material.unitCost)}
                                             </TableCell>
                                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>

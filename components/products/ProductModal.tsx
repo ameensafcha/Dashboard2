@@ -5,9 +5,12 @@ import { useProductStore } from '@/stores/productStore';
 import { getProduct, createProduct, updateProduct } from '@/app/actions/product/actions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import ProductForm from './ProductForm';
 import { toast } from '@/components/ui/toast';
 import { Product } from '@prisma/client';
+import { Edit, Plus, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 type ProductFormState = Partial<Omit<Product, 'baseCost' | 'baseRetailPrice' | 'size'>> & {
   baseCost: number;
@@ -43,7 +46,6 @@ export default function ProductModal() {
     launchDate: null,
   });
 
-  const [originalData, setOriginalData] = useState<ProductFormState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -67,7 +69,6 @@ export default function ProductModal() {
         productId,
       };
       setFormData(data);
-      setOriginalData(data);
     }
   };
 
@@ -89,7 +90,6 @@ export default function ProductModal() {
       image: null,
       launchDate: null,
     });
-    setOriginalData(null);
   };
 
   const handleClose = () => {
@@ -102,11 +102,6 @@ export default function ProductModal() {
     setFormData((prev: ProductFormState) => ({ ...prev, [field]: value }));
   };
 
-  const hasChanges = (): boolean => {
-    if (!originalData) return true;
-    return JSON.stringify(formData) !== JSON.stringify(originalData);
-  };
-
   const handleSave = async () => {
     if (!formData.name) {
       toast({ title: 'Error', description: 'Please enter product name', type: 'error' });
@@ -116,6 +111,7 @@ export default function ProductModal() {
     const dataToSave = {
       ...formData,
       skuPrefix: formData.skuPrefix || undefined,
+      launchDate: formData.launchDate || null,
     };
 
     setIsSaving(true);
@@ -141,49 +137,53 @@ export default function ProductModal() {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0 bg-[var(--card)] border-[var(--border)] shadow-2xl flex flex-col">
-        <DialogHeader className="p-6 pb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#E8A838]/10 flex items-center justify-center text-[#E8A838] border border-[#E8A838]/20 shadow-sm">
+      <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-hidden p-0 bg-[var(--background)] border border-[var(--border)] shadow-xl flex flex-col rounded-2xl">
+        <DialogHeader className="px-8 py-6 bg-[var(--card)] border-b border-[var(--border)]">
+          <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
+            <div className="w-11 h-11 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)]">
               {selectedProduct ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
             </div>
-            <DialogTitle className="text-2xl font-bold text-[var(--text-primary)]">
-              {selectedProduct ? t.editProduct : t.addNewProduct}
-            </DialogTitle>
+            <div className={cn("space-y-0.5", isRTL ? "text-right" : "")}>
+              <DialogTitle className="text-xl font-bold text-[var(--text-primary)] tracking-tight">
+                {selectedProduct ? t.editProduct : t.addNewProduct}
+              </DialogTitle>
+              <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">{selectedProduct ? 'Update product details' : 'Register new catalog item'}</p>
+            </div>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 pt-2">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <div className="flex-1 overflow-y-auto p-8 sm:p-10 scrollbar-hide">
           <ProductForm product={formData as any} onChange={handleFieldChange} />
         </div>
 
-        <div className="flex justify-end gap-3 p-6 bg-[var(--muted)]/50 border-t" style={{ borderColor: 'var(--border)' }}>
+        <div className={cn("flex justify-end gap-3 p-6 bg-[var(--card)] border-t border-[var(--border)]", isRTL ? "flex-row-reverse" : "")}>
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={handleClose}
             disabled={isSaving}
-            className="border-[var(--border)] hover:bg-[var(--card)] w-28 text-[var(--text-primary)] transition-all"
+            className="px-6 text-[var(--text-secondary)] font-bold uppercase tracking-widest text-[10px] h-10 rounded-lg"
           >
             {t.cancel}
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving || !formData.name}
-            className="bg-[#E8A838] hover:bg-[#d49a2d] text-black font-semibold px-10 shadow-md transition-all active:scale-95"
+            className="bg-[var(--primary)] hover:opacity-90 text-[var(--primary-foreground)] font-bold uppercase tracking-widest text-[10px] h-10 px-8 rounded-lg shadow-sm transition-all active:scale-95"
           >
             {isSaving ? (
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                {selectedProduct ? 'Updating...' : 'Saving...'}
+                <div className="w-3.5 h-3.5 border-2 border-[var(--primary-foreground)]/30 border-t-[var(--primary-foreground)] rounded-full animate-spin" />
+                <span>{selectedProduct ? 'Updating...' : 'Saving...'}</span>
               </div>
-            ) : t.saveChanges}
+            ) : (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{t.saveChanges}</span>
+              </div>
+            )}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-import { Edit, Plus } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n';

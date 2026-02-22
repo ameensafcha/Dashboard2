@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from '@/lib/i18n';
-import { Tag, FileText, Hash, DollarSign, Package, Activity, ShieldCheck, Box } from 'lucide-react';
-
+import { Tag, FileText, Hash, DollarSign, Package, Activity, ShieldCheck, Box, Coffee, LayoutGrid, Calendar, Scale } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Product } from '@prisma/client';
 
 interface ProductFormProps {
@@ -38,246 +38,278 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="productId" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <Hash className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.productId} <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="productId"
-            type="number"
-            value={product.productId || ''}
-            onChange={(e) => onChange('productId', e.target.value)}
-            placeholder="e.g., 101"
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
-          />
+    <div className="space-y-10">
+      {/* 1. Core Identity Section */}
+      <FormSection
+        icon={Package}
+        title={isRTL ? 'بيانات المنتج' : 'Core Identity'}
+        description={isRTL ? 'الاسم ورمز المنتج' : 'Product identifiers'}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          <FormItem icon={Hash} label={t.productId} required isRTL={isRTL}>
+            <Input
+              type="number"
+              value={product.productId || ''}
+              onChange={(e) => onChange('productId', e.target.value)}
+              placeholder="e.g., 101"
+              disabled={!!(product as any).id}
+              className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl focus:ring-1 focus:ring-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </FormItem>
+          <FormItem icon={Tag} label={t.productName} required isRTL={isRTL}>
+            <Input
+              value={product.name || ''}
+              onChange={(e) => onChange('name', e.target.value)}
+              placeholder={t.enterProductName}
+              className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl focus:ring-1 focus:ring-[var(--primary)]"
+            />
+          </FormItem>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <Package className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.productName} <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="name"
-            value={product.name || ''}
-            onChange={(e) => onChange('name', e.target.value)}
-            placeholder={t.enterProductName}
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2 relative">
-          <Label className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <Activity className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.status} <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            value={product.status || ''}
-            onValueChange={(value) => onChange('status', value)}
-          >
-            <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11">
-              <SelectValue placeholder={t.status} />
-            </SelectTrigger>
-            <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)] shadow-xl" position="popper" sideOffset={4}>
-              {productStatusOptions.map((status) => (
-                <SelectItem key={status.value} value={status.value} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">
-                  {status.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2 relative">
-          <Label className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <Tag className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.category}
-          </Label>
-          <Select
-            open={openCategory}
-            onOpenChange={setOpenCategory}
-            value={product.categoryId || ''}
-            onValueChange={(value) => onChange('categoryId', value)}
-          >
-            <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11">
-              <SelectValue placeholder={t.allCategories} />
-            </SelectTrigger>
-            <SelectContent
-              className="z-[100] max-h-60 overflow-auto bg-[var(--card)] border-[var(--border)] shadow-xl"
-              position="popper"
-              sideOffset={4}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          <FormItem icon={Activity} label={t.status} required isRTL={isRTL}>
+            <Select
+              value={product.status || ''}
+              onValueChange={(value) => onChange('status', value)}
             >
-              {categories.length === 0 ? (
-                <div className="p-2 text-sm text-[var(--text-secondary)]">{t.noCategoriesYet}</div>
-              ) : (
-                categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">
-                    {cat.name}
+              <SelectTrigger className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl">
+                <SelectValue placeholder={t.status} />
+              </SelectTrigger>
+              <SelectContent className="bg-[var(--popover)] border-[var(--border)] shadow-xl rounded-xl">
+                {productStatusOptions.map((status) => (
+                  <SelectItem key={status.value} value={status.value} className="text-[var(--text-primary)] py-2.5">
+                    {status.label}
                   </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+          <FormItem icon={LayoutGrid} label={t.category} isRTL={isRTL}>
+            <Select
+              open={openCategory}
+              onOpenChange={setOpenCategory}
+              value={product.categoryId || ''}
+              onValueChange={(value) => onChange('categoryId', value)}
+            >
+              <SelectTrigger className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl">
+                <SelectValue placeholder={t.allCategories} />
+              </SelectTrigger>
+              <SelectContent className="bg-[var(--popover)] border-[var(--border)] shadow-xl rounded-xl max-h-60 overflow-auto">
+                {categories.length === 0 ? (
+                  <div className="p-4 text-center text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest">{t.noCategoriesYet}</div>
+                ) : (
+                  categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id} className="text-[var(--text-primary)] py-2.5">
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </FormItem>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="baseRetailPrice" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <DollarSign className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.retailPrice} <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="baseRetailPrice"
-            type="number"
-            step="0.01"
-            value={product.baseRetailPrice ? Number(product.baseRetailPrice) : ''}
-            onChange={(e) => onChange('baseRetailPrice', parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 border-t border-[var(--border)]/10 pt-6">
+          <FormItem icon={Calendar} label={t.launchDate} isRTL={isRTL}>
+            <Input
+              type="date"
+              value={product.launchDate ? new Date(product.launchDate).toISOString().split('T')[0] : ''}
+              onChange={(e) => onChange('launchDate', e.target.value)}
+              className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl focus:ring-1 focus:ring-[var(--primary)]"
+            />
+          </FormItem>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="baseCost" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <DollarSign className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.baseCost} <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="baseCost"
-            type="number"
-            step="0.01"
-            value={product.baseCost ? Number(product.baseCost) : ''}
-            onChange={(e) => onChange('baseCost', parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
-          />
+      </FormSection>
+
+      {/* 2. Pricing & Economics */}
+      <FormSection
+        icon={DollarSign}
+        title={isRTL ? 'التسعير' : 'Pricing'}
+        description={isRTL ? 'التكلفة وسعر السوق' : 'Marginal evaluation'}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 bg-[var(--muted)]/30 p-6 rounded-2xl border border-[var(--border)]">
+          <FormItem icon={DollarSign} label={t.baseCost} required isRTL={isRTL}>
+            <Input
+              type="number"
+              step="0.01"
+              value={product.baseCost ? Number(product.baseCost) : ''}
+              onChange={(e) => onChange('baseCost', parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
+              className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl font-bold"
+            />
+          </FormItem>
+          <FormItem icon={Tag} label={t.retailPrice} required isRTL={isRTL}>
+            <Input
+              type="number"
+              step="0.01"
+              value={product.baseRetailPrice ? Number(product.baseRetailPrice) : ''}
+              onChange={(e) => onChange('baseRetailPrice', parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
+              className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--primary)] h-11 rounded-xl font-bold text-lg"
+            />
+          </FormItem>
         </div>
-      </div>
+      </FormSection>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2 relative">
-          <Label className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <Box className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.unit} <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            value={(product as any).unit || 'gm'}
-            onValueChange={(value) => onChange('unit', value)}
-          >
-            <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11">
-              <SelectValue placeholder={t.unit} />
-            </SelectTrigger>
-            <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)] shadow-xl" position="popper" sideOffset={4}>
-              {['gm', 'kg', 'ml', 'L'].map(u => (
-                <SelectItem key={u} value={u} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">{u}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* 3. Specifications */}
+      <FormSection
+        icon={Box}
+        title={isRTL ? 'المواصفات' : 'Specifications'}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          <FormItem icon={Box} label={t.unit} required isRTL={isRTL}>
+            <Select
+              value={(product as any).unit || 'gm'}
+              onValueChange={(value) => onChange('unit', value)}
+            >
+              <SelectTrigger className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl">
+                <SelectValue placeholder={t.unit} />
+              </SelectTrigger>
+              <SelectContent className="bg-[var(--popover)] border-[var(--border)] shadow-xl rounded-xl">
+                {['gm', 'kg', 'ml', 'L'].map(u => (
+                  <SelectItem key={u} value={u} className="text-[var(--text-primary)] py-2.5">{u}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+          <FormItem icon={Scale} label={t.size} required isRTL={isRTL}>
+            <Input
+              type="number"
+              step="0.01"
+              value={(product as any).size ? Number((product as any).size) : ''}
+              onChange={(e) => onChange('size', parseFloat(e.target.value) || 0)}
+              placeholder="e.g. 500"
+              className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl"
+            />
+          </FormItem>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="size" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-            <Box className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-            {t.size} <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="size"
-            type="number"
-            step="0.01"
-            value={(product as any).size ? Number((product as any).size) : ''}
-            onChange={(e) => onChange('size', parseFloat(e.target.value) || 0)}
-            placeholder="e.g. 500"
-            className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
-          />
-        </div>
-      </div>
 
-      <div className="space-y-2 relative">
-        <Label className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-          <ShieldCheck className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-          {t.sfdaStatus}
-        </Label>
-        <Select
-          value={product.sfdaStatus || 'not_submitted'}
-          onValueChange={(value) => onChange('sfdaStatus', value)}
-        >
-          <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11">
-            <SelectValue placeholder={t.sfdaStatus} />
-          </SelectTrigger>
-          <SelectContent className="z-[100] bg-[var(--card)] border-[var(--border)] shadow-xl" position="popper" sideOffset={4}>
-            {sfdaStatusOptions.map((status) => (
-              <SelectItem key={status.value} value={status.value} className="cursor-pointer text-[var(--text-primary)] focus:bg-[#E8A838] focus:text-black py-2.5">
-                {status.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="sfdaReference" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-          <FileText className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-          {t.sfdaReference}
-        </Label>
-        <Input
-          id="sfdaReference"
-          value={product.sfdaReference || ''}
-          onChange={(e) => onChange('sfdaReference', e.target.value)}
-          placeholder="e.g., SFDA-2024-001"
-          className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-          <FileText className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-          {t.description}
-        </Label>
-        <textarea
-          id="description"
-          value={product.description || ''}
-          onChange={(e) => onChange('description', e.target.value)}
-          placeholder={t.enterProductDescription}
-          rows={3}
-          className="w-full px-3 py-2 bg-[var(--muted)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] resize-none transition-all"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="keyIngredients" className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-          <FileText className="w-4 h-4 opacity-50 text-[var(--text-secondary)]" />
-          {t.keyIngredients}
-        </Label>
-        <Input
-          id="keyIngredients"
-          value={product.keyIngredients || ''}
-          onChange={(e) => onChange('keyIngredients', e.target.value)}
-          placeholder="e.g., Natural herbs, spices"
-          className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:ring-1 focus:ring-[#E8A838] focus:border-[#E8A838] h-11"
-        />
-      </div>
-
-      <div className="flex items-center gap-2 group cursor-pointer">
-        <div className="relative flex items-center">
+        <div className={cn("flex items-center gap-4 p-4 rounded-xl bg-[var(--muted)]/30 border border-[var(--border)] hover:border-[var(--primary)]/30 transition-all cursor-pointer", isRTL ? "flex-row-reverse" : "")}>
           <input
             type="checkbox"
             id="caffeineFree"
             checked={product.caffeineFree ?? true}
             onChange={(e) => onChange('caffeineFree', e.target.checked)}
-            className="w-5 h-5 appearance-none border-2 border-[var(--border)] rounded bg-[var(--muted)] checked:bg-[#E8A838] checked:border-[#E8A838] transition-all cursor-pointer focus:ring-2 focus:ring-[#E8A838]/20"
+            className="w-5 h-5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
           />
-          {product.caffeineFree && (
-            <svg className="absolute w-3.5 h-3.5 text-black pointer-events-none inset-0 m-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
-            </svg>
-          )}
+          <div className={cn("flex flex-col", isRTL ? "text-right" : "")}>
+            <Label htmlFor="caffeineFree" className="cursor-pointer text-sm font-bold text-[var(--text-primary)]">
+              {t.caffeineFree}
+            </Label>
+            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Zero caffeine content</p>
+          </div>
         </div>
-        <Label htmlFor="caffeineFree" className="cursor-pointer text-sm font-medium text-[var(--text-primary)] select-none">
-          {t.caffeineFree}
-        </Label>
+      </FormSection>
+
+      {/* 4. Regulatory */}
+      <FormSection
+        icon={ShieldCheck}
+        title={isRTL ? 'المعلومات النظامية' : 'Compliance'}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 bg-green-500/5 p-6 rounded-2xl border border-green-500/10 mb-6">
+          <FormItem icon={ShieldCheck} label={t.sfdaStatus} isRTL={isRTL}>
+            <Select
+              value={product.sfdaStatus || 'not_submitted'}
+              onValueChange={(value) => onChange('sfdaStatus', value)}
+            >
+              <SelectTrigger className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl">
+                <SelectValue placeholder={t.sfdaStatus} />
+              </SelectTrigger>
+              <SelectContent className="bg-[var(--popover)] border-[var(--border)] shadow-xl rounded-xl">
+                {sfdaStatusOptions.map((status) => (
+                  <SelectItem key={status.value} value={status.value} className="text-[var(--text-primary)] py-2.5">
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+          <FormItem icon={Hash} label={t.sfdaReference} isRTL={isRTL}>
+            <Input
+              value={product.sfdaReference || ''}
+              onChange={(e) => onChange('sfdaReference', e.target.value)}
+              placeholder="ID Reference"
+              className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl font-mono uppercase"
+            />
+          </FormItem>
+        </div>
+
+        <div className="space-y-6">
+          <FormItem icon={FileText} label={t.keyIngredients} isRTL={isRTL}>
+            <Input
+              value={product.keyIngredients || ''}
+              onChange={(e) => onChange('keyIngredients', e.target.value)}
+              placeholder="e.g., Herbs, Spices"
+              className="bg-[var(--muted)]/50 border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl"
+            />
+          </FormItem>
+          <FormItem icon={FileText} label={t.description} isRTL={isRTL}>
+            <textarea
+              id="description"
+              value={product.description || ''}
+              onChange={(e) => onChange('description', e.target.value)}
+              placeholder={t.enterProductDescription}
+              rows={3}
+              className="w-full px-5 py-3 bg-[var(--muted)]/50 border border-[var(--border)] text-[var(--text-primary)] rounded-xl focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none text-sm leading-relaxed"
+            />
+          </FormItem>
+        </div>
+      </FormSection>
+    </div>
+  );
+}
+
+function FormSection({
+  icon: Icon,
+  title,
+  description,
+  children
+}: {
+  icon: any,
+  title: string,
+  description?: string,
+  children: React.ReactNode
+}) {
+  const { isRTL } = useTranslation();
+  return (
+    <div className="space-y-5">
+      <div className={cn("space-y-1 px-1", isRTL ? "text-right" : "")}>
+        <h3 className={cn("text-base font-bold text-[var(--text-primary)] flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+          <Icon className="w-4 h-4 text-[var(--primary)]" />
+          {title}
+        </h3>
+        {description && <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">{description}</p>}
       </div>
+      <div className="space-y-6">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FormItem({
+  icon: Icon,
+  label,
+  required,
+  children,
+  isRTL
+}: {
+  icon: any,
+  label: string,
+  required?: boolean,
+  children: React.ReactNode,
+  isRTL: boolean
+}) {
+  return (
+    <div className="space-y-2.5">
+      <Label className={cn(
+        "text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-2",
+        isRTL ? "flex-row-reverse" : ""
+      )}>
+        <Icon className="w-3.5 h-3.5 opacity-40" />
+        {label} {required && <span className="text-red-500">*</span>}
+      </Label>
+      {children}
     </div>
   );
 }
