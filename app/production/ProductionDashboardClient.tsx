@@ -1,11 +1,12 @@
 'use client';
 
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Factory, CheckCircle2, AlertTriangle, TrendingUp, ArrowRight, Activity, Clock, Box } from 'lucide-react';
+import { Factory, CheckCircle2, TrendingUp, ArrowRight, Activity, Clock, Box, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from '@/lib/i18n';
 import { ProductionBatchWithProduct } from '@/app/actions/production';
 import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
 
 interface ProductionDashboardClientProps {
     batches: ProductionBatchWithProduct[];
@@ -33,151 +34,187 @@ export default function ProductionDashboardClient({
             title: t.activeBatches,
             value: activeBatches,
             sub: activeTrendText,
-            icon: Factory,
-            color: 'var(--primary)',
-            bg: 'rgba(232, 168, 56, 0.08)'
+            icon: <Factory className="w-5 h-5 text-[var(--primary)]" />,
+            color: "text-[var(--primary)]",
+            bg: "bg-[var(--primary)]/5",
+            border: "border-[var(--primary)]/10"
         },
         {
             title: t.capacityUtilization,
             value: `${utilizationPercent}%`,
-            sub: `${monthlyProductionKg} kg / ${maxCapacityKg} kg`,
-            icon: TrendingUp,
-            color: '#3b82f6',
-            bg: 'rgba(59, 130, 246, 0.08)'
+            sub: `${monthlyProductionKg.toLocaleString()} / ${maxCapacityKg.toLocaleString()} kg`,
+            icon: <TrendingUp className="w-5 h-5 text-blue-400" />,
+            color: "text-blue-400",
+            bg: "bg-blue-400/5",
+            border: "border-blue-400/10"
         },
         {
             title: t.pendingQC || 'Pending QC',
             value: batches.filter(b => b.status === 'quality_check').length,
             sub: 'Awaiting inspection',
-            icon: CheckCircle2,
-            color: '#10b981',
-            bg: 'rgba(16, 185, 129, 0.08)'
+            icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />,
+            color: "text-emerald-400",
+            bg: "bg-emerald-400/5",
+            border: "border-emerald-400/10"
         },
         {
             title: t.activeProducts,
             value: new Set(batches.map(b => b.productId)).size,
-            sub: 'Unique items',
-            icon: Activity,
-            color: 'var(--primary)',
-            bg: 'rgba(232, 168, 56, 0.08)'
+            sub: 'Unique items in cycle',
+            icon: <Activity className="w-5 h-5 text-amber-500" />,
+            color: "text-amber-500",
+            bg: "bg-amber-400/5",
+            border: "border-amber-400/10"
         }
     ];
 
     return (
-        <div className="p-4 sm:p-6 lg:p-10 space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
-            <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6", isRTL ? "sm:flex-row-reverse" : "")}>
-                <PageHeader title={t.productionOverview} />
-                <Link
-                    href="/production/batches"
-                    className="group bg-[#E8A838] text-black hover:bg-[#d69628] px-8 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-[#E8A838]/20 active:scale-95 flex items-center gap-3"
-                >
-                    <Factory className="w-4 h-4 transition-transform group-hover:scale-110" />
-                    {t.viewAddBatches}
-                </Link>
+        <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">
+                        {t.productionOverview}
+                    </h1>
+                    <p className="text-sm text-[var(--text-disabled)] mt-1">
+                        Real-time facility monitoring and production queue management.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Link href="/production/batches" className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
+                        {t.viewAll}
+                    </Link>
+                    <Link href="/production/batches" className="h-10 px-5 flex items-center gap-2 rounded-xl text-xs font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 transition-all shadow-lg shadow-[var(--primary)]/20">
+                        <Factory className="w-4 h-4" />
+                        {t.viewAddBatches}
+                        <ArrowRight className={cn("w-4 h-4 ml-2", isRTL && "rotate-180 mr-2 ml-0")} />
+                    </Link>
+                </div>
             </div>
 
-            {/* 1. Primary Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, idx) => (
-                    <div
-                        key={idx}
-                        className="p-7 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+            {/* KPI Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {stats.map((stat, i) => (
+                    <Card
+                        key={i}
+                        className="p-6 border-[var(--border)] bg-[var(--card)] rounded-2xl hover:border-[var(--primary)]/40 transition-all border-b-4 border-b-transparent hover:border-b-[var(--primary)] shadow-sm"
                     >
-                        <div className="absolute -bottom-2 -right-2 opacity-[0.02] group-hover:opacity-[0.04] group-hover:scale-110 transition-all duration-500">
-                            <stat.icon size={64} />
-                        </div>
-
-                        <div className={cn("flex flex-col gap-4 relative z-10", isRTL ? "items-end" : "items-start")}>
-                            <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-[var(--background)] border border-[var(--border)] group-hover:border-[var(--primary)]/30 group-hover:shadow-[0_0_15px_rgba(232,168,56,0.1)]"
-                            >
-                                <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
+                        <div className="flex justify-between items-start">
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{stat.title}</p>
+                                <h3 className={cn("text-2xl font-black tracking-tight", stat.color)}>
+                                    {stat.value}
+                                </h3>
+                                <p className="text-[10px] font-bold text-[var(--text-muted)] tracking-tight opacity-70">
+                                    {stat.sub}
+                                </p>
                             </div>
-
-                            <div className={cn("space-y-1", isRTL ? "text-right" : "")}>
-                                <h3 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight">{stat.value}</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-secondary)] opacity-80">{stat.title}</p>
-                                <p className="text-[9px] font-medium text-[var(--text-muted)] tracking-tight">{stat.sub}</p>
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border", stat.bg, stat.border)}>
+                                {stat.icon}
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 ))}
             </div>
 
-            {/* 2. Production Queue Section */}
-            <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl overflow-hidden relative">
-                <div className={cn("px-8 py-6 border-b border-[var(--border)] flex justify-between items-center bg-[var(--muted)]/20", isRTL ? "flex-row-reverse" : "")}>
-                    <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
-                        <div className="w-1.5 h-6 bg-[#E8A838] rounded-full" />
-                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">
-                            {t.currentProductionQueue}
-                        </h3>
+            {/* Production Queue Feed */}
+            <Card className="border-[var(--border)] bg-[var(--card)] rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-8 border-b border-[var(--border)]/50 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-black text-[var(--text-primary)] tracking-tight">{t.currentProductionQueue}</h2>
+                        <p className="text-[11px] text-[var(--text-disabled)] mt-0.5">Live monitoring of floor activity and batch progression.</p>
                     </div>
-                    <Link href="/production/batches" className="group text-[10px] text-[#E8A838] hover:text-[#d69628] font-black uppercase tracking-widest transition-all flex items-center gap-2">
-                        {t.viewAll}
-                        <ArrowRight className={cn("w-3.5 h-3.5 transition-transform group-hover:translate-x-1", isRTL ? "rotate-180 group-hover:translate-x-[-4px]" : "")} />
-                    </Link>
+                    <LayoutGrid className="w-6 h-6 text-[var(--text-disabled)] opacity-20" />
                 </div>
 
-                <div className="divide-y divide-[var(--border)]">
-                    {batches.slice(0, 6).map((batch) => (
-                        <div key={batch.id} className={cn("p-6 hover:bg-[var(--muted)]/40 flex items-center justify-between transition-all group relative", isRTL ? "flex-row-reverse" : "")}>
-                            <div className={cn("flex items-center gap-6", isRTL ? "flex-row-reverse" : "")}>
-                                <div className="w-12 h-12 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-center group-hover:border-[var(--primary)]/30 transition-colors shadow-sm">
-                                    <Box className="w-5 h-5 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
-                                </div>
-                                <div className={cn("space-y-1", isRTL ? "text-right" : "")}>
-                                    <div className="font-mono text-[13px] font-black text-[var(--text-primary)] group-hover:text-[#E8A838] transition-colors tracking-tighter uppercase">
-                                        {batch.batchNumber}
-                                    </div>
-                                    <div className="text-[13px] text-[var(--text-primary)] font-bold flex items-center gap-2">
-                                        {batch.product?.name}
-                                        {batch.product?.size && (
-                                            <span className="text-[9px] bg-[var(--muted)] text-[var(--text-muted)] px-1.5 py-0.5 rounded font-black border border-[var(--border)] uppercase tracking-tight">
-                                                {batch.product.size} {batch.product.unit || 'gm'}
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-[var(--border)]/30">
+                                <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-right" : "text-left")}>{t.batchNo}</th>
+                                <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-right" : "text-left")}>{t.product}</th>
+                                <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-left" : "text-right")}>{t.targetQty}</th>
+                                <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-right" : "text-left")}>{t.status}</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border)]/20">
+                            {batches.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-8 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <Activity className="w-10 h-10 text-[var(--text-disabled)] opacity-20" />
+                                            <p className="text-sm font-bold text-[var(--text-disabled)] italic">{t.noActiveProduction}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                batches.slice(0, 10).map((batch) => (
+                                    <tr key={batch.id} className="group hover:bg-[var(--muted)]/30 transition-colors">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-[var(--muted)] flex items-center justify-center border border-[var(--border)] group-hover:border-[var(--primary)]/30 transition-all font-mono text-[10px] font-black uppercase">
+                                                    {batch.batchNumber.slice(-2)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">{batch.batchNumber}</p>
+                                                    <p className="text-[10px] font-bold text-[var(--text-disabled)] flex items-center gap-1 uppercase tracking-tighter">
+                                                        <Clock className="w-3 h-3" />
+                                                        {new Date(batch.startDate).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col">
+                                                <span className="text-[13px] font-bold text-[var(--text-primary)]">
+                                                    {batch.product?.name}
+                                                </span>
+                                                {batch.product?.size && (
+                                                    <span className="text-[9px] text-[var(--text-disabled)] font-black uppercase tracking-widest">
+                                                        {batch.product.size} {batch.product.unit || 'gm'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6" style={{ textAlign: isRTL ? 'left' : 'right' }}>
+                                            <span className="text-sm font-black tracking-tight text-[var(--text-primary)]">
+                                                {Number(batch.targetQty).toLocaleString()} kg
                                             </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-3 text-[10px] text-[var(--text-disabled)] font-bold uppercase tracking-widest">
-                                        <Clock className="w-3 h-3" />
-                                        {new Date(batch.startDate).toLocaleDateString()}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className={cn("text-right flex items-center gap-8", isRTL ? "flex-row-reverse" : "")}>
-                                <div className={cn("hidden sm:flex flex-col items-end gap-1", isRTL ? "items-start" : "")}>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">{t.targetQty}</span>
-                                    <span className="text-sm font-black text-[var(--text-primary)]">{Number(batch.targetQty)} kg</span>
-                                </div>
-
-                                <div className="flex flex-col items-end gap-2">
-                                    <span className={cn(
-                                        "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm border text-white transition-all transform group-hover:scale-105",
-                                        batch.status === 'completed' ? 'bg-green-500/90 border-green-400/20' :
-                                            batch.status === 'in_progress' ? 'bg-blue-500/90 border-blue-400/20 shadow-blue-500/10' :
-                                                batch.status === 'quality_check' ? 'bg-amber-500/90 border-amber-400/20 shadow-amber-500/10' :
-                                                    batch.status === 'failed' ? 'bg-red-500/90 border-red-400/20' :
-                                                        'bg-gray-500/90 border-gray-400/20'
-                                    )}>
-                                        {t[batch.status as keyof typeof t] || batch.status.replace('_', ' ')}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    {batches.length === 0 && (
-                        <div className="p-20 text-center space-y-4">
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--muted)]/30 border border-dashed border-[var(--border)]">
-                                <Activity className="w-8 h-8 text-[var(--text-disabled)] opacity-20" />
-                            </div>
-                            <p className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-widest">
-                                {t.noActiveProduction}
-                            </p>
-                        </div>
-                    )}
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className={cn(
+                                                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-center inline-block min-w-[100px] border shadow-sm",
+                                                batch.status === 'completed' ? 'bg-emerald-500 text-white border-emerald-400/20' :
+                                                    batch.status === 'in_progress' ? 'bg-blue-500 text-white border-blue-400/20' :
+                                                        batch.status === 'quality_check' ? 'bg-amber-500 text-white border-amber-400/20' :
+                                                            batch.status === 'failed' ? 'bg-red-500 text-white border-red-400/20' :
+                                                                'bg-zinc-500 text-white border-zinc-400/20'
+                                            )}>
+                                                {t[batch.status as keyof typeof t] || batch.status.replace('_', ' ')}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+
+                {batches.length > 0 && (
+                    <div className="p-6 bg-[var(--muted)]/10 border-t border-[var(--border)]/30 text-center">
+                        <Link href="/production/batches" className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
+                            {t.viewAll}
+                            {isRTL ? <ChevronLeft className="w-4 h-4 ml-2" /> : <ArrowRight className="w-4 h-4 ml-2" />}
+                        </Link>
+                    </div>
+                )}
+            </Card>
         </div>
     );
+}
+
+function ChevronLeft({ className }: { className?: string }) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("lucide lucide-chevron-left", className)}><path d="m15 18-6-6 6-6" /></svg>
+    )
 }

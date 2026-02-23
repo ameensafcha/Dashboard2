@@ -67,6 +67,7 @@ export default function Sidebar() {
       name: t.finance, href: '/finance', icon: DollarSign, children: [
         { name: t.overview, href: '/finance' },
         { name: t.expenses, href: '/finance/expenses' },
+        { name: t.transactions, href: '/finance/transactions' },
       ]
     },
     {

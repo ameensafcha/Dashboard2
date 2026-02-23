@@ -2,7 +2,8 @@
 
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useTranslation } from '@/lib/i18n';
-import { Coffee, Layers, CheckCircle, Activity, ArrowRight, LayoutGrid, DollarSign, Users } from 'lucide-react';
+import { Coffee, Layers, CheckCircle, Activity, ArrowRight, LayoutGrid, ChevronLeft } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -13,6 +14,7 @@ interface ProductsOverviewData {
     sfdaApprovedCount: number;
     statusBreakdown: { status: string; count: number }[];
     sfdaBreakdown: { status: string; count: number }[];
+    recentProducts: any[];
 }
 
 export default function ProductsOverviewClient({ data }: { data: ProductsOverviewData }) {
@@ -22,171 +24,215 @@ export default function ProductsOverviewClient({ data }: { data: ProductsOvervie
         {
             title: t.totalProducts,
             value: data.totalProducts,
-            icon: Coffee,
-            color: 'var(--primary)',
-            bg: 'rgba(232, 168, 56, 0.08)'
+            icon: <Coffee className="w-5 h-5 text-[var(--primary)]" />,
+            color: "text-[var(--primary)]",
+            bg: "bg-[var(--primary)]/5",
+            border: "border-[var(--primary)]/10"
         },
         {
             title: t.categories,
             value: data.totalCategories,
-            icon: Layers,
-            color: '#3b82f6',
-            bg: 'rgba(59, 130, 246, 0.08)'
+            icon: <Layers className="w-5 h-5 text-blue-400" />,
+            color: "text-blue-400",
+            bg: "bg-blue-400/5",
+            border: "border-blue-400/10"
         },
         {
             title: t.sfdaApproved,
             value: data.sfdaApprovedCount,
-            icon: CheckCircle,
-            color: '#10b981',
-            bg: 'rgba(16, 185, 129, 0.08)'
+            icon: <CheckCircle className="w-5 h-5 text-emerald-400" />,
+            color: "text-emerald-400",
+            bg: "bg-emerald-400/5",
+            border: "border-emerald-400/10"
         },
         {
-            title: t.activeProducts,
+            title: t.activeProducts || 'Active Products',
             value: data.activeCount,
-            icon: Activity,
-            color: 'var(--primary)',
-            bg: 'rgba(232, 168, 56, 0.08)'
+            icon: <Activity className="w-5 h-5 text-amber-500" />,
+            color: "text-amber-500",
+            bg: "bg-amber-400/5",
+            border: "border-amber-400/10"
         }
     ];
 
-    const quickActions = [
-        { title: t.productCatalog, href: '/products/catalog', icon: LayoutGrid, desc: 'Manage catalog & SKUs' },
-        { title: t.categories, href: '/products/categories', icon: Layers, desc: 'Organize product types' },
-        { title: t.pricing, href: '/products/pricing', icon: DollarSign, desc: 'Set margins & tiers' },
-        { title: t.suppliers, href: '/products/suppliers', icon: Users, desc: 'Manage raw material sources' },
-    ];
-
     return (
-        <div className="p-4 sm:p-6 lg:p-10 space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
-            <PageHeader title={t.productsOverview} />
+        <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">
+                        {t.productsOverview}
+                    </h1>
+                    <p className="text-sm text-[var(--text-disabled)] mt-1">
+                        Centralized catalog management and compliance monitoring.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Link href="/products/catalog" className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
+                        {t.productCatalog}
+                    </Link>
+                    <Link href="/products/pricing" className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
+                        {t.pricing}
+                    </Link>
+                    <Link href="/products/catalog" className="h-10 px-5 flex items-center gap-2 rounded-xl text-xs font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 transition-all">
+                        {t.addNewProduct}
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                    </Link>
+                </div>
+            </div>
 
-            {/* 1. Primary Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, idx) => (
-                    <div
-                        key={idx}
-                        className="p-7 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+            {/* KPI Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {stats.map((stat, i) => (
+                    <Card
+                        key={i}
+                        className="p-6 border-[var(--border)] bg-[var(--card)] rounded-2xl hover:border-[var(--primary)]/40 transition-all border-b-4 border-b-transparent hover:border-b-[var(--primary)] shadow-sm"
                     >
-                        {/* Background Icon - More subtle and smaller to prevent override */}
-                        <div className="absolute -bottom-2 -right-2 opacity-[0.02] group-hover:opacity-[0.04] group-hover:scale-110 transition-all duration-500">
-                            <stat.icon size={64} />
-                        </div>
-
-                        <div className={cn("flex flex-col gap-4 relative z-10", isRTL ? "items-end" : "items-start")}>
-                            <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-[var(--background)] border border-[var(--border)] group-hover:border-[var(--primary)]/30 group-hover:shadow-[0_0_15px_rgba(232,168,56,0.1)]"
-                            >
-                                <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
+                        <div className="flex justify-between items-start">
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{stat.title}</p>
+                                <h3 className={cn("text-2xl font-black tracking-tight", stat.color)}>
+                                    {stat.value.toLocaleString()}
+                                </h3>
                             </div>
-
-                            <div className={cn("space-y-1", isRTL ? "text-right" : "")}>
-                                <h3 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight">{stat.value}</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-secondary)] opacity-80">{stat.title}</p>
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border", stat.bg, stat.border)}>
+                                {stat.icon}
                             </div>
                         </div>
-                    </div>
+                    </Card>
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* 2. Distributions & Summary */}
-                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Status Distribution */}
-                    <div className="bg-[var(--card)] p-8 rounded-2xl border border-[var(--border)] shadow-sm space-y-8 relative overflow-hidden">
-                        <div className={cn("flex justify-between items-center", isRTL ? "flex-row-reverse" : "")}>
-                            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-[var(--primary)]" />
-                                {t.catalogSummary}
-                            </h3>
-                            <span className="text-[9px] bg-[var(--muted)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">{t.distribution}</span>
+            {/* Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Side Analytics */}
+                <div className="lg:col-span-4 space-y-6">
+                    <Card className="p-8 border-[var(--border)] bg-[var(--card)] rounded-2xl shadow-sm">
+                        <div className="mb-8">
+                            <h2 className="text-sm font-black text-[var(--text-primary)] uppercase tracking-widest">{t.catalogSummary || 'Catalog Status'}</h2>
+                            <p className="text-[10px] text-[var(--text-disabled)] mt-0.5 uppercase tracking-tighter">Production lifecycle.</p>
                         </div>
-
                         <div className="space-y-6">
                             {data.statusBreakdown.map((item) => (
                                 <div key={item.status} className="space-y-2">
-                                    <div className={cn("flex justify-between text-[11px] font-bold uppercase tracking-wider", isRTL ? "flex-row-reverse text-right" : "")}>
-                                        <span className="text-[var(--text-primary)]">{t[item.status as keyof typeof t] || item.status}</span>
-                                        <span className="text-[var(--text-secondary)]">{item.count}</span>
+                                    <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
+                                        <span className="text-[var(--text-secondary)]">{t[item.status as keyof typeof t] || item.status}</span>
+                                        <span className="text-[var(--primary)]">{item.count}</span>
                                     </div>
-                                    <div className="h-2 w-full bg-[var(--muted)] rounded-full overflow-hidden">
+                                    <div className="h-1.5 w-full bg-[var(--muted)]/50 rounded-full overflow-hidden">
                                         <div
-                                            className={cn("h-full transition-all duration-1000",
-                                                item.status === 'active' ? 'bg-green-500' : item.status === 'in_development' ? 'bg-amber-500' : 'bg-red-500/80'
+                                            className={cn("h-full rounded-full transition-all duration-1000",
+                                                item.status === 'active' ? 'bg-emerald-500' : item.status === 'in_development' ? 'bg-amber-500' : 'bg-red-500'
                                             )}
-                                            style={{ width: `${(item.count / data.totalProducts) * 100}%` }}
+                                            style={{ width: `${(item.count / (data.totalProducts || 1)) * 100}%` }}
                                         />
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Card>
 
-                    {/* SFDA Compliance Distribution */}
-                    <div className="bg-[var(--card)] p-8 rounded-2xl border border-[var(--border)] shadow-sm space-y-8 relative overflow-hidden">
-                        <div className={cn("flex justify-between items-center", isRTL ? "flex-row-reverse" : "")}>
-                            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-500" />
-                                {t.sfdaCompliance}
-                            </h3>
-                            <span className="text-[9px] bg-[var(--muted)] text-[var(--text-secondary)] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">{t.distribution}</span>
+                    <Card className="p-8 border-[var(--border)] bg-[var(--card)] rounded-2xl shadow-sm">
+                        <div className="mb-8">
+                            <h2 className="text-sm font-black text-[var(--text-primary)] uppercase tracking-widest">{t.sfdaCompliance || 'Compliance'}</h2>
+                            <p className="text-[10px] text-[var(--text-disabled)] mt-0.5 uppercase tracking-tighter">Certification status.</p>
                         </div>
-
                         <div className="space-y-6">
                             {data.sfdaBreakdown.map((item) => (
                                 <div key={item.status} className="space-y-2">
-                                    <div className={cn("flex justify-between text-[11px] font-bold uppercase tracking-wider", isRTL ? "flex-row-reverse text-right" : "")}>
-                                        <span className="text-[var(--text-primary)]">{t[item.status as keyof typeof t] || item.status}</span>
-                                        <span className="text-[var(--text-secondary)]">{item.count}</span>
+                                    <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
+                                        <span className="text-[var(--text-secondary)]">{t[item.status as keyof typeof t] || item.status}</span>
+                                        <span className="text-[var(--text-primary)] font-black">{item.count}</span>
                                     </div>
-                                    <div className="h-2 w-full bg-[var(--muted)] rounded-full overflow-hidden">
+                                    <div className="h-1.5 w-full bg-[var(--muted)]/50 rounded-full overflow-hidden">
                                         <div
-                                            className={cn("h-full transition-all duration-1000",
-                                                item.status === 'approved' ? 'bg-green-500' : item.status === 'pending' ? 'bg-amber-500' : 'bg-red-500/80'
+                                            className={cn("h-full rounded-full transition-all duration-1000",
+                                                item.status === 'approved' ? 'bg-blue-500' : 'bg-zinc-500'
                                             )}
-                                            style={{ width: `${(item.count / data.totalProducts) * 100}%` }}
+                                            style={{ width: `${(item.count / (data.totalProducts || 1)) * 100}%` }}
                                         />
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Card>
                 </div>
 
-                {/* 3. Quick Actions Sidebar */}
-                <div className="space-y-6">
-                    <div className="bg-[#121212] p-8 rounded-2xl border border-white/5 shadow-2xl space-y-8">
-                        <h3 className={cn("text-[11px] font-black uppercase tracking-[0.3em] text-[var(--primary)] flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                            <LayoutGrid className="w-4 h-4" />
-                            {t.quickActions}
-                        </h3>
-
-                        <div className="space-y-4">
-                            {quickActions.map((action, idx) => (
-                                <Link
-                                    key={idx}
-                                    href={action.href}
-                                    className={cn(
-                                        "flex items-center p-4 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.04] hover:border-[var(--primary)]/20 transition-all group group/link",
-                                        isRTL ? "flex-row-reverse text-right" : ""
-                                    )}
-                                >
-                                    <div className={cn("w-10 h-10 rounded-xl bg-[var(--primary)]/5 flex items-center justify-center mr-4 group-hover/link:bg-[var(--primary)]/10 transition-colors shrink-0", isRTL ? "mr-0 ml-4" : "")}>
-                                        <action.icon className="w-5 h-5 text-[var(--primary)]" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-[13px] font-bold text-white group-hover/link:text-[var(--primary)] transition-colors">{action.title}</p>
-                                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{action.desc}</p>
-                                    </div>
-                                    {isRTL ? (
-                                        <ArrowRight className="w-4 h-4 text-gray-700 rotate-180 group-hover/link:translate-x-[-4px] group-hover/link:text-[var(--primary)] transition-all" />
-                                    ) : (
-                                        <ArrowRight className="w-4 h-4 text-gray-700 group-hover/link:translate-x-1 group-hover/link:text-[var(--primary)] transition-all" />
-                                    )}
-                                </Link>
-                            ))}
+                {/* Recent Products */}
+                <Card className="lg:col-span-8 border-[var(--border)] bg-[var(--card)] rounded-2xl overflow-hidden shadow-sm">
+                    <div className="p-8 border-b border-[var(--border)]/50 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-black text-[var(--text-primary)] tracking-tight">{t.recentTransactions || 'Latest Additions'}</h2>
+                            <p className="text-[11px] text-[var(--text-disabled)] mt-0.5">Most recently added products.</p>
                         </div>
+                        <LayoutGrid className="w-6 h-6 text-[var(--text-disabled)] opacity-20" />
                     </div>
-                </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-[var(--border)]/30">
+                                    <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-right" : "text-left")}>{t.productName}</th>
+                                    <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-right" : "text-left")}>{t.category}</th>
+                                    <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-left" : "text-right")}>{t.price}</th>
+                                    <th className={cn("px-8 py-5 text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]", isRTL ? "text-right" : "text-left")}>{t.status}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--border)]/20">
+                                {data.recentProducts.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-8 py-20 text-center">
+                                            <p className="text-sm font-bold text-[var(--text-disabled)] italic">No products found</p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    data.recentProducts.map((p) => (
+                                        <tr key={p.id} className="group hover:bg-[var(--muted)]/30 transition-colors">
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-[var(--muted)] flex items-center justify-center border border-[var(--border)] group-hover:border-[var(--primary)]/30 transition-all">
+                                                        <Coffee className="w-5 h-5 text-[var(--text-disabled)] opacity-40 group-hover:opacity-100 group-hover:text-[var(--primary)] transition-all" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">{p.name}</p>
+                                                        <p className="text-[10px] font-bold text-[var(--text-disabled)] uppercase tracking-tighter">{p.skuPrefix}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <span className="text-[11px] font-bold text-[var(--text-secondary)] bg-[var(--muted)]/50 px-2 py-1 rounded-md">
+                                                    {p.category?.name || 'Uncategorized'}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6" style={{ textAlign: isRTL ? 'left' : 'right' }}>
+                                                <span className="text-sm font-black tracking-tight text-[var(--text-primary)]">
+                                                    SAR {p.baseRetailPrice.toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight text-center inline-block min-w-[80px] border border-current",
+                                                    p.status === 'active' ? "bg-emerald-500/10 text-emerald-500" :
+                                                        p.status === 'in_development' ? "bg-amber-500/10 text-amber-500" :
+                                                            "bg-red-500/10 text-red-500"
+                                                )}>
+                                                    {t[p.status as keyof typeof t] || p.status}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="p-6 bg-[var(--muted)]/10 border-t border-[var(--border)]/30 text-center">
+                        <Link href="/products/catalog" className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
+                            {t.viewFullHistory || 'Manage Catalog'}
+                            {isRTL ? <ChevronLeft className="w-4 h-4 mr-2" /> : <ArrowRight className="w-4 h-4 ml-2" />}
+                        </Link>
+                    </div>
+                </Card>
             </div>
         </div>
     );

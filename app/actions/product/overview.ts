@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 
 export async function getProductsOverview() {
     try {
-        const [totalProducts, totalCategories, productsByStatus, productsBySfda] = await Promise.all([
+        const [totalProducts, totalCategories, productsByStatus, productsBySfda, recentProducts] = await Promise.all([
             prisma.product.count(),
             prisma.category.count(),
             prisma.product.groupBy({
@@ -14,6 +14,11 @@ export async function getProductsOverview() {
             prisma.product.groupBy({
                 by: ['sfdaStatus'],
                 _count: { sfdaStatus: true }
+            }),
+            prisma.product.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+                include: { category: true }
             })
         ]);
 
@@ -32,6 +37,12 @@ export async function getProductsOverview() {
             sfdaBreakdown: productsBySfda.map(p => ({
                 status: p.sfdaStatus,
                 count: p._count.sfdaStatus
+            })),
+            recentProducts: recentProducts.map(p => ({
+                ...p,
+                baseCost: Number(p.baseCost),
+                baseRetailPrice: Number(p.baseRetailPrice),
+                size: p.size ? Number(p.size) : null
             }))
         };
     } catch (error) {

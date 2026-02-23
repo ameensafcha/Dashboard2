@@ -249,3 +249,31 @@ export async function getFinanceSummary() {
         };
     }
 }
+
+export async function getTransactions(page = 1, limit = 50) {
+    try {
+        const transactions = await prisma.transaction.findMany({
+            orderBy: { date: 'desc' },
+            skip: (page - 1) * limit,
+            take: limit,
+        });
+
+        const total = await prisma.transaction.count();
+
+        return {
+            transactions: transactions.map(t => ({
+                ...t,
+                amount: Number(t.amount),
+            })),
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        return { transactions: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+    }
+}
