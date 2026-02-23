@@ -127,6 +127,9 @@ model ProductionBatch {
   batchItems    BatchItem[]
   qualityChecks QualityCheck[]
 
+  @@index([status])
+  @@index([startDate])
+  @@index([productId])
   @@map("production_batches")
 }
 
@@ -382,6 +385,11 @@ model Order {
   orderItems OrderItem[]
   invoice    Invoice?
 
+  @@index([date])
+  @@index([status])
+  @@index([clientId])
+  @@index([companyId])
+  @@index([date, status])
   @@map("orders")
 }
 
@@ -571,6 +579,9 @@ model Transaction {
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
+  @@index([type, date])
+  @@index([orderId])
+  @@index([date])
   @@map("transactions")
 }
 
@@ -589,5 +600,7 @@ model Expense {
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
+  @@index([category])
+  @@index([date])
   @@map("expenses")
 }
