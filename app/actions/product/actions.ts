@@ -2,6 +2,7 @@
 
 import { PrismaClient, Product, Category, Prisma, ProductStatus, SfdaStatus } from '@prisma/client';
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 
 const prisma = new PrismaClient();
 
@@ -162,6 +163,9 @@ export async function createProduct(data: Partial<Product> & { categoryId?: stri
       launchDate: validData.launchDate,
     },
   });
+  revalidatePath('/products');
+  revalidatePath('/products/catalog');
+
   return serializeProduct(product);
 }
 
@@ -192,11 +196,17 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
       launchDate: validData.launchDate,
     },
   });
+
+  revalidatePath('/products');
+  revalidatePath('/products/catalog');
+
   return serializeProduct(product);
 }
 
 export async function deleteProduct(id: string) {
   await prisma.product.delete({ where: { id } });
+  revalidatePath('/products');
+  revalidatePath('/products/catalog');
 }
 
 export async function getCategories(search?: string) {
@@ -211,23 +221,35 @@ export async function getCategories(search?: string) {
 }
 
 export async function createCategory(data: { name: string; description?: string | null }) {
-  return prisma.category.create({
+  const category = await prisma.category.create({
     data: {
       name: data.name,
       description: data.description,
     },
   });
+
+  revalidatePath('/products');
+  revalidatePath('/products/catalog');
+
+  return category;
 }
 
 export async function updateCategory(id: string, data: { name?: string; description?: string | null }) {
-  return prisma.category.update({
+  const category = await prisma.category.update({
     where: { id },
     data,
   });
+
+  revalidatePath('/products');
+  revalidatePath('/products/catalog');
+
+  return category;
 }
 
 export async function deleteCategory(id: string) {
   await prisma.category.delete({ where: { id } });
+  revalidatePath('/products');
+  revalidatePath('/products/catalog');
 }
 
 // Variants have been removed.
