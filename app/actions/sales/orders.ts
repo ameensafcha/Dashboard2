@@ -100,6 +100,11 @@ export async function createOrder(data: CreateOrderInput) {
             return { success: false, error: 'Order must contain at least one item' };
         }
 
+        const invalidItems = data.items.filter(item => !item.productId);
+        if (invalidItems.length > 0) {
+            return { success: false, error: 'All items must have a valid product selected' };
+        }
+
         // Calculate item totals
         const itemsWithTotals = data.items.map(item => ({
             ...item,
@@ -113,7 +118,7 @@ export async function createOrder(data: CreateOrderInput) {
                     clientId: data.clientId,
                     companyId: data.companyId || null,
                     channel: data.channel,
-                    status: 'draft', // New orders start as draft by default
+                    status: 'draft',
                     paymentStatus: 'pending',
                     fulfillmentStatus: 'unfulfilled',
                     subTotal: data.subTotal,
@@ -139,8 +144,13 @@ export async function createOrder(data: CreateOrderInput) {
 
         revalidatePath('/sales/orders');
         return { success: true, orderId: order.id };
-    } catch (error) {
-        console.error('Failed to create order:', error);
-        return { success: false, error: 'Failed to create order' };
+    } catch (error: any) {
+        console.error('Detailed Order Creation Error:', {
+            message: error.message,
+            code: error.code,
+            meta: error.meta,
+            stack: error.stack
+        });
+        return { success: false, error: error.message || 'Failed to create order' };
     }
 }

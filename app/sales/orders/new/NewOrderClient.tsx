@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,385 +16,503 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Save, ShoppingBag } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n';
-import { createOrder } from '@/app/actions/sales/orders';
-
-// Minimal types for props
-type ClientWithCompany = any;
-type ProductWithCat = any;
-type CompanyPricingTierData = any;
-
-interface NewOrderClientProps {
-    clients: ClientWithCompany[];
-    products: ProductWithCat[];
-    companyPricingTiers: CompanyPricingTierData[];
-    globalPricingTiers: any[];
-}
-
-interface LineItem {
-    id: string; // for React keys
-    productId: string;
-    quantity: number;
-    discount: number; // manual override discount amount
-}
+import {
+    Plus,
+    Trash2,
+    ChevronRight,
+    User,
+    Building2,
+    Package,
+    Info,
+    Calendar,
+    ArrowLeft,
+    ShoppingBag
+} from 'lucide-react';
+import { useTranslation, translations, Language } from '@/lib/i18n';
+import { createOrder, CreateOrderInput } from '@/app/actions/sales/orders';
+import { useSalesStore } from '@/stores/salesStore';
+import { useCrmStore } from '@/stores/crmStore';
+import { getFinishedProducts } from '@/app/actions/inventory/finished-products';
+import { getContacts } from '@/app/actions/crm/contacts';
+import { getCompanies } from '@/app/actions/crm/companies';
+import { toast } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export default function NewOrderClient({
-    clients,
-    products,
-    companyPricingTiers,
-    globalPricingTiers
-}: NewOrderClientProps) {
+    clients = [],
+    products = [],
+    companyPricingTiers = [],
+    globalPricingTiers = []
+}: any) {
     const router = useRouter();
-    const { t, isRTL } = useTranslation();
+    const { isRTL, language } = useTranslation();
+    const { setOrders } = useSalesStore();
+    const { contacts, companies, setContacts, setCompanies } = useCrmStore();
 
-    const [isSaving, setIsSaving] = useState(false);
-    const [clientId, setClientId] = useState<string>('');
-    const [channel, setChannel] = useState<string>('b2b');
-    const [notes, setNotes] = useState('');
-    const [shippingCost, setShippingCost] = useState(0);
-    const [vatRate, setVatRate] = useState(15); // 15% VAT default
+    const [loading, setLoading] = useState(false);
+    const [localProducts, setLocalProducts] = useState<any[]>(products);
 
-    const [items, setItems] = useState<LineItem[]>([
-        { id: crypto.randomUUID(), productId: '', quantity: 1, discount: 0 }
-    ]);
+    const [formData, setFormData] = useState<Omit<CreateOrderInput, 'subTotal' | 'discount' | 'vat' | 'shippingCost' | 'grandTotal'> & { shippingCost: number }>({
+        clientId: '',
+        companyId: '',
+        channel: 'b2c' as any,
+        notes: '',
+        shippingCost: 0,
+        items: [{ productId: '', quantity: 1, unitPrice: 0, discount: 0 }]
+    });
 
-    // Derived Data
-    const selectedClient = useMemo(() => clients.find(c => c.id === clientId), [clients, clientId]);
-    const companyId = selectedClient?.companyId;
+    const [orderNumber, setOrderNumber] = useState('');
+    const [mounted, setMounted] = useState(false);
 
-    // Helper to calculate the unit price for a given product and current client
-    const getUnitPrice = (productId: string) => {
-        if (!productId) return 0;
+    // Initial Data Fetching
+    useEffect(() => {
+        setMounted(true);
+        setOrderNumber(`ORD-${Math.floor(1000 + Math.random() * 9000)}`);
 
-        const product = products.find(p => p.id === productId);
-        if (!product) return 0;
+        const fetchData = async () => {
+            const [prodRes, contactRes, companyRes] = await Promise.all([
+                getFinishedProducts(),
+                getContacts(),
+                getCompanies()
+            ]);
 
-        const basePrice = product.baseRetailPrice;
-        let discountPercent = 0;
+            if (prodRes.success) setLocalProducts(prodRes.products);
+            if (Array.isArray(contactRes)) setContacts(contactRes as any);
+            if (Array.isArray(companyRes)) setCompanies(companyRes as any);
+        };
+        fetchData();
+    }, [setContacts, setCompanies]);
 
-        if (companyId && product.categoryId) {
-            // Find if this company has a specific overriding tier for this product's category
-            const compTier = companyPricingTiers.find(
-                ct => ct.companyId === companyId && ct.categoryId === product.categoryId
-            );
-            if (compTier && compTier.pricingTier) {
-                discountPercent = compTier.pricingTier.discountPercent;
+    // Calculations
+    const calculations = useMemo(() => {
+        const subTotal = formData.items.reduce((acc, item) => {
+            return acc + (item.quantity * item.unitPrice) - item.discount;
+        }, 0);
+        const vat = subTotal * 0.15;
+        const grandTotal = subTotal + vat + Number(formData.shippingCost);
+        return { subTotal, vat, grandTotal };
+    }, [formData.items, formData.shippingCost]);
+
+    const handleAddItem = () => {
+        setFormData({
+            ...formData,
+            items: [...formData.items, { productId: '', quantity: 1, unitPrice: 0, discount: 0 }]
+        });
+    };
+
+    const handleRemoveItem = (index: number) => {
+        if (formData.items.length === 1) return;
+        const newItems = formData.items.filter((_, i) => i !== index);
+        setFormData({ ...formData, items: newItems });
+    };
+
+    const handleItemChange = (index: number, field: string, value: any) => {
+        const newItems = [...formData.items];
+        newItems[index] = { ...newItems[index], [field]: value };
+
+        if (field === 'productId') {
+            const product = localProducts.find(p => p.productId === value);
+            if (product) {
+                newItems[index].unitPrice = product.retailPrice;
             }
         }
 
-        // If no discount found yet, and we are not B2B, maybe apply global?
-        // (Simplified: keeping global checks available if needed, but primarily relying on company tiers)
-
-        return basePrice * (1 - (discountPercent / 100));
+        setFormData({ ...formData, items: newItems });
     };
 
-    // Derived calculations
-    const lineItemsWithTotals = useMemo(() => {
-        return items.map(item => {
-            const unitPrice = getUnitPrice(item.productId);
-            const rawTotal = item.quantity * unitPrice;
-            const finalTotal = Math.max(0, rawTotal - item.discount);
-
-            return {
-                ...item,
-                unitPrice,
-                total: finalTotal
-            };
-        });
-    }, [items, clientId, products, companyPricingTiers]);
-
-    const subTotal = lineItemsWithTotals.reduce((sum, item) => sum + item.total, 0);
-    const totalDiscount = lineItemsWithTotals.reduce((sum, item) => sum + (item.discount || 0), 0);
-    const vatAmount = subTotal * (vatRate / 100);
-    const grandTotal = subTotal + vatAmount + shippingCost;
-
-    // Handlers
-    const addLineItem = () => {
-        setItems([...items, { id: crypto.randomUUID(), productId: '', quantity: 1, discount: 0 }]);
-    };
-
-    const removeLineItem = (id: string) => {
-        if (items.length === 1) return; // keep at least one
-        setItems(items.filter(i => i.id !== id));
-    };
-
-    const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
-        setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
-    };
-
-    const handleSave = async () => {
-        if (!clientId) {
-            alert('Please select a client');
+    const handleSubmit = async () => {
+        if (!formData.clientId) {
+            toast({
+                title: t.error,
+                description: translations[language as Language].selectCustomer,
+                type: 'error'
+            });
             return;
         }
 
-        const validItems = lineItemsWithTotals.filter(i => i.productId && i.quantity > 0);
-        if (validItems.length === 0) {
-            alert('Please add at least one valid product');
+        const invalidItems = formData.items.filter(item => !item.productId);
+        if (invalidItems.length > 0) {
+            toast({
+                title: t.error,
+                description: translations[language as Language].selectProduct,
+                type: 'error'
+            });
             return;
         }
 
-        setIsSaving(true);
+        setLoading(true);
         try {
             const result = await createOrder({
-                clientId,
-                companyId: companyId || undefined,
-                channel: channel as any,
-                notes,
-                items: validItems.map(i => ({
-                    productId: i.productId,
-                    quantity: i.quantity,
-                    unitPrice: i.unitPrice,
-                    discount: i.discount
-                })),
-                subTotal,
-                discount: totalDiscount,
-                vat: vatAmount,
-                shippingCost,
-                grandTotal
-            });
+                clientId: formData.clientId,
+                companyId: formData.companyId !== 'none' ? formData.companyId : undefined,
+                channel: formData.channel as any,
+                notes: formData.notes,
+                items: formData.items,
+                subTotal: calculations.subTotal,
+                discount: formData.items.reduce((acc, item) => acc + (item.discount || 0), 0),
+                vat: calculations.vat,
+                shippingCost: formData.shippingCost,
+                grandTotal: calculations.grandTotal,
+            } as CreateOrderInput);
 
             if (result.success) {
+                toast({
+                    title: language === 'ar' ? 'تم إنشاء الطلب بنجاح' : 'Success',
+                    description: language === 'ar' ? 'تمت إضافة الطلب بنجاح' : 'Order has been created successfully.',
+                    type: 'success'
+                });
                 router.push('/sales/orders');
             } else {
-                alert(result.error || 'Failed to create order');
-                setIsSaving(false);
+                toast({
+                    title: 'Error',
+                    description: result.error || 'Failed to create order',
+                    type: 'error'
+                });
             }
         } catch (error) {
-            console.error(error);
-            alert('An unexpected error occurred');
-            setIsSaving(false);
+            toast({
+                title: 'System Error',
+                description: 'An unexpected error occurred.',
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-SA', { style: 'currency', currency: 'SAR' }).format(amount);
+    const t = {
+        title: language === 'ar' ? 'طلب مبيعات جديد' : 'New Sales Order',
+        client: language === 'ar' ? 'العميل' : 'Customer',
+        company: language === 'ar' ? 'الشركة' : 'Company',
+        channel: language === 'ar' ? 'القناة' : 'Sales Channel',
+        date: language === 'ar' ? 'التاريخ' : 'Order Date',
+        items: language === 'ar' ? 'الأصناف' : 'Order Items',
+        shipping: language === 'ar' ? 'رسوم الشحن' : 'Shipping Fee',
+        notes: language === 'ar' ? 'ملاحظات' : 'Internal Notes',
+        addItem: language === 'ar' ? 'إضافة صنف' : 'Add Item',
+        summary: language === 'ar' ? 'ملخص الطلب' : 'Order Summary',
+        confirm: language === 'ar' ? 'تأكيد الطلب' : 'Create Order',
+        subTotal: language === 'ar' ? 'المجموع الفرعي' : 'Subtotal',
+        vat: language === 'ar' ? 'الضريبة' : 'VAT (15%)',
+        total: language === 'ar' ? 'الإجمالي' : 'Grand Total',
+        error: language === 'ar' ? 'خطأ' : 'Error',
+        success: language === 'ar' ? 'نجاح' : 'Success',
     };
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-12">
-            <div className="flex justify-between items-center">
-                <div>
-                    <PageHeader title={isRTL ? 'طلب جديد' : 'New Order'} />
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => router.back()}>
-                        Cancel
-                    </Button>
-                    <Button
-                        className="bg-[var(--primary)] text-white"
-                        onClick={handleSave}
-                        disabled={isSaving}
+        <div className="p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-700">
+            <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                <div className="space-y-1">
+                    <Link
+                        href="/sales/orders"
+                        className={cn("text-xs font-bold text-[var(--text-disabled)] hover:text-[var(--primary)] flex items-center gap-1 transition-colors group", isRTL ? "flex-row-reverse" : "")}
                     >
-                        <Save className="mr-2 h-4 w-4" />
-                        {isSaving ? 'Saving...' : 'Create Order'}
-                    </Button>
+                        <ArrowLeft className={cn("w-3 h-3 transition-transform", isRTL ? "rotate-180 group-hover:translate-x-1" : "group-hover:-translate-x-1")} />
+                        {language === 'ar' ? 'العودة للمبيعات' : 'Back to Orders'}
+                    </Link>
+                    <PageHeader title={t.title} />
+                </div>
+                <div className="text-right hidden sm:block">
+                    <Badge variant="outline" className="rounded-full px-4 py-1.5 border-[var(--border)] bg-[var(--card)] text-[var(--text-primary)] font-black text-[10px] tracking-widest uppercase shadow-sm">
+                        {mounted ? orderNumber : '...'}
+                    </Badge>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className={cn("grid grid-cols-1 lg:grid-cols-3 gap-8", isRTL ? "lg:flex-row-reverse" : "")}>
+                {/* Main Form Area */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Customer Selection Card */}
+                    <Card className="rounded-3xl border-[var(--border)] overflow-hidden shadow-xl bg-[var(--card)]/50 backdrop-blur-sm">
+                        <CardHeader className="bg-[var(--muted)]/20 border-b border-[var(--border)] p-6">
+                            <CardTitle className="text-lg flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
+                                    <User className="w-5 h-5 text-[var(--primary)]" />
+                                </div>
+                                {t.client}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-8 space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-black uppercase tracking-widest opacity-60 px-1">{t.client}</Label>
+                                    <Select
+                                        value={formData.clientId}
+                                        onValueChange={(v) => setFormData({ ...formData, clientId: v })}
+                                    >
+                                        <SelectTrigger className="h-12 bg-[var(--background)] border-[var(--border)] rounded-2xl focus:ring-1 focus:ring-[var(--primary)] text-sm font-bold">
+                                            <SelectValue placeholder="Search for customer..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {contacts.map((c: any) => (
+                                                <SelectItem key={c.id} value={c.id} className="cursor-pointer font-bold">{c.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
-                {/* Left Column: Order Details & Line Items */}
-                <div className="md:col-span-2 space-y-6">
-
-                    {/* Basic Info Card */}
-                    <Card className="p-6 bg-[var(--card)] border-[var(--border)]">
-                        <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)] flex items-center gap-2">
-                            <ShoppingBag className="w-5 h-5 text-[var(--primary)]" />
-                            Order Details
-                        </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Client <span className="text-red-500">*</span></Label>
-                                <Select value={clientId} onValueChange={setClientId}>
-                                    <SelectTrigger className="bg-[var(--background)] border-[var(--border)]">
-                                        <SelectValue placeholder="Select a client..." />
-                                    </SelectTrigger>
-                                    <SelectContent position="popper" className="z-[100] max-h-60">
-                                        {clients.map(c => (
-                                            <SelectItem key={c.id} value={c.id}>
-                                                {c.name} {c.company ? `(${c.company.name})` : ''}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-black uppercase tracking-widest opacity-60 px-1">{t.company}</Label>
+                                    <Select
+                                        value={formData.companyId || 'none'}
+                                        onValueChange={(v) => setFormData({ ...formData, companyId: v })}
+                                    >
+                                        <SelectTrigger className="h-12 bg-[var(--background)] border-[var(--border)] rounded-2xl focus:ring-1 focus:ring-[var(--primary)] text-sm font-bold">
+                                            <SelectValue placeholder="Link a company..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none" className="font-bold opacity-50">Independent / Individual</SelectItem>
+                                            {companies.map((c: any) => (
+                                                <SelectItem key={c.id} value={c.id} className="cursor-pointer font-bold">{c.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Sales Channel</Label>
-                                <Select value={channel} onValueChange={setChannel}>
-                                    <SelectTrigger className="bg-[var(--background)] border-[var(--border)]">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent position="popper" className="z-[100]">
-                                        <SelectItem value="b2b">B2B (Wholesale)</SelectItem>
-                                        <SelectItem value="b2c">B2C (Retail)</SelectItem>
-                                        <SelectItem value="pos">POS</SelectItem>
-                                        <SelectItem value="event">Event / Expo</SelectItem>
-                                        <SelectItem value="export">Export</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-[var(--border)]/10">
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-black uppercase tracking-widest opacity-60 px-1">{t.channel}</Label>
+                                    <Select
+                                        value={formData.channel}
+                                        onValueChange={(v: any) => setFormData({ ...formData, channel: v })}
+                                    >
+                                        <SelectTrigger className="h-12 bg-[var(--background)] border-[var(--border)] rounded-2xl focus:ring-1 focus:ring-[var(--primary)] text-sm font-bold">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {[
+                                                { value: 'b2b', label: translations[language as Language].chan_b2b },
+                                                { value: 'b2c', label: translations[language as Language].chan_b2c },
+                                                { value: 'pos', label: translations[language as Language].chan_pos },
+                                                { value: 'event', label: translations[language as Language].chan_event },
+                                                { value: 'export', label: translations[language as Language].chan_export },
+                                                { value: 'other', label: translations[language as Language].chan_other },
+                                            ].map(c => (
+                                                <SelectItem key={c.value} value={c.value} className="font-bold">{c.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-black uppercase tracking-widest opacity-60 px-1">{t.date}</Label>
+                                    <div className="h-12 bg-[var(--muted)]/20 border border-[var(--border)] rounded-2xl flex items-center px-4 gap-3 text-sm text-[var(--text-primary)] font-bold">
+                                        <Calendar className="w-4 h-4 text-[var(--primary)]" />
+                                        {mounted ? new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '...'}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        </CardContent>
                     </Card>
 
-                    {/* Line Items Card */}
-                    <Card className="p-6 bg-[var(--card)] border-[var(--border)] overflow-hidden">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Line Items</h2>
-                        </div>
+                    {/* Order Items Card */}
+                    <Card className="rounded-3xl border-[var(--border)] overflow-hidden shadow-xl bg-[var(--card)]/50 backdrop-blur-sm">
+                        <CardHeader className="bg-[var(--muted)]/20 border-b border-[var(--border)] p-6 flex flex-row items-center justify-between">
+                            <CardTitle className="text-lg flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
+                                    <Package className="w-5 h-5 text-[var(--primary)]" />
+                                </div>
+                                {t.items}
+                            </CardTitle>
+                            <Button
+                                onClick={handleAddItem}
+                                variant="outline"
+                                className="h-10 rounded-xl border-[var(--primary)]/30 text-[var(--primary)] font-black text-[10px] uppercase tracking-widest px-6 hover:bg-[var(--primary)] hover:text-black transition-all"
+                            >
+                                <Plus className="w-3.5 h-3.5 mr-2" />
+                                {t.addItem}
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="divide-y divide-[var(--border)]">
+                                {formData.items.map((item, index) => (
+                                    <div key={index} className="p-6 md:p-8 space-y-6 group relative translate-x-0 bg-transparent hover:bg-[var(--muted)]/5 transition-colors">
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                                            <div className="md:col-span-6 space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest px-1 opacity-50">Component Selection</Label>
+                                                <Select
+                                                    value={item.productId}
+                                                    onValueChange={(v) => handleItemChange(index, 'productId', v)}
+                                                >
+                                                    <SelectTrigger className="h-12 bg-[var(--background)] border-[var(--border)] rounded-xl focus:ring-1 focus:ring-[var(--primary)] font-bold text-sm transition-all">
+                                                        <SelectValue placeholder="Select Finished Product..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {localProducts.map((p: any) => (
+                                                            <SelectItem key={p.id} value={p.productId} className="font-bold">{p.product?.name || p.sku} <span className="text-[10px] opacity-40 ml-2">({p.variant})</span></SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="md:col-span-2 space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest px-1 opacity-50 text-center block">Qty</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={item.quantity === 0 ? '' : item.quantity}
+                                                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value === '' ? 0 : Number(e.target.value))}
+                                                    onFocus={(e) => e.target.select()}
+                                                    className="h-12 text-center bg-[var(--background)] border-[var(--border)] rounded-xl font-black focus:ring-[var(--primary)] transition-all"
+                                                />
+                                            </div>
+                                            <div className="md:col-span-3 space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest px-1 opacity-50">Unit Price</Label>
+                                                <div className="relative group/price">
+                                                    <span className={cn(
+                                                        "absolute top-3.5 text-[10px] font-black text-[var(--text-disabled)] tracking-widest",
+                                                        isRTL ? "right-4" : "left-4"
+                                                    )}>
+                                                        SAR
+                                                    </span>
+                                                    <Input
+                                                        type="number"
+                                                        value={item.unitPrice === 0 ? '' : item.unitPrice}
+                                                        onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value === '' ? 0 : Number(e.target.value))}
+                                                        onFocus={(e) => e.target.select()}
+                                                        className={cn(
+                                                            "h-12 font-mono font-black bg-[var(--background)] border-[var(--border)] rounded-xl focus:ring-[var(--primary)] transition-all",
+                                                            isRTL ? "pr-14 text-left" : "pl-14 text-right"
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="md:col-span-1 flex justify-end">
+                                                {formData.items.length > 1 && (
+                                                    <Button
+                                                        onClick={() => handleRemoveItem(index)}
+                                                        variant="ghost"
+                                                        className="h-12 w-12 rounded-xl text-red-500 hover:bg-red-500/10 active:scale-90 transition-all"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
 
-                        <div className="space-y-4">
-                            {lineItemsWithTotals.map((item, index) => (
-                                <div key={item.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end p-4 border border-[var(--border)] rounded-md bg-[var(--background)]/50">
-                                    <div className="w-full sm:flex-1 space-y-2">
-                                        <Label>Product</Label>
-                                        <Select value={item.productId} onValueChange={(val) => updateLineItem(item.id, 'productId', val)}>
-                                            <SelectTrigger className="bg-[var(--background)] border-[var(--border)]">
-                                                <SelectValue placeholder="Select product..." />
-                                            </SelectTrigger>
-                                            <SelectContent position="popper" className="z-[100]">
-                                                {products.map(p => (
-                                                    <SelectItem key={p.id} value={p.id}>
-                                                        {p.name} ({formatCurrency(p.baseRetailPrice)})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {item.productId && (
-                                            <p className="text-xs text-[var(--text-muted)]">
-                                                Active Unit Price: {formatCurrency(item.unitPrice)}
-                                                {/* Show if a discount tier was applied implicitly via the unit price drop */}
-                                            </p>
-                                        )}
+                                        <div className={cn("flex flex-wrap items-center justify-between gap-6 pt-6 border-t border-[var(--border)]/10", isRTL ? "flex-row-reverse" : "")}>
+                                            <div className={cn("flex items-center gap-6", isRTL ? "flex-row-reverse" : "")}>
+                                                <div className="flex bg-[var(--muted)]/20 border border-[var(--border)] rounded-xl overflow-hidden h-10 group-focus-within:border-[var(--primary)]/40 transition-all">
+                                                    <div className="px-4 flex items-center bg-[var(--muted)]/40 text-[9px] font-black uppercase tracking-widest border-r border-[var(--border)] text-[var(--text-disabled)]">Discount</div>
+                                                    <Input
+                                                        type="number"
+                                                        value={item.discount === 0 ? '' : item.discount}
+                                                        onChange={(e) => handleItemChange(index, 'discount', e.target.value === '' ? 0 : Number(e.target.value))}
+                                                        onFocus={(e) => e.target.select()}
+                                                        className="w-28 h-full border-0 rounded-none bg-transparent text-xs font-black text-emerald-500 focus:ring-0 text-right pr-4"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className={cn("text-right", isRTL ? "text-left" : "")}>
+                                                <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-disabled)] opacity-40 mb-1">Line Reconciliation</div>
+                                                <div className="text-lg font-black text-[var(--text-primary)] font-mono tracking-tighter">
+                                                    SAR {(item.quantity * item.unitPrice - item.discount).toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                                    <div className="w-full sm:w-24 space-y-2">
-                                        <Label>Qty</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            value={item.quantity}
-                                            onChange={(e) => updateLineItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                                            className="bg-[var(--background)] border-[var(--border)]"
-                                        />
+                {/* Sticky Summary Sidebar */}
+                <div className="lg:col-span-1">
+                    <div className="sticky top-28 space-y-6">
+                        <Card className="rounded-3xl border-2 border-[var(--primary)]/20 bg-[var(--card)] shadow-2xl overflow-hidden relative group/summary transition-all hover:border-[var(--primary)]/30">
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-[var(--primary)] opacity-20" />
+
+                            <CardHeader className="p-8 pb-4">
+                                <CardTitle className="text-xl font-black uppercase tracking-tighter text-[var(--text-primary)]">{t.summary}</CardTitle>
+                                <CardDescription className="font-bold text-[9px] tracking-widest uppercase text-[var(--text-disabled)]">Strategic Financial Matrix</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-8 pt-4 space-y-8">
+                                <div className="space-y-4">
+                                    <div className={cn("flex justify-between items-center text-sm font-bold", isRTL ? "flex-row-reverse" : "")}>
+                                        <span className="text-[var(--text-secondary)] uppercase text-[10px] tracking-widest">{t.subTotal}</span>
+                                        <span className="font-mono text-[var(--text-primary)]">SAR {calculations.subTotal.toLocaleString()}</span>
                                     </div>
-
-                                    <div className="w-full sm:w-32 space-y-2">
-                                        <Label>Discount (SAR)</Label>
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={item.discount}
-                                            onChange={(e) => updateLineItem(item.id, 'discount', parseFloat(e.target.value) || 0)}
-                                            className="bg-[var(--background)] border-[var(--border)]"
-                                        />
+                                    <div className={cn("flex justify-between items-center text-sm font-bold", isRTL ? "flex-row-reverse" : "")}>
+                                        <span className="text-[var(--text-secondary)] uppercase text-[10px] tracking-widest">{t.vat}</span>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-[8px] h-4 rounded-none border-[var(--border)] px-1">15%</Badge>
+                                            <span className="font-mono text-emerald-500">+ SAR {calculations.vat.toLocaleString()}</span>
+                                        </div>
                                     </div>
+                                    <div className="space-y-3 pt-4 border-t border-[var(--border)]/10">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 flex items-center gap-2 px-1">
+                                            <ShoppingBag className="w-3 h-3 text-[var(--primary)]" />
+                                            {t.shipping}
+                                        </Label>
+                                        <div className="relative group/shipping">
+                                            <span className={cn(
+                                                "absolute top-3 text-[10px] font-black text-[var(--text-disabled)] italic",
+                                                isRTL ? "right-4" : "left-4"
+                                            )}>
+                                                SAR
+                                            </span>
+                                            <Input
+                                                type="number"
+                                                value={formData.shippingCost === 0 ? '' : formData.shippingCost}
+                                                onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value === '' ? 0 : Number(e.target.value) })}
+                                                onFocus={(e) => e.target.select()}
+                                                className={cn(
+                                                    "h-11 bg-[var(--background)]/50 border-[var(--border)]/50 rounded-2xl font-mono text-sm font-black focus:border-[var(--primary)] transition-all",
+                                                    isRTL ? "pr-12 text-left" : "pl-12 text-right"
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
 
-                                    <div className="w-full sm:w-32 space-y-2 pb-2 text-right">
-                                        <Label className="block mb-2 sm:mb-4">Total</Label>
-                                        <span className="font-semibold text-[var(--text-primary)]">
-                                            {formatCurrency(item.total)}
-                                        </span>
+                                <div className="pt-8 border-t-2 border-dashed border-[var(--border)]/20 mt-6 bg-[var(--muted)]/10 -mx-8 px-8 pb-8 rounded-b-3xl">
+                                    <div className={cn("flex flex-col gap-2", isRTL ? "items-end" : "items-start")}>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--primary)]">{t.total}</span>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-[10px] font-black text-[var(--text-disabled)] opacity-40 italic">SAR</span>
+                                            <span className="text-4xl font-black font-mono tracking-tighter text-[var(--text-primary)] drop-shadow-sm">
+                                                {calculations.grandTotal.toLocaleString()}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeLineItem(item.id)}
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        disabled={items.length === 1}
+                                        disabled={loading}
+                                        onClick={handleSubmit}
+                                        className="w-full h-16 bg-[var(--primary)] text-black hover:bg-[var(--primary)]/90 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-[var(--primary)]/20 active:scale-95 transition-all mt-8 group/btn"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        {loading ? (
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-5 h-5 border-3 border-black/20 border-t-black rounded-full animate-spin" />
+                                                <span>Finalizing...</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-3">
+                                                {t.confirm}
+                                                <ChevronRight className={cn("w-5 h-5 transition-transform group-hover/btn:translate-x-1", isRTL ? "rotate-180" : "")} />
+                                            </div>
+                                        )}
                                     </Button>
                                 </div>
-                            ))}
+                            </CardContent>
+                        </Card>
 
-                            <Button
-                                variant="outline"
-                                onClick={addLineItem}
-                                className="w-full mt-2 border-dashed border-[var(--text-muted)] text-[var(--text-secondary)] hover:text-[var(--primary)] hover:border-[var(--primary)]"
-                            >
-                                <Plus className="w-4 h-4 mr-2" /> Add Another Product
-                            </Button>
-                        </div>
-                    </Card>
-
-                </div>
-
-                {/* Right Column: Financial Summary */}
-                <div className="space-y-6">
-                    <Card className="p-6 bg-[var(--card)] border-[var(--border)] sticky top-6">
-                        <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Summary</h2>
-
-                        <div className="space-y-3 text-sm">
-                            <div className="flex justify-between items-center text-[var(--text-secondary)]">
-                                <span>Subtotal</span>
-                                <span>{formatCurrency(subTotal)}</span>
-                            </div>
-
-                            {totalDiscount > 0 && (
-                                <div className="flex justify-between items-center text-emerald-600">
-                                    <span>Manual Discounts</span>
-                                    <span>-{formatCurrency(totalDiscount)}</span>
+                        <Card className="rounded-3xl border border-[var(--border)] bg-[var(--card)]/30 backdrop-blur-sm p-6 space-y-4 shadow-lg overflow-hidden relative">
+                            <div className="flex items-center gap-3 mb-2 px-1">
+                                <div className="w-6 h-6 rounded-lg bg-[var(--muted)]/50 flex items-center justify-center">
+                                    <Info className="w-3.5 h-3.5 text-[var(--primary)]" />
                                 </div>
-                            )}
-
-                            <div className="flex justify-between items-center">
-                                <span className="text-[var(--text-secondary)]">VAT Rate (%)</span>
-                                <Input
-                                    type="number"
-                                    value={vatRate}
-                                    onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
-                                    className="w-20 h-8 text-right bg-[var(--background)] border-[var(--border)]"
-                                />
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{t.notes}</h4>
                             </div>
-
-                            <div className="flex justify-between items-center text-[var(--text-secondary)]">
-                                <span>VAT Amount</span>
-                                <span>{formatCurrency(vatAmount)}</span>
-                            </div>
-
-                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-[var(--border)]/50">
-                                <span className="text-[var(--text-secondary)]">Shipping</span>
-                                <Input
-                                    type="number"
-                                    value={shippingCost}
-                                    onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
-                                    className="w-24 h-8 text-right bg-[var(--background)] border-[var(--border)]"
-                                />
-                            </div>
-
-                            <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border)] font-bold text-lg text-[var(--text-primary)]">
-                                <span>Grand Total</span>
-                                <span>{formatCurrency(grandTotal)}</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 space-y-2">
-                            <Label>Notes for Invoice</Label>
                             <Textarea
-                                placeholder="Add any special instructions..."
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                className="resize-none bg-[var(--background)] border-[var(--border)]"
-                                rows={3}
+                                value={formData.notes}
+                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                placeholder="Strategic intelligence, delivery logistics, or special clauses..."
+                                className="bg-[var(--background)]/50 border-[var(--border)] rounded-2xl min-h-[140px] p-5 text-sm font-medium resize-none focus-visible:ring-1 focus-visible:ring-[var(--primary)] transition-all border-dashed"
                             />
-                        </div>
-
-                        <Button
-                            className="w-full mt-6 bg-[var(--primary)] text-white"
-                            size="lg"
-                            onClick={handleSave}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? 'Saving...' : 'Confirm & Save Order'}
-                        </Button>
-                    </Card>
+                        </Card>
+                    </div>
                 </div>
-
             </div>
         </div>
     );

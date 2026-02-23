@@ -112,6 +112,23 @@ export const translations = {
         sfdaCompliance: 'SFDA Compliance',
         quickActions: 'Quick Actions',
         distribution: 'Distribution',
+        // Order Channels
+        chan_b2b: 'B2B (Wholesale)',
+        chan_b2c: 'B2C (Retail)',
+        chan_pos: 'POS',
+        chan_event: 'Event',
+        chan_export: 'Export',
+        chan_other: 'Other',
+        // Order Statuses
+        status_draft: 'Draft',
+        status_confirmed: 'Confirmed',
+        status_processing: 'Processing',
+        status_shipped: 'Shipped',
+        status_delivered: 'Delivered',
+        status_cancelled: 'Cancelled',
+        // Validation
+        selectCustomer: 'Please select a customer',
+        selectProduct: 'Please select a product for all items',
         // Navigation
         overview: 'Overview',
         salesOrders: 'Sales & Orders',
@@ -466,6 +483,23 @@ export const translations = {
         tasteTestDesc: 'مستوى النكهة، الحلاوة، وفحص الطعم المتبقي',
         labAnalysisDesc: 'فحص ميكروبي، رطوبة، ومعادن ثقيلة',
         sfdaComplianceDesc: 'دقة الملصق، قائمة المكونات، وتحذيرات مسببات الحساسية',
+        // Order Channels
+        chan_b2b: 'B2B (جملة)',
+        chan_b2c: 'B2C (تجزئة)',
+        chan_pos: 'نقطة بيع',
+        chan_event: 'فعالية',
+        chan_export: 'تصدير',
+        chan_other: 'أخرى',
+        // Order Statuses
+        status_draft: 'مسودة',
+        status_confirmed: 'مؤكد',
+        status_processing: 'قيد التنفيذ',
+        status_shipped: 'تم الشحن',
+        status_delivered: 'تم التوصيل',
+        status_cancelled: 'ملغي',
+        // Validation
+        selectCustomer: 'يرجى اختيار العميل',
+        selectProduct: 'يرجى اختيار المنتج لجميع الأصناف',
     }
 };
 
