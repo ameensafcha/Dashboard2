@@ -38,14 +38,21 @@ export async function getStockMovements(filters?: {
     }
 }
 
-async function generateMovementId(): Promise<string> {
+async function generateMovementId(tx: any): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await prisma.stockMovement.count({
-        where: {
-            movementId: { startsWith: `SM-${year}` },
-        },
+    const prefix = `SM-${year}`;
+    const last = await tx.stockMovement.findFirst({
+        where: { movementId: { startsWith: prefix } },
+        orderBy: { movementId: 'desc' },
+        select: { movementId: true },
     });
-    return `SM-${year}-${String(count + 1).padStart(4, '0')}`;
+    let nextNum = 1;
+    if (last) {
+        const parts = last.movementId.split('-');
+        const num = parseInt(parts[2]);
+        if (!isNaN(num)) nextNum = num + 1;
+    }
+    return `${prefix}-${String(nextNum).padStart(4, '0')}`;
 }
 
 export async function logMovement(data: {
@@ -65,13 +72,16 @@ export async function logMovement(data: {
             return { success: false, error: 'Must specify a Raw Material or Finished Product.' };
         }
 
-        const movementId = await generateMovementId();
-
         // Determine the stock change direction
         const isIncrease = data.type === 'STOCK_IN' || data.type === 'RETURN';
         const stockDelta = isIncrease ? Math.abs(data.quantity) : -Math.abs(data.quantity);
 
+        let movementId = '';
+
         await prisma.$transaction(async (tx) => {
+            // Generate ID inside transaction to prevent race conditions
+            movementId = await generateMovementId(tx);
+
             // 1. Create the movement log
             await tx.stockMovement.create({
                 data: {

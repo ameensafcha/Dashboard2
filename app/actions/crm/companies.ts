@@ -44,7 +44,8 @@ export async function getCompanies(search?: string) {
                     select: { contacts: true, deals: true }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: 200,
         });
 
         // Safely transform Decimal to primitive numbers for client components
@@ -109,21 +110,24 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
 
         const validData = parsed.data;
 
-        const company = await prisma.company.update({
-            where: { id },
-            data: {
-                name: validData.name,
-                industry: validData.industry || null,
-                city: validData.city || null,
-                website: validData.website || null,
-                companyPricingTiers: {
-                    deleteMany: {}, // Clear existing
-                    create: validData.pricingTiers?.map(t => ({
-                        categoryId: t.categoryId,
-                        pricingTierId: t.pricingTierId
-                    })) || []
+        // P6: Wrap in transaction for atomicity (deleteMany + create)
+        const company = await prisma.$transaction(async (tx) => {
+            return tx.company.update({
+                where: { id },
+                data: {
+                    name: validData.name,
+                    industry: validData.industry || null,
+                    city: validData.city || null,
+                    website: validData.website || null,
+                    companyPricingTiers: {
+                        deleteMany: {},
+                        create: validData.pricingTiers?.map(t => ({
+                            categoryId: t.categoryId,
+                            pricingTierId: t.pricingTierId
+                        })) || []
+                    }
                 }
-            }
+            });
         });
 
         revalidatePath('/crm/companies');

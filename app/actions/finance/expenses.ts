@@ -8,20 +8,38 @@ import { revalidatePath } from 'next/cache';
 // Expense CRUD
 // ==========================================
 
-async function generateExpenseId(): Promise<string> {
+async function generateExpenseId(tx: any): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await prisma.expense.count({
-        where: { expenseId: { startsWith: `EXP-${year}` } },
+    const prefix = `EXP-${year}`;
+    const last = await tx.expense.findFirst({
+        where: { expenseId: { startsWith: prefix } },
+        orderBy: { expenseId: 'desc' },
+        select: { expenseId: true },
     });
-    return `EXP-${year}-${String(count + 1).padStart(4, '0')}`;
+    let nextNum = 1;
+    if (last) {
+        const parts = last.expenseId.split('-');
+        const num = parseInt(parts[2]);
+        if (!isNaN(num)) nextNum = num + 1;
+    }
+    return `${prefix}-${String(nextNum).padStart(4, '0')}`;
 }
 
-async function generateTransactionId(): Promise<string> {
+async function generateTransactionId(tx: any): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await prisma.transaction.count({
-        where: { transactionId: { startsWith: `TXN-${year}` } },
+    const prefix = `TXN-${year}`;
+    const last = await tx.transaction.findFirst({
+        where: { transactionId: { startsWith: prefix } },
+        orderBy: { transactionId: 'desc' },
+        select: { transactionId: true },
     });
-    return `TXN-${year}-${String(count + 1).padStart(4, '0')}`;
+    let nextNum = 1;
+    if (last) {
+        const parts = last.transactionId.split('-');
+        const num = parseInt(parts[2]);
+        if (!isNaN(num)) nextNum = num + 1;
+    }
+    return `${prefix}-${String(nextNum).padStart(4, '0')}`;
 }
 
 export async function getExpenses(category?: ExpenseCategory | 'all') {
@@ -32,6 +50,7 @@ export async function getExpenses(category?: ExpenseCategory | 'all') {
         const expenses = await prisma.expense.findMany({
             where,
             orderBy: { date: 'desc' },
+            take: 200,
         });
 
         return expenses.map(e => ({
@@ -56,12 +75,13 @@ export async function createExpense(data: {
     notes?: string;
 }) {
     try {
-        const [expenseId, transactionId] = await Promise.all([
-            generateExpenseId(),
-            generateTransactionId(),
-        ]);
-
         await prisma.$transaction(async (tx) => {
+            // Generate IDs inside transaction to prevent race conditions
+            const [expenseId, transactionId] = await Promise.all([
+                generateExpenseId(tx),
+                generateTransactionId(tx),
+            ]);
+
             // Create expense
             await tx.expense.create({
                 data: {

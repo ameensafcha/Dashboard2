@@ -71,28 +71,37 @@ export async function getDashboardData() {
 
         // ===================== Charts =====================
 
-        // Revenue Trend — last 6 months
+        // Revenue Trend — last 6 months (OPTIMIZED: 2 queries instead of 12)
+        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        const [allRevenues, allExpenses] = await Promise.all([
+            prisma.transaction.findMany({
+                where: { type: 'revenue', date: { gte: sixMonthsAgo } },
+                select: { amount: true, date: true },
+            }),
+            prisma.transaction.findMany({
+                where: { type: 'expense', date: { gte: sixMonthsAgo } },
+                select: { amount: true, date: true },
+            }),
+        ]);
+
+        // Bucket into months in JS
         const revenueTrend: { month: string; revenue: number; expenses: number }[] = [];
         for (let i = 5; i >= 0; i--) {
             const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
             const monthLabel = monthStart.toLocaleString('en-US', { month: 'short', year: '2-digit' });
 
-            const [rev, exp] = await Promise.all([
-                prisma.transaction.aggregate({
-                    where: { type: 'revenue', date: { gte: monthStart, lt: monthEnd } },
-                    _sum: { amount: true },
-                }),
-                prisma.transaction.aggregate({
-                    where: { type: 'expense', date: { gte: monthStart, lt: monthEnd } },
-                    _sum: { amount: true },
-                }),
-            ]);
+            const monthRevenue = allRevenues
+                .filter(t => t.date >= monthStart && t.date < monthEnd)
+                .reduce((sum, t) => sum + Number(t.amount), 0);
+            const monthExpenses = allExpenses
+                .filter(t => t.date >= monthStart && t.date < monthEnd)
+                .reduce((sum, t) => sum + Number(t.amount), 0);
 
             revenueTrend.push({
                 month: monthLabel,
-                revenue: rev._sum.amount ? Number(rev._sum.amount) : 0,
-                expenses: exp._sum.amount ? Number(exp._sum.amount) : 0,
+                revenue: monthRevenue,
+                expenses: monthExpenses,
             });
         }
 

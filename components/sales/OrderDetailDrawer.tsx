@@ -100,11 +100,11 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
             if (order.company) {
                 doc.text(order.company.name, 14, 67);
             }
-            const tableColumn = ["Item ID", "Qty", "Unit Price", "Discount", "Total"];
+            const tableColumn = ["Product", "Qty", "Unit Price", "Discount", "Total"];
             const tableRows: any[] = [];
             order.orderItems.forEach(item => {
                 const rowData = [
-                    item.productId.substring(0, 8) + '...',
+                    (item as any).productName || 'Product',
                     item.quantity.toString(),
                     formatCurrency(item.unitPrice),
                     formatCurrency(item.discount),
@@ -171,37 +171,129 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                         </Button>
                     </div>
 
-                    {/* Status Lifecycle Management */}
-                    {getNextStatuses(order.status).length > 0 && (
-                        <div className={cn("p-4 rounded-xl bg-[var(--muted)]/30 border border-[var(--border)] flex items-center justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
-                            <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                                <Clock className="w-4 h-4 text-[var(--primary)]" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)]">Workflow Transition</span>
+                    {/* Order Pipeline Visual */}
+                    {(() => {
+                        const PIPELINE_STAGES = ['draft', 'confirmed', 'processing', 'shipped', 'delivered'];
+                        const stageLabels: Record<string, string> = {
+                            draft: 'Draft',
+                            confirmed: 'Confirmed',
+                            processing: 'Processing',
+                            shipped: 'Shipped',
+                            delivered: 'Delivered',
+                        };
+                        const stageIcons: Record<string, React.ReactNode> = {
+                            draft: <FileText className="w-3.5 h-3.5" />,
+                            confirmed: <CheckCircle2 className="w-3.5 h-3.5" />,
+                            processing: <Clock className="w-3.5 h-3.5" />,
+                            shipped: <Truck className="w-3.5 h-3.5" />,
+                            delivered: <Package className="w-3.5 h-3.5" />,
+                        };
+                        const isCancelled = order.status === 'cancelled';
+                        const currentIdx = PIPELINE_STAGES.indexOf(order.status);
+                        const nextStatuses = getNextStatuses(order.status);
+
+                        const handleStatusChange = async (newStatus: string) => {
+                            setIsChangingStatus(true);
+                            const result = await updateOrderStatus(order.id, newStatus as any);
+                            setIsChangingStatus(false);
+                            if (result.success) {
+                                updateOrderInStore(order.id, { status: newStatus as any });
+                            }
+                        };
+
+                        return (
+                            <div className="space-y-4">
+                                {/* Pipeline Steps */}
+                                <div className={cn("flex items-center gap-0 w-full", isRTL ? "flex-row-reverse" : "")}>
+                                    {PIPELINE_STAGES.map((stage, idx) => {
+                                        const isCompleted = !isCancelled && currentIdx > idx;
+                                        const isCurrent = !isCancelled && currentIdx === idx;
+                                        const isUpcoming = !isCancelled && currentIdx < idx;
+
+                                        return (
+                                            <div key={stage} className="flex-1 flex items-center">
+                                                <div className="flex flex-col items-center flex-1 relative">
+                                                    {/* Step Circle */}
+                                                    <div className={cn(
+                                                        "w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative z-10",
+                                                        isCompleted && "bg-emerald-500/20 border-emerald-500 text-emerald-400",
+                                                        isCurrent && "bg-[#E8A838]/20 border-[#E8A838] text-[#E8A838] ring-4 ring-[#E8A838]/10",
+                                                        isCancelled && "bg-red-500/20 border-red-500/40 text-red-400/50",
+                                                        isUpcoming && "bg-[var(--muted)]/30 border-[var(--border)] text-[var(--text-disabled)]/40",
+                                                    )}>
+                                                        {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : stageIcons[stage]}
+                                                    </div>
+                                                    {/* Label */}
+                                                    <span className={cn(
+                                                        "text-[8px] font-black uppercase tracking-widest mt-2 text-center leading-tight",
+                                                        isCompleted && "text-emerald-400",
+                                                        isCurrent && "text-[#E8A838]",
+                                                        isCancelled && "text-red-400/40",
+                                                        isUpcoming && "text-[var(--text-disabled)]/40",
+                                                    )}>
+                                                        {stageLabels[stage]}
+                                                    </span>
+                                                </div>
+                                                {/* Connector Line */}
+                                                {idx < PIPELINE_STAGES.length - 1 && (
+                                                    <div className={cn(
+                                                        "h-[2px] flex-shrink-0 w-full -mx-1 mt-[-18px]",
+                                                        !isCancelled && currentIdx > idx ? "bg-emerald-500/40" : "bg-[var(--border)]/40",
+                                                    )} />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Cancelled Badge */}
+                                {isCancelled && (
+                                    <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-red-400">Order Cancelled</span>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                {nextStatuses.length > 0 && (
+                                    <div className={cn("flex gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                        {nextStatuses.filter(s => s !== 'cancelled').map(s => (
+                                            <Button
+                                                key={s}
+                                                disabled={isChangingStatus}
+                                                onClick={() => handleStatusChange(s)}
+                                                className={cn(
+                                                    "flex-1 h-10 rounded-xl font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 transition-all active:scale-[0.97]",
+                                                    s === 'confirmed' && "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20",
+                                                    s === 'processing' && "bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20",
+                                                    s === 'shipped' && "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20",
+                                                    s === 'delivered' && "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20",
+                                                )}
+                                            >
+                                                {isChangingStatus ? (
+                                                    <span className="animate-pulse">Updating...</span>
+                                                ) : (
+                                                    <>
+                                                        <ArrowRight className={cn("w-3.5 h-3.5", isRTL ? "rotate-180" : "")} />
+                                                        Move to {stageLabels[s]}
+                                                    </>
+                                                )}
+                                            </Button>
+                                        ))}
+                                        {nextStatuses.includes('cancelled') && (
+                                            <Button
+                                                disabled={isChangingStatus}
+                                                onClick={() => handleStatusChange('cancelled')}
+                                                variant="outline"
+                                                className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[9px] border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 transition-all active:scale-[0.97]"
+                                            >
+                                                Cancel
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <Select
-                                disabled={isChangingStatus}
-                                onValueChange={async (newStatus) => {
-                                    setIsChangingStatus(true);
-                                    const result = await updateOrderStatus(order.id, newStatus as any);
-                                    setIsChangingStatus(false);
-                                    if (result.success) {
-                                        updateOrderInStore(order.id, { status: newStatus as any });
-                                    }
-                                }}
-                            >
-                                <SelectTrigger className="w-[180px] bg-[var(--background)] border-[var(--border)] h-9 text-[10px] font-black uppercase tracking-widest rounded-lg focus:ring-1 focus:ring-[var(--primary)]">
-                                    <SelectValue placeholder={isChangingStatus ? 'Updating...' : 'Advance Status'} />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[var(--card)] border-[var(--border)] z-[200]">
-                                    {getNextStatuses(order.status).map(s => (
-                                        <SelectItem key={s} value={s} className="text-[10px] font-black uppercase py-2.5">
-                                            {s.replace('_', ' ')}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 <div className="p-8 space-y-10">
@@ -304,7 +396,7 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                             <table className="w-full text-xs text-left border-collapse">
                                 <thead className="bg-[var(--muted)]/40 text-[9px] font-black uppercase tracking-widest text-[var(--text-disabled)] border-b border-[var(--border)]">
                                     <tr className={isRTL ? "text-right" : ""}>
-                                        <th className="px-6 py-4">Fulfillment SKU</th>
+                                        <th className="px-6 py-4">Product</th>
                                         <th className="px-6 py-4 text-center">Unit</th>
                                         <th className={cn("px-6 py-4 text-right", isRTL ? "text-left" : "")}>Price</th>
                                         <th className={cn("px-6 py-4 text-right", isRTL ? "text-left" : "")}>Discount</th>
@@ -314,7 +406,7 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                                 <tbody className="divide-y divide-[var(--border)]/30 font-bold">
                                     {order.orderItems.map((item) => (
                                         <tr key={item.id} className="text-[var(--text-primary)] hover:bg-[var(--muted)]/20 transition-colors">
-                                            <td className="px-6 py-4 font-mono text-[10px] opacity-70">{item.productId.substring(0, 12)}...</td>
+                                            <td className="px-6 py-4 font-bold text-sm">{(item as any).productName || item.productId.substring(0, 12) + '...'}</td>
                                             <td className="px-6 py-4 text-center">x {item.quantity}</td>
                                             <td className={cn("px-6 py-4 text-right whitespace-nowrap", isRTL ? "text-left" : "")}>{formatCurrency(item.unitPrice)}</td>
                                             <td className={cn("px-6 py-4 text-right text-emerald-500 font-black whitespace-nowrap", isRTL ? "text-left" : "")}>{item.discount > 0 ? `-${formatCurrency(item.discount)}` : '-'}</td>

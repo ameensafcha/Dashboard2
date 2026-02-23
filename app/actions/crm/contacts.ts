@@ -53,7 +53,8 @@ export async function getContacts(search?: string, companyId?: string) {
                     select: { deals: true }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: 200,
         });
 
         // Prisma Json types might need safe parsing if they aren't guaranteed arrays

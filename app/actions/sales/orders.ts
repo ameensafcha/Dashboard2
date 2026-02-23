@@ -37,7 +37,11 @@ export async function getOrders(search?: string, channel?: OrderChannel, status?
             include: {
                 client: { select: { id: true, name: true } },
                 company: { select: { id: true, name: true } },
-                orderItems: true,
+                orderItems: {
+                    include: {
+                        product: { select: { id: true, name: true } }
+                    }
+                },
                 invoice: true
             },
             orderBy: {
@@ -57,7 +61,8 @@ export async function getOrders(search?: string, channel?: OrderChannel, status?
                 ...item,
                 unitPrice: item.unitPrice ? Number(item.unitPrice.toString()) : 0,
                 discount: item.discount ? Number(item.discount.toString()) : 0,
-                total: item.total ? Number(item.total.toString()) : 0
+                total: item.total ? Number(item.total.toString()) : 0,
+                productName: item.product?.name || 'Unknown Product',
             })),
             invoice: order.invoice ? {
                 ...order.invoice,

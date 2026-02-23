@@ -63,18 +63,33 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
             // --- SHIP: Deduct stock + create movement logs ---
             if (newStatus === 'shipped') {
-                // Generate movement IDs
-                const year = new Date().getFullYear();
-                const countBase = await tx.stockMovement.count({
-                    where: { movementId: { startsWith: `SM-${year}` } },
-                });
+                // P3: Validate stock availability before deducting
+                for (const item of order.orderItems) {
+                    const fp = item.product.finishedProduct;
+                    if (fp && Number(fp.currentStock) < item.quantity) {
+                        throw new Error(`Insufficient stock for product. Available: ${Number(fp.currentStock)}, Required: ${item.quantity}`);
+                    }
+                }
 
-                let counter = countBase;
+                // P2: Generate movement IDs inside transaction using findFirst
+                const year = new Date().getFullYear();
+                const prefix = `SM-${year}`;
+                const lastMovement = await tx.stockMovement.findFirst({
+                    where: { movementId: { startsWith: prefix } },
+                    orderBy: { movementId: 'desc' },
+                    select: { movementId: true },
+                });
+                let counter = 0;
+                if (lastMovement) {
+                    const parts = lastMovement.movementId.split('-');
+                    const num = parseInt(parts[2]);
+                    if (!isNaN(num)) counter = num;
+                }
 
                 for (const item of order.orderItems) {
                     const fp = item.product.finishedProduct;
                     if (fp) {
-                        // Release reservation
+                        // Release reservation and deduct stock
                         await tx.finishedProduct.update({
                             where: { id: fp.id },
                             data: {
@@ -85,7 +100,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
                         // Create audit log
                         counter++;
-                        const movementId = `SM-${year}-${String(counter).padStart(4, '0')}`;
+                        const movementId = `${prefix}-${String(counter).padStart(4, '0')}`;
 
                         await tx.stockMovement.create({
                             data: {
@@ -126,12 +141,21 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
             // --- DELIVERED: Auto-create revenue transaction ---
             if (newStatus === 'delivered') {
-                // Generate TXN ID
+                // P2: Generate TXN ID inside transaction using findFirst
                 const year = new Date().getFullYear();
-                const txnCount = await tx.transaction.count({
-                    where: { transactionId: { startsWith: `TXN-${year}` } },
+                const txnPrefix = `TXN-${year}`;
+                const lastTxn = await tx.transaction.findFirst({
+                    where: { transactionId: { startsWith: txnPrefix } },
+                    orderBy: { transactionId: 'desc' },
+                    select: { transactionId: true },
                 });
-                const txnId = `TXN-${year}-${String(txnCount + 1).padStart(4, '0')}`;
+                let txnNum = 1;
+                if (lastTxn) {
+                    const parts = lastTxn.transactionId.split('-');
+                    const num = parseInt(parts[2]);
+                    if (!isNaN(num)) txnNum = num + 1;
+                }
+                const txnId = `${txnPrefix}-${String(txnNum).padStart(4, '0')}`;
 
                 await tx.transaction.create({
                     data: {

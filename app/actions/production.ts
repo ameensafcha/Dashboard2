@@ -105,6 +105,7 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
         qualityChecks: { select: { id: true, overallScore: true, passed: true, checkedAt: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: 200,
     });
 
     if (!batches || batches.length === 0) {

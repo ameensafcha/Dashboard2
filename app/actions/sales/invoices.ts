@@ -44,7 +44,13 @@ export async function createInvoice(data: {
         });
 
         revalidatePath('/sales/orders');
-        return { success: true, invoice };
+        return {
+            success: true,
+            invoice: {
+                ...invoice,
+                totalAmount: Number(invoice.totalAmount.toString()),
+            }
+        };
 
     } catch (error) {
         console.error('Failed to create invoice:', error);

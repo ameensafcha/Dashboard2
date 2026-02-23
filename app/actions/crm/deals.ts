@@ -42,7 +42,8 @@ export async function getDeals(search?: string) {
                     select: { id: true, name: true, email: true, phone: true }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: 200,
         });
 
         return deals.map(deal => ({

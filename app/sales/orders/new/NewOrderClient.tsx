@@ -181,6 +181,35 @@ export default function NewOrderClient({
         }
     };
 
+    // Smart Contact-Company Linking
+    const selectedContact = useMemo(() => {
+        if (!formData.clientId) return null;
+        return contacts.find((c: any) => c.id === formData.clientId) || null;
+    }, [formData.clientId, contacts]);
+
+    const contactHasNoCompany = selectedContact && !selectedContact.companyId;
+
+    const filteredContacts = useMemo(() => {
+        if (!formData.companyId || formData.companyId === 'none') return contacts;
+        return contacts.filter((c: any) => c.companyId === formData.companyId);
+    }, [contacts, formData.companyId]);
+
+    const handleContactChange = (contactId: string) => {
+        const contact = contacts.find((c: any) => c.id === contactId);
+        if (contact?.companyId) {
+            // Auto-fill company from contact
+            setFormData({ ...formData, clientId: contactId, companyId: contact.companyId });
+        } else {
+            // Contact has no company → disable company selector
+            setFormData({ ...formData, clientId: contactId, companyId: 'none' });
+        }
+    };
+
+    const handleCompanyChange = (companyId: string) => {
+        // Reset contact when company changes (because old contact may not belong to new company)
+        setFormData({ ...formData, companyId, clientId: '' });
+    };
+
     const t = {
         title: language === 'ar' ? 'طلب مبيعات جديد' : 'New Sales Order',
         client: language === 'ar' ? 'العميل' : 'Customer',
@@ -235,37 +264,74 @@ export default function NewOrderClient({
                         </CardHeader>
                         <CardContent className="p-8 space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-black uppercase tracking-widest opacity-60 px-1">{t.client}</Label>
-                                    <Select
-                                        value={formData.clientId}
-                                        onValueChange={(v) => setFormData({ ...formData, clientId: v })}
-                                    >
-                                        <SelectTrigger className="h-12 bg-[var(--background)] border-[var(--border)] rounded-2xl focus:ring-1 focus:ring-[var(--primary)] text-sm font-bold">
-                                            <SelectValue placeholder="Search for customer..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {contacts.map((c: any) => (
-                                                <SelectItem key={c.id} value={c.id} className="cursor-pointer font-bold">{c.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
+                                {/* Company First */}
                                 <div className="space-y-3">
                                     <Label className="text-xs font-black uppercase tracking-widest opacity-60 px-1">{t.company}</Label>
                                     <Select
                                         value={formData.companyId || 'none'}
-                                        onValueChange={(v) => setFormData({ ...formData, companyId: v })}
+                                        onValueChange={handleCompanyChange}
+                                        disabled={!!contactHasNoCompany}
                                     >
-                                        <SelectTrigger className="h-12 bg-[var(--background)] border-[var(--border)] rounded-2xl focus:ring-1 focus:ring-[var(--primary)] text-sm font-bold">
-                                            <SelectValue placeholder="Link a company..." />
+                                        <SelectTrigger className={cn(
+                                            "h-12 bg-[var(--background)] border-[var(--border)] rounded-2xl focus:ring-1 focus:ring-[var(--primary)] text-sm font-bold",
+                                            contactHasNoCompany && "opacity-40 cursor-not-allowed"
+                                        )}>
+                                            <SelectValue placeholder={contactHasNoCompany ? 'No company linked' : 'Select company...'} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="none" className="font-bold opacity-50">Independent / Individual</SelectItem>
+                                            <SelectItem value="none" className="font-bold opacity-50">
+                                                {language === 'ar' ? 'بدون شركة' : 'All / Independent'}
+                                            </SelectItem>
                                             {companies.map((c: any) => (
                                                 <SelectItem key={c.id} value={c.id} className="cursor-pointer font-bold">{c.name}</SelectItem>
                                             ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {contactHasNoCompany && (
+                                        <p className="text-[10px] text-amber-500 font-bold px-1">
+                                            {language === 'ar' ? 'هذا العميل غير مرتبط بشركة' : 'This contact has no linked company'}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Contact (filtered by company) */}
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-black uppercase tracking-widest opacity-60 px-1">
+                                        {t.client}
+                                        {formData.companyId && formData.companyId !== 'none' && (
+                                            <span className="text-[var(--primary)] ml-2">
+                                                ({filteredContacts.length})
+                                            </span>
+                                        )}
+                                    </Label>
+                                    <Select
+                                        value={formData.clientId}
+                                        onValueChange={handleContactChange}
+                                    >
+                                        <SelectTrigger className="h-12 bg-[var(--background)] border-[var(--border)] rounded-2xl focus:ring-1 focus:ring-[var(--primary)] text-sm font-bold">
+                                            <SelectValue placeholder={
+                                                formData.companyId && formData.companyId !== 'none'
+                                                    ? (language === 'ar' ? 'اختر من موظفي الشركة...' : 'Select company contact...')
+                                                    : (language === 'ar' ? 'ابحث عن عميل...' : 'Search for customer...')
+                                            } />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {filteredContacts.length === 0 ? (
+                                                <div className="p-3 text-xs text-center text-[var(--text-disabled)] font-bold">
+                                                    {language === 'ar' ? 'لا توجد جهات اتصال' : 'No contacts found'}
+                                                </div>
+                                            ) : (
+                                                filteredContacts.map((c: any) => (
+                                                    <SelectItem key={c.id} value={c.id} className="cursor-pointer font-bold">
+                                                        <div className="flex items-center gap-2">
+                                                            {c.name}
+                                                            {c.company && (!formData.companyId || formData.companyId === 'none') && (
+                                                                <span className="text-[10px] opacity-40 ml-1">— {c.company.name}</span>
+                                                            )}
+                                                        </div>
+                                                    </SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
