@@ -140,6 +140,12 @@ export default function QualityPageClient({ initialChecks }: { initialChecks: Ch
 
     return (
         <div className="space-y-6">
+            <div className={cn("mb-2", isRTL ? "text-right" : "")}>
+                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
+                    {t.qualityControl}
+                </h1>
+            </div>
+
             {/* QC Submit Form */}
             <QualityCheckForm onSuccess={refresh} />
 

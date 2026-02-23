@@ -3,6 +3,33 @@
 import prisma from '@/lib/prisma';
 import { OrderChannel, OrderStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+// ===================== Validation Schemas =====================
+
+const orderItemSchema = z.object({
+    productId: z.string().min(1, 'Product is required'),
+    quantity: z.number().int().positive('Quantity must be at least 1'),
+    unitPrice: z.number().nonnegative('Unit price cannot be negative'),
+    discount: z.number().nonnegative('Discount cannot be negative'),
+});
+
+const createOrderSchema = z.object({
+    clientId: z.string().min(1, 'Client is required'),
+    companyId: z.string().optional(),
+    channel: z.nativeEnum(OrderChannel),
+    notes: z.string().optional(),
+    items: z.array(orderItemSchema).min(1, 'Order must have at least one item'),
+    subTotal: z.number().nonnegative(),
+    discount: z.number().nonnegative(),
+    vat: z.number().nonnegative(),
+    shippingCost: z.number().nonnegative(),
+    grandTotal: z.number().nonnegative(),
+});
+
+export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+// ===================== Queries =====================
 
 export async function getOrders(search?: string, channel?: OrderChannel, status?: OrderStatus) {
     try {
@@ -77,41 +104,23 @@ export async function getOrders(search?: string, channel?: OrderChannel, status?
     }
 }
 
-export type CreateOrderInput = {
-    clientId: string;
-    companyId?: string;
-    channel: OrderChannel;
-    notes?: string;
-    items: {
-        productId: string;
-        quantity: number;
-        unitPrice: number;
-        discount: number;
-    }[];
-    subTotal: number;
-    discount: number;
-    vat: number;
-    shippingCost: number;
-    grandTotal: number;
-};
+// ===================== Mutations =====================
 
 export async function createOrder(data: CreateOrderInput) {
     try {
+        // Zod validation
+        const parsed = createOrderSchema.safeParse(data);
+        if (!parsed.success) {
+            const firstIssue = parsed.error.issues[0];
+            return { success: false, error: firstIssue.message };
+        }
+        const validated = parsed.data;
+
         const { generateOrderNumber } = await import('./utils');
         const orderNumber = await generateOrderNumber();
 
-        // Validate items
-        if (!data.items || data.items.length === 0) {
-            return { success: false, error: 'Order must contain at least one item' };
-        }
-
-        const invalidItems = data.items.filter(item => !item.productId);
-        if (invalidItems.length > 0) {
-            return { success: false, error: 'All items must have a valid product selected' };
-        }
-
         // Calculate item totals
-        const itemsWithTotals = data.items.map(item => ({
+        const itemsWithTotals = validated.items.map(item => ({
             ...item,
             total: (item.quantity * item.unitPrice) - item.discount
         }));
@@ -120,18 +129,18 @@ export async function createOrder(data: CreateOrderInput) {
             const newOrder = await tx.order.create({
                 data: {
                     orderNumber,
-                    clientId: data.clientId,
-                    companyId: data.companyId || null,
-                    channel: data.channel,
+                    clientId: validated.clientId,
+                    companyId: validated.companyId || null,
+                    channel: validated.channel,
                     status: 'draft',
                     paymentStatus: 'pending',
                     fulfillmentStatus: 'unfulfilled',
-                    subTotal: data.subTotal,
-                    discount: data.discount,
-                    vat: data.vat,
-                    shippingCost: data.shippingCost,
-                    grandTotal: data.grandTotal,
-                    notes: data.notes,
+                    subTotal: validated.subTotal,
+                    discount: validated.discount,
+                    vat: validated.vat,
+                    shippingCost: validated.shippingCost,
+                    grandTotal: validated.grandTotal,
+                    notes: validated.notes,
 
                     orderItems: {
                         create: itemsWithTotals

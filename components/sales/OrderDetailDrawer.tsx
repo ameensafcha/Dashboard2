@@ -161,14 +161,17 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                             </div>
                         </div>
 
-                        <Button
-                            onClick={handleGenerateInvoice}
-                            disabled={isGenerating}
-                            className="bg-[#E8A838] text-black hover:bg-[#d69628] h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-[#E8A838]/10 flex items-center gap-2 active:scale-95 transition-all"
-                        >
-                            <Download className="w-3.5 h-3.5" />
-                            {isGenerating ? 'Generating...' : order.invoice ? 'Download Invoice' : 'Generate Invoice'}
-                        </Button>
+                        {/* Invoice Generation - Only for Processing and beyond */}
+                        {order.status !== 'draft' && order.status !== 'cancelled' && (
+                            <Button
+                                onClick={handleGenerateInvoice}
+                                disabled={isGenerating}
+                                className="bg-[#E8A838] text-black hover:bg-[#d69628] h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-[#E8A838]/10 flex items-center gap-2 active:scale-95 transition-all"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                {isGenerating ? 'Generating...' : order.invoice ? 'Download Invoice' : 'Generate Invoice'}
+                            </Button>
+                        )}
                     </div>
 
                     {/* Order Pipeline Visual */}

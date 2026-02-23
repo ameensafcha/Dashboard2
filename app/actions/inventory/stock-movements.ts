@@ -2,6 +2,31 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { StockMovementType, StockMovementReason } from '@prisma/client';
+
+// ==========================================
+// Validation Schemas
+// ==========================================
+
+const logMovementSchema = z.object({
+    type: z.nativeEnum(StockMovementType),
+    quantity: z.number().positive('Quantity must be greater than 0'),
+    reason: z.nativeEnum(StockMovementReason),
+    notes: z.string().optional(),
+    referenceId: z.string().optional(),
+    rawMaterialId: z.string().optional(),
+    finishedProductId: z.string().optional(),
+}).refine(data => data.rawMaterialId || data.finishedProductId, {
+    message: "Must specify a Raw Material or Finished Product.",
+    path: ["rawMaterialId"], // Reference path
+});
+
+export type LogMovementInput = z.infer<typeof logMovementSchema>;
+
+// ==========================================
+// Queries
+// ==========================================
 
 export async function getStockMovements(filters?: {
     rawMaterialId?: string;
@@ -38,6 +63,10 @@ export async function getStockMovements(filters?: {
     }
 }
 
+// ==========================================
+// Helper Functions
+// ==========================================
+
 async function generateMovementId(tx: any): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `SM-${year}`;
@@ -55,26 +84,22 @@ async function generateMovementId(tx: any): Promise<string> {
     return `${prefix}-${String(nextNum).padStart(4, '0')}`;
 }
 
-export async function logMovement(data: {
-    type: string;
-    quantity: number;
-    reason: string;
-    notes?: string;
-    referenceId?: string;
-    rawMaterialId?: string;
-    finishedProductId?: string;
-}) {
+// ==========================================
+// Mutations
+// ==========================================
+
+export async function logMovement(data: LogMovementInput) {
     try {
-        if (!data.type || !data.quantity || !data.reason) {
-            return { success: false, error: 'Type, Quantity, and Reason are required.' };
+        // Validate
+        const parsed = logMovementSchema.safeParse(data);
+        if (!parsed.success) {
+            return { success: false, error: parsed.error.issues[0].message };
         }
-        if (!data.rawMaterialId && !data.finishedProductId) {
-            return { success: false, error: 'Must specify a Raw Material or Finished Product.' };
-        }
+        const validated = parsed.data;
 
         // Determine the stock change direction
-        const isIncrease = data.type === 'STOCK_IN' || data.type === 'RETURN';
-        const stockDelta = isIncrease ? Math.abs(data.quantity) : -Math.abs(data.quantity);
+        const isIncrease = validated.type === 'STOCK_IN' || validated.type === 'RETURN';
+        const stockDelta = isIncrease ? Math.abs(validated.quantity) : -Math.abs(validated.quantity);
 
         let movementId = '';
 
@@ -86,26 +111,26 @@ export async function logMovement(data: {
             await tx.stockMovement.create({
                 data: {
                     movementId,
-                    type: data.type as any,
-                    quantity: data.quantity,
-                    reason: data.reason as any,
-                    notes: data.notes || null,
-                    referenceId: data.referenceId || null,
-                    rawMaterialId: data.rawMaterialId || null,
-                    finishedProductId: data.finishedProductId || null,
+                    type: validated.type,
+                    quantity: validated.quantity,
+                    reason: validated.reason,
+                    notes: validated.notes || null,
+                    referenceId: validated.referenceId || null,
+                    rawMaterialId: validated.rawMaterialId || null,
+                    finishedProductId: validated.finishedProductId || null,
                 },
             });
 
             // 2. Update the corresponding inventory balance
-            if (data.rawMaterialId) {
+            if (validated.rawMaterialId) {
                 await tx.rawMaterial.update({
-                    where: { id: data.rawMaterialId },
+                    where: { id: validated.rawMaterialId },
                     data: { currentStock: { increment: stockDelta } },
                 });
             }
-            if (data.finishedProductId) {
+            if (validated.finishedProductId) {
                 await tx.finishedProduct.update({
-                    where: { id: data.finishedProductId },
+                    where: { id: validated.finishedProductId },
                     data: { currentStock: { increment: stockDelta } },
                 });
             }

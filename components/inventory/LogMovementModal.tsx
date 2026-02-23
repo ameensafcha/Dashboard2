@@ -12,6 +12,7 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { ArrowDownUp } from 'lucide-react';
+import { StockMovementType, StockMovementReason } from '@prisma/client';
 import { logMovement } from '@/app/actions/inventory/stock-movements';
 
 interface Props {
@@ -27,9 +28,9 @@ export default function LogMovementModal({ targetType, targetId, targetName, onS
     const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
-        type: 'STOCK_IN',
+        type: 'STOCK_IN' as StockMovementType,
         quantity: 0,
-        reason: 'PURCHASE',
+        reason: 'PURCHASE' as StockMovementReason,
         notes: '',
         referenceId: '',
     });
@@ -60,7 +61,7 @@ export default function LogMovementModal({ targetType, targetId, targetName, onS
         setIsSaving(false);
         if (result.success) {
             setIsOpen(false);
-            setFormData({ type: 'STOCK_IN', quantity: 0, reason: 'PURCHASE', notes: '', referenceId: '' });
+            setFormData({ type: 'STOCK_IN' as StockMovementType, quantity: 0, reason: 'PURCHASE' as StockMovementReason, notes: '', referenceId: '' });
             onSuccess();
         } else {
             setError(result.error || 'Failed to log movement.');

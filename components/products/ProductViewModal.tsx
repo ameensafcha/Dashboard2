@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useAppStore } from '@/stores/appStore';
 import { productStatuses, sfdaStatuses } from '@/app/actions/product/types';
-import { Edit, Package, Trash2, Calendar, Coffee, FileCheck, DollarSign, Scale, Hash, LayoutGrid, Tag } from 'lucide-react';
+import { Edit, Package, Trash2, Calendar, Coffee, FileCheck, DollarSign, Scale, Hash, LayoutGrid, Tag, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -81,114 +81,122 @@ export default function ProductViewModal({
                     </div>
                 </DialogHeader>
 
-                <div className={cn("overflow-y-auto p-8 sm:p-10 flex flex-col lg:flex-row gap-10 lg:gap-12", isRTL ? "lg:flex-row-reverse" : "")}>
-                    {/* Left Column - Image & Pricing */}
-                    <div className="w-full lg:w-80 shrink-0 space-y-8">
-                        <div className="aspect-square relative rounded-xl overflow-hidden bg-[var(--muted)] border border-[var(--border)] shadow-sm flex items-center justify-center">
-                            {product.image ? (
-                                <Image
-                                    src={product.image}
-                                    alt={product.name}
-                                    fill
-                                    className="object-cover"
-                                />
-                            ) : (
-                                <div className="flex flex-col items-center justify-center p-8 text-[var(--text-muted)]">
-                                    <Package className="w-12 h-12 opacity-20 mb-3" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">No image</span>
+                <div className="flex-1 overflow-y-auto p-8 sm:p-10 space-y-12 scrollbar-hide">
+                    {/* Top Section - Image/Pricing & Info Grid */}
+                    <div className={cn("flex flex-col lg:flex-row gap-10 lg:gap-12", isRTL ? "lg:flex-row-reverse" : "")}>
+                        {/* Left Column - Image & Pricing */}
+                        <div className="w-full lg:w-80 shrink-0 space-y-8">
+                            <div className="aspect-square relative rounded-xl overflow-hidden bg-[var(--muted)] border border-[var(--border)] shadow-sm flex items-center justify-center">
+                                {product.image ? (
+                                    <Image
+                                        src={product.image}
+                                        alt={product.name}
+                                        fill
+                                        className="object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-8 text-[var(--text-muted)]">
+                                        <Package className="w-12 h-12 opacity-20 mb-3" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest">{isRTL ? 'لا توجد صورة' : 'No image'}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Pricing Card */}
+                            <div className="bg-[var(--card)] p-6 rounded-xl border border-[var(--border)] shadow-sm space-y-6">
+                                <h4 className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.2em] flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                    <DollarSign className="w-3.5 h-3.5 text-[var(--primary)]" />
+                                    {isRTL ? 'التسعير' : 'Pricing'}
+                                </h4>
+
+                                <div className="space-y-4">
+                                    <div className={cn("flex justify-between items-center group", isRTL ? "flex-row-reverse" : "")}>
+                                        <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'التكلفة' : 'Cost'}</span>
+                                        <span className="text-sm font-bold text-[var(--text-primary)]">SAR {Number(product.baseCost).toFixed(2)}</span>
+                                    </div>
+                                    <div className={cn("flex justify-between items-center pt-2 border-t border-[var(--border)]", isRTL ? "flex-row-reverse" : "")}>
+                                        <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'السعر' : 'Price'}</span>
+                                        <span className="text-xl font-bold text-[var(--primary)]">SAR {Number(product.baseRetailPrice).toFixed(2)}</span>
+                                    </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Pricing Card */}
-                        <div className="bg-[var(--card)] p-6 rounded-xl border border-[var(--border)] shadow-sm space-y-6">
-                            <h4 className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.2em] flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                                <DollarSign className="w-3.5 h-3.5 text-[var(--primary)]" />
-                                {isRTL ? 'التسعير' : 'Pricing'}
-                            </h4>
+                        {/* Right Column - Details */}
+                        <div className="flex-1 space-y-10">
+                            {/* Core Details Segment */}
+                            <div className="space-y-6">
+                                <h3 className={cn("text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                                    <LayoutGrid className="w-4 h-4 text-[var(--primary)]" />
+                                    {isRTL ? 'المعلومات الأساسية' : 'Core Information'}
+                                </h3>
 
-                            <div className="space-y-4">
-                                <div className={cn("flex justify-between items-center group", isRTL ? "flex-row-reverse" : "")}>
-                                    <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'التكلفة' : 'Cost'}</span>
-                                    <span className="text-sm font-bold text-[var(--text-primary)]">SAR {Number(product.baseCost).toFixed(2)}</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 lg:gap-10 border border-[var(--border)] rounded-xl p-8 bg-[var(--card)] shadow-sm">
+                                    <DetailBox icon={Tag} label={isRTL ? 'الفئة' : 'Category'} value={product.category?.name || 'Uncategorized'} />
+                                    <DetailBox icon={Scale} label={isRTL ? 'الحجم' : 'Size'} value={product.size ? `${Number(product.size)} ${product.unit || ''}` : 'N/A'} />
+
+                                    <div className={cn("space-y-2", isRTL ? "text-right" : "")}>
+                                        <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                            <Coffee className="w-3.5 h-3.5 text-[var(--primary)]" /> {isRTL ? 'الكافيين' : 'Caffeine'}
+                                        </p>
+                                        <Badge variant="outline" className={cn(
+                                            "px-3 py-1 font-bold",
+                                            product.caffeineFree ? "text-green-600 bg-green-500/5 border-green-500/10" : "text-[var(--text-primary)]"
+                                        )}>
+                                            {product.caffeineFree ? (isRTL ? 'خالي' : 'Caffeine-free') : (isRTL ? 'يحتوي' : 'Standard')}
+                                        </Badge>
+                                    </div>
+
+                                    <DetailBox icon={Calendar} label={isRTL ? 'تاريخ الإطلاق' : 'Launch Date'} value={product.launchDate ? new Date(product.launchDate).toLocaleDateString() : 'TBD'} />
                                 </div>
-                                <div className={cn("flex justify-between items-center pt-2 border-t border-[var(--border)]", isRTL ? "flex-row-reverse" : "")}>
-                                    <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'السعر' : 'Price'}</span>
-                                    <span className="text-xl font-bold text-[var(--primary)]">SAR {Number(product.baseRetailPrice).toFixed(2)}</span>
+                            </div>
+
+                            {/* Regulatory Breakdown */}
+                            <div className="space-y-6">
+                                <h3 className={cn("text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                                    <FileCheck className="w-4 h-4 text-green-600" />
+                                    {isRTL ? 'المعلومات التنظيمية' : 'Compliance & Regulatory'}
+                                </h3>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 lg:gap-10 border border-[var(--border)] rounded-xl p-8 bg-[var(--card)] shadow-sm">
+                                    <div className={cn("space-y-2", isRTL ? "text-right" : "")}>
+                                        <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest">{isRTL ? 'الحالة FDA' : 'SFDA Status'}</p>
+                                        <Badge className={cn(
+                                            "px-4 py-1.5 font-bold uppercase tracking-wider text-[10px]",
+                                            product.sfdaStatus === 'approved' ? 'bg-green-600 text-white' : product.sfdaStatus === 'pending' ? 'bg-yellow-500 text-black' : 'bg-[var(--muted)] text-[var(--text-secondary)]'
+                                        )}>
+                                            {sfdaStatuses.find(s => s.value === product.sfdaStatus)?.label}
+                                        </Badge>
+                                    </div>
+                                    <DetailBox icon={Hash} label={isRTL ? 'المرجع FDA' : 'SFDA Reference'} value={product.sfdaReference || 'N/A'} />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right Column - Details */}
-                    <div className="flex-1 space-y-10">
-                        {/* Core Details Segment */}
-                        <div className="space-y-6">
-                            <h3 className={cn("text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
-                                <LayoutGrid className="w-4 h-4 text-[var(--primary)]" />
-                                {isRTL ? 'المعلومات الأساسية' : 'Core Information'}
-                            </h3>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 lg:gap-10 border border-[var(--border)] rounded-xl p-8 bg-[var(--card)] shadow-sm">
-                                <DetailBox icon={Tag} label={isRTL ? 'الفئة' : 'Category'} value={product.category?.name || 'Uncategorized'} />
-                                <DetailBox icon={Scale} label={isRTL ? 'الحجم' : 'Size'} value={product.size ? `${Number(product.size)} ${product.unit || ''}` : 'N/A'} />
-
-                                <div className={cn("space-y-2", isRTL ? "text-right" : "")}>
-                                    <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                                        <Coffee className="w-3.5 h-3.5 text-[var(--primary)]" /> {isRTL ? 'الكافيين' : 'Caffeine'}
-                                    </p>
-                                    <Badge variant="outline" className={cn(
-                                        "px-3 py-1 font-bold",
-                                        product.caffeineFree ? "text-green-600 bg-green-500/5 border-green-500/10" : "text-[var(--text-primary)]"
-                                    )}>
-                                        {product.caffeineFree ? (isRTL ? 'خالي' : 'Caffeine-free') : (isRTL ? 'يحتوي' : 'Standard')}
-                                    </Badge>
+                    {/* Bottom Sections: Full Width */}
+                    <div className="space-y-10 pt-10 border-t border-[var(--border)]/10">
+                        {/* Ingredients */}
+                        {product.keyIngredients && (
+                            <div className="space-y-4">
+                                <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest", isRTL ? "text-right" : "")}>
+                                    {isRTL ? 'المكونات الأساسية' : 'Key Ingredients'}
+                                </p>
+                                <div className="bg-[var(--muted)]/30 p-6 rounded-xl text-sm border border-[var(--border)] text-[var(--text-primary)] leading-relaxed italic shadow-sm">
+                                    &quot;{product.keyIngredients}&quot;
                                 </div>
-
-                                <DetailBox icon={Calendar} label={isRTL ? 'تاريخ الإطلاق' : 'Launch Date'} value={product.launchDate ? new Date(product.launchDate).toLocaleDateString() : 'TBD'} />
                             </div>
-                        </div>
-
-                        {/* Regulatory Breakdown */}
-                        <div className="space-y-6">
-                            <h3 className={cn("text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
-                                <FileCheck className="w-4 h-4 text-green-600" />
-                                {isRTL ? 'المعلومات التنظيمية' : 'Compliance & Regulatory'}
-                            </h3>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 lg:gap-10 border border-[var(--border)] rounded-xl p-8 bg-[var(--card)] shadow-sm">
-                                <div className={cn("space-y-2", isRTL ? "text-right" : "")}>
-                                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest">{isRTL ? 'الحالة FDA' : 'SFDA Status'}</p>
-                                    <Badge className={cn(
-                                        "px-4 py-1.5 font-bold uppercase tracking-wider text-[10px]",
-                                        product.sfdaStatus === 'approved' ? 'bg-green-600 text-white' : product.sfdaStatus === 'pending' ? 'bg-yellow-500 text-black' : 'bg-[var(--muted)] text-[var(--text-secondary)]'
-                                    )}>
-                                        {sfdaStatuses.find(s => s.value === product.sfdaStatus)?.label}
-                                    </Badge>
-                                </div>
-                                <DetailBox icon={Hash} label={isRTL ? 'المرجع FDA' : 'SFDA Reference'} value={product.sfdaReference || 'N/A'} />
-                            </div>
-                        </div>
+                        )}
 
                         {/* Description */}
-                        {(product.keyIngredients || product.description) && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {product.keyIngredients && (
-                                    <div className="space-y-3">
-                                        <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider", isRTL ? "text-right" : "")}>{isRTL ? 'المكونات' : 'Key Ingredients'}</p>
-                                        <div className="bg-[var(--muted)]/50 p-5 rounded-xl text-sm border border-[var(--border)] text-[var(--text-primary)] leading-relaxed italic">
-                                            &quot;{product.keyIngredients}&quot;
-                                        </div>
-                                    </div>
-                                )}
-                                {product.description && (
-                                    <div className="space-y-3">
-                                        <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider", isRTL ? "text-right" : "")}>{isRTL ? 'الوصف' : 'Description'}</p>
-                                        <div className="bg-[var(--muted)]/50 p-5 rounded-xl text-sm border border-[var(--border)] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
-                                            {product.description}
-                                        </div>
-                                    </div>
-                                )}
+                        {product.description && (
+                            <div className="space-y-4">
+                                <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest", isRTL ? "text-right" : "")}>
+                                    {isRTL ? 'الوصف الكامل' : 'Full Description'}
+                                </p>
+                                <div className="bg-[var(--card)] p-8 rounded-xl text-sm border border-[var(--border)] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap shadow-sm">
+                                    {product.description}
+                                </div>
                             </div>
                         )}
                     </div>

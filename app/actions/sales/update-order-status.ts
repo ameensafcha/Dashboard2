@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { OrderStatus } from '@prisma/client';
+import { z } from 'zod';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -14,11 +15,22 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
     cancelled: [],  // terminal
 };
 
+const updateStatusSchema = z.object({
+    orderId: z.string().min(1, 'Order ID is required'),
+    newStatus: z.nativeEnum(OrderStatus),
+});
+
 export async function getValidNextStatuses(currentStatus: string): Promise<string[]> {
     return VALID_TRANSITIONS[currentStatus] || [];
 }
 
 export async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
+    // Validate inputs
+    const parsed = updateStatusSchema.safeParse({ orderId, newStatus });
+    if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0].message };
+    }
+
     try {
         // 1. Fetch order with items and their linked finished products
         const order = await prisma.order.findUnique({

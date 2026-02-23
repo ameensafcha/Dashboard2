@@ -3,9 +3,27 @@
 import prisma from '@/lib/prisma';
 import { ExpenseCategory, PaymentMethod } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 // ==========================================
-// Expense CRUD
+// Validation Schemas
+// ==========================================
+
+const expenseSchema = z.object({
+    category: z.nativeEnum(ExpenseCategory),
+    amount: z.number().positive('Amount must be greater than 0'),
+    vat: z.number().nonnegative('VAT cannot be negative').optional(),
+    description: z.string().min(3, 'Description must be at least 3 characters'),
+    vendor: z.string().optional(),
+    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    date: z.coerce.date(),
+    notes: z.string().optional(),
+});
+
+export type CreateExpenseInput = z.infer<typeof expenseSchema>;
+
+// ==========================================
+// Helper Functions
 // ==========================================
 
 async function generateExpenseId(tx: any): Promise<string> {
@@ -42,6 +60,10 @@ async function generateTransactionId(tx: any): Promise<string> {
     return `${prefix}-${String(nextNum).padStart(4, '0')}`;
 }
 
+// ==========================================
+// Queries
+// ==========================================
+
 export async function getExpenses(category?: ExpenseCategory | 'all') {
     try {
         const where: any = {};
@@ -64,17 +86,19 @@ export async function getExpenses(category?: ExpenseCategory | 'all') {
     }
 }
 
-export async function createExpense(data: {
-    category: ExpenseCategory;
-    amount: number;
-    vat?: number;
-    description: string;
-    vendor?: string;
-    paymentMethod?: PaymentMethod;
-    date: Date;
-    notes?: string;
-}) {
+// ==========================================
+// Mutations
+// ==========================================
+
+export async function createExpense(data: CreateExpenseInput) {
     try {
+        // Validate
+        const parsed = expenseSchema.safeParse(data);
+        if (!parsed.success) {
+            return { success: false, error: parsed.error.issues[0].message };
+        }
+        const validated = parsed.data;
+
         await prisma.$transaction(async (tx) => {
             // Generate IDs inside transaction to prevent race conditions
             const [expenseId, transactionId] = await Promise.all([
@@ -86,14 +110,14 @@ export async function createExpense(data: {
             await tx.expense.create({
                 data: {
                     expenseId,
-                    category: data.category,
-                    amount: data.amount,
-                    vat: data.vat || 0,
-                    description: data.description,
-                    vendor: data.vendor || null,
-                    paymentMethod: data.paymentMethod || null,
-                    date: data.date,
-                    notes: data.notes || null,
+                    category: validated.category,
+                    amount: validated.amount,
+                    vat: validated.vat || 0,
+                    description: validated.description,
+                    vendor: validated.vendor || null,
+                    paymentMethod: validated.paymentMethod || null,
+                    date: validated.date,
+                    notes: validated.notes || null,
                 },
             });
 
@@ -102,10 +126,10 @@ export async function createExpense(data: {
                 data: {
                     transactionId,
                     type: 'expense',
-                    amount: data.amount,
-                    description: data.description,
+                    amount: validated.amount,
+                    description: validated.description,
                     referenceId: expenseId,
-                    date: data.date,
+                    date: validated.date,
                 },
             });
         });
@@ -119,17 +143,15 @@ export async function createExpense(data: {
     }
 }
 
-export async function updateExpense(id: string, data: {
-    category: ExpenseCategory;
-    amount: number;
-    vat?: number;
-    description: string;
-    vendor?: string;
-    paymentMethod?: PaymentMethod;
-    date: Date;
-    notes?: string;
-}) {
+export async function updateExpense(id: string, data: CreateExpenseInput) {
     try {
+        // Validate
+        const parsed = expenseSchema.safeParse(data);
+        if (!parsed.success) {
+            return { success: false, error: parsed.error.issues[0].message };
+        }
+        const validated = parsed.data;
+
         const existing = await prisma.expense.findUnique({ where: { id } });
         if (!existing) return { success: false, error: 'Expense not found.' };
 
@@ -137,14 +159,14 @@ export async function updateExpense(id: string, data: {
             await tx.expense.update({
                 where: { id },
                 data: {
-                    category: data.category,
-                    amount: data.amount,
-                    vat: data.vat || 0,
-                    description: data.description,
-                    vendor: data.vendor || null,
-                    paymentMethod: data.paymentMethod || null,
-                    date: data.date,
-                    notes: data.notes || null,
+                    category: validated.category,
+                    amount: validated.amount,
+                    vat: validated.vat || 0,
+                    description: validated.description,
+                    vendor: validated.vendor || null,
+                    paymentMethod: validated.paymentMethod || null,
+                    date: validated.date,
+                    notes: validated.notes || null,
                 },
             });
 
@@ -156,9 +178,9 @@ export async function updateExpense(id: string, data: {
                 await tx.transaction.update({
                     where: { id: linkedTxn.id },
                     data: {
-                        amount: data.amount,
-                        description: data.description,
-                        date: data.date,
+                        amount: validated.amount,
+                        description: validated.description,
+                        date: validated.date,
                     },
                 });
             }

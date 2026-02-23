@@ -183,31 +183,33 @@ export async function getDashboardData() {
                 })),
         ];
 
-        // Activity Feed (unchanged — merge + sort is minimal overhead)
-        type FeedItem = { text: string; time: Date; type: 'order' | 'stock' | 'production' };
+        // Activity Feed (merged + sorted is minimal overhead)
+        type FeedItem = {
+            type: 'order' | 'stock' | 'production',
+            time: string,
+            data: any
+        };
+
         const feed: FeedItem[] = [
             ...recentOrders.map(o => ({
-                text: `Order ${o.orderNumber} — ${o.status} (SAR ${Number(o.grandTotal).toLocaleString()})`,
-                time: o.createdAt,
                 type: 'order' as const,
+                time: o.createdAt.toISOString(),
+                data: { number: o.orderNumber, status: o.status, amount: Number(o.grandTotal) }
             })),
             ...recentMovements.map(m => ({
-                text: `${m.type === 'STOCK_IN' ? '📥' : '📤'} ${m.movementId}: ${m.type.replace('_', ' ')} — ${m.quantity} kg`,
-                time: m.createdAt,
                 type: 'stock' as const,
+                time: m.createdAt.toISOString(),
+                data: { id: m.movementId, type: m.type, qty: Number(m.quantity) }
             })),
             ...recentBatches.map(b => ({
-                text: `🏭 ${b.batchNumber} — ${b.status.replace('_', ' ')}`,
-                time: b.createdAt,
                 type: 'production' as const,
+                time: b.createdAt.toISOString(),
+                data: { number: b.batchNumber, status: b.status }
             })),
         ];
-        feed.sort((a, b) => b.time.getTime() - a.time.getTime());
-        const activityFeed = feed.slice(0, 20).map(f => ({
-            text: f.text,
-            time: f.time.toISOString(),
-            type: f.type,
-        }));
+
+        feed.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+        const activityFeed = feed.slice(0, 20);
 
         return {
             kpis: {

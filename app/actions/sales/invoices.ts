@@ -35,13 +35,8 @@ export async function createInvoice(data: {
             }
         });
 
-        // Also update the Order Status to indicate it has been processed
-        await prisma.order.update({
-            where: { id: data.orderId },
-            data: {
-                status: 'confirmed',
-            }
-        });
+        // Invoicing no longer triggers status changes. 
+        // Status is managed via updateOrderStatus action.
 
         revalidatePath('/sales/orders');
         return {

@@ -53,7 +53,8 @@ export async function getProductsOverview() {
             activeCount: 0,
             sfdaApprovedCount: 0,
             statusBreakdown: [],
-            sfdaBreakdown: []
+            sfdaBreakdown: [],
+            recentProducts: []
         };
     }
 }
