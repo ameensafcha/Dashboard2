@@ -165,6 +165,7 @@ export async function createProduct(data: Partial<Product> & { categoryId?: stri
   });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
+  revalidatePath('/');
 
   return serializeProduct(product);
 }
@@ -199,6 +200,7 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
+  revalidatePath('/');
 
   return serializeProduct(product);
 }
@@ -207,6 +209,7 @@ export async function deleteProduct(id: string) {
   await prisma.product.delete({ where: { id } });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
+  revalidatePath('/');
 }
 
 export async function getCategories(search?: string) {
@@ -230,6 +233,7 @@ export async function createCategory(data: { name: string; description?: string 
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
+  revalidatePath('/');
 
   return category;
 }
@@ -242,6 +246,7 @@ export async function updateCategory(id: string, data: { name?: string; descript
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
+  revalidatePath('/');
 
   return category;
 }
@@ -250,6 +255,7 @@ export async function deleteCategory(id: string) {
   await prisma.category.delete({ where: { id } });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
+  revalidatePath('/');
 }
 
 // Variants have been removed.

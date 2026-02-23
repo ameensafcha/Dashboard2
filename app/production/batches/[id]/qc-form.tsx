@@ -27,11 +27,16 @@ export default function QCForm({ batchId }: { batchId: string }) {
         labAnalysis: '',
         sfdaCompliance: 'pass',
         overallScore: 10,
+        actualQty: 0,
         notes: '',
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (formData.actualQty <= 0) {
+            toast({ title: 'Error', description: 'Please enter a valid actual quantity', type: 'error' });
+            return;
+        }
         setIsSubmitting(true);
         try {
             // Calculate passed status based on all 4 required points
@@ -163,6 +168,24 @@ export default function QCForm({ batchId }: { batchId: string }) {
                             className="bg-[var(--card)] border-[var(--border)] h-11 focus:ring-[#E8A838]"
                             value={formData.labAnalysis}
                             onChange={(e) => setFormData({ ...formData, labAnalysis: e.target.value })}
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4 p-6 bg-[#E8A838]/5 border border-[#E8A838]/20 rounded-2xl group">
+                        <div className={cn("flex items-center gap-2 mb-2", isRTL ? "flex-row-reverse" : "")}>
+                            <ClipboardCheck className="w-5 h-5 text-[#E8A838]" />
+                            <h4 className="font-bold text-sm tracking-tight text-[var(--text-primary)]">{t.actualQtyKg} <span className="text-red-500">*</span></h4>
+                        </div>
+                        <Input
+                            type="number"
+                            step="0.1"
+                            placeholder={t.actualOutput}
+                            className="bg-[var(--card)] border-[var(--border)] h-12 text-xl font-black text-[#E8A838] focus:ring-[#E8A838]"
+                            value={formData.actualQty || ''}
+                            onChange={(e) => setFormData({ ...formData, actualQty: parseFloat(e.target.value) || 0 })}
+                            required
                         />
                     </div>
                 </div>

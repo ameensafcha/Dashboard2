@@ -136,6 +136,7 @@ export async function createExpense(data: CreateExpenseInput) {
 
         revalidatePath('/finance');
         revalidatePath('/finance/expenses');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Error creating expense:', error);
@@ -188,6 +189,7 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
 
         revalidatePath('/finance');
         revalidatePath('/finance/expenses');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Error updating expense:', error);
@@ -211,6 +213,7 @@ export async function deleteExpense(id: string) {
 
         revalidatePath('/finance');
         revalidatePath('/finance/expenses');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Error deleting expense:', error);

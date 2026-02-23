@@ -8,20 +8,14 @@ import { z } from 'zod';
 const createBatchSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
   targetQty: z.number().positive('Target quantity must be greater than zero'),
-  actualQty: z.number().nonnegative('Actual quantity cannot be negative').optional(),
   status: z.nativeEnum(BatchStatus).optional(),
   startDate: z.date(),
-  endDate: z.date().optional(),
-  qualityScore: z.number().min(0).max(10).optional(),
   producedBy: z.string().optional(),
   notes: z.string().optional(),
 });
 
 const updateBatchSchema = z.object({
-  actualQty: z.number().nonnegative('Actual quantity cannot be negative').optional(),
   status: z.nativeEnum(BatchStatus).optional(),
-  qualityScore: z.number().min(0).max(10).optional(),
-  endDate: z.date().optional(),
   producedBy: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -173,11 +167,8 @@ export async function getProductionBatchById(id: string) {
 export async function createProductionBatch(data: {
   productId: string;
   targetQty: number;
-  actualQty?: number;
   status?: string;
   startDate: Date;
-  endDate?: Date;
-  qualityScore?: number;
   producedBy?: string;
   notes?: string;
   batchItems?: { rawMaterialId: string; materialName: string; quantityUsed: number }[];
@@ -191,21 +182,13 @@ export async function createProductionBatch(data: {
     const validData = parsedData.data;
     const batchNumber = await generateBatchNumber(validData.startDate);
 
-    const yieldPercent = (validData.actualQty && validData.targetQty > 0)
-      ? (validData.actualQty / validData.targetQty) * 100
-      : undefined;
-
     const batch = await prisma.productionBatch.create({
       data: {
         batchNumber,
         productId: validData.productId,
         targetQty: validData.targetQty,
-        actualQty: validData.actualQty,
-        yieldPercent: yieldPercent,
         status: validData.status || 'planned',
         startDate: validData.startDate,
-        endDate: validData.endDate,
-        qualityScore: validData.qualityScore,
         producedBy: validData.producedBy,
         notes: validData.notes,
         // Phase 7.1: Create batch items (raw material consumption)
@@ -227,6 +210,7 @@ export async function createProductionBatch(data: {
     };
 
     revalidatePath('/production/batches');
+    revalidatePath('/');
     return { success: true, data: serializedBatch };
   } catch (error: unknown) {
     console.error('Error creating batch:', error instanceof Error ? error.message : String(error));
@@ -243,10 +227,7 @@ export async function createProductionBatch(data: {
 }
 
 export async function updateProductionBatch(id: string, data: {
-  actualQty?: number;
   status?: string;
-  qualityScore?: number;
-  endDate?: Date;
   producedBy?: string;
   notes?: string;
 }) {
@@ -257,21 +238,14 @@ export async function updateProductionBatch(id: string, data: {
     }
     const validData = parsedData.data;
 
-    const currentBatch = await prisma.productionBatch.findUnique({ where: { id } });
-    const targetQty = currentBatch ? Number(currentBatch.targetQty) : 0;
-
-    // Calculate new yield if actualQty is provided
-    let newYieldPercent: number | undefined;
-    if (validData.actualQty !== undefined && targetQty > 0) {
-      newYieldPercent = (validData.actualQty / targetQty) * 100;
+    if (validData.status === 'completed' || validData.status === 'failed') {
+      return { success: false, error: 'Status can only be set to Completed or Failed via Quality Control.' };
     }
 
     const batch = await prisma.productionBatch.update({
       where: { id },
       data: {
         ...validData,
-        yieldPercent: newYieldPercent,
-        status: validData.status,
       },
     });
 
@@ -283,6 +257,8 @@ export async function updateProductionBatch(id: string, data: {
     };
 
     revalidatePath('/production/batches');
+    revalidatePath('/production/quality');
+    revalidatePath('/');
     return { success: true, data: serializedBatch };
   } catch (error) {
     console.error('Error updating batch:', error);
@@ -294,6 +270,7 @@ export async function deleteProductionBatch(id: string) {
   try {
     await prisma.productionBatch.delete({ where: { id } });
     revalidatePath('/production/batches');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error deleting batch:', error);
@@ -331,6 +308,7 @@ export async function getQualityChecks() {
 
 export async function createQualityCheck(data: {
   batchId: string;
+  actualQty: number;
   visualInspection: string;
   visualNotes?: string;
   weightVerification: string;
@@ -348,15 +326,28 @@ export async function createQualityCheck(data: {
     // Phase 7.3: Use transaction for QC + inventory automation
     await prisma.$transaction(async (tx) => {
       // 1. Create QC record
-      await tx.qualityCheck.create({ data });
+      const { actualQty, ...qcData } = data;
+      await tx.qualityCheck.create({ data: qcData });
 
-      // 2. Update batch status
+      // 2. Update batch status and post-production fields
       const newStatus = data.passed ? 'completed' : 'failed';
+
+      const batchForYield = await tx.productionBatch.findUnique({
+        where: { id: data.batchId },
+        select: { targetQty: true }
+      });
+
+      const targetQty = batchForYield?.targetQty ? Number(batchForYield.targetQty) : 0;
+      const yieldPercent = targetQty > 0 ? (actualQty / targetQty) * 100 : 0;
+
       await tx.productionBatch.update({
         where: { id: data.batchId },
         data: {
           qualityScore: data.overallScore,
           status: newStatus,
+          actualQty: actualQty,
+          yieldPercent: yieldPercent,
+          endDate: data.checkedAt,
         },
       });
 
@@ -379,7 +370,7 @@ export async function createQualityCheck(data: {
 
         // 3a. INCREASE Finished Product stock by actualQty
         let fp = batch.product.finishedProduct;
-        const qty = batch.actualQty ? Number(batch.actualQty) : 0;
+        const qty = actualQty; // Use the provided actualQty
 
         if (qty > 0) {
           if (!fp) {
@@ -448,6 +439,7 @@ export async function createQualityCheck(data: {
     revalidatePath('/inventory/finished');
     revalidatePath('/inventory/raw-materials');
     revalidatePath('/inventory');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error creating quality check:', error);
@@ -632,6 +624,7 @@ export async function updateQualityCheck(id: string, data: {
     revalidatePath('/inventory/finished');
     revalidatePath('/inventory/raw-materials');
     revalidatePath('/inventory');
+    revalidatePath('/');
 
     revalidatePath('/production/quality');
     revalidatePath('/production/batches');
@@ -733,6 +726,7 @@ export async function deleteQualityCheck(id: string) {
     revalidatePath('/inventory/finished');
     revalidatePath('/inventory/raw-materials');
     revalidatePath('/inventory');
+    revalidatePath('/');
 
     revalidatePath('/production/quality');
     revalidatePath('/production/batches');
@@ -818,6 +812,7 @@ export async function createRnDProject(data: {
       },
     });
     revalidatePath('/production/rnd');
+    revalidatePath('/');
     return { success: true, data: project };
   } catch (error) {
     console.error('Error creating R&D project:', error);
@@ -847,6 +842,7 @@ export async function updateRnDProject(id: string, data: {
       },
     });
     revalidatePath('/production/rnd');
+    revalidatePath('/');
     return { success: true, data: project };
   } catch (error) {
     console.error('Error updating R&D project:', error);
@@ -858,6 +854,7 @@ export async function deleteRnDProject(id: string) {
   try {
     await prisma.rndProject.delete({ where: { id } });
     revalidatePath('/production/rnd');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error deleting R&D project:', error);
@@ -894,6 +891,7 @@ export async function updateSystemCapacity(capacityKg: number) {
       });
     }
     revalidatePath('/production');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error updating capacity:', error);

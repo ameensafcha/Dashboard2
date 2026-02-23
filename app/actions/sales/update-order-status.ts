@@ -196,6 +196,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
         revalidatePath('/sales/orders');
         revalidatePath('/inventory/finished');
         revalidatePath('/finance');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Error updating order status:', error);

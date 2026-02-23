@@ -94,11 +94,8 @@ export default function ProductionBatchesPage() {
       const result = await createProductionBatch({
         productId: formData.productId,
         targetQty: formData.targetQty,
-        actualQty: formData.actualQty > 0 ? formData.actualQty : undefined,
         status: formData.status,
         startDate: new Date(formData.startDate),
-        endDate: formData.endDate ? new Date(formData.endDate) : undefined,
-        qualityScore: formData.qualityScore >= 1 && formData.qualityScore <= 10 ? formData.qualityScore : undefined,
         producedBy: formData.producedBy || undefined,
         notes: formData.notes || undefined,
         batchItems: materialRows.filter(r => r.rawMaterialId && r.quantityUsed > 0),
@@ -123,11 +120,8 @@ export default function ProductionBatchesPage() {
     setFormData({
       status: batch.status,
       targetQty: batch.targetQty as number,
-      actualQty: batch.actualQty || 0,
-      qualityScore: batch.qualityScore || 0,
       producedBy: batch.producedBy || '',
       notes: batch.notes || '',
-      endDate: batch.endDate ? new Date(batch.endDate).toISOString().split('T')[0] : '',
     });
     setIsEditingBatch(false);
     setIsDetailOpen(true);
@@ -139,11 +133,8 @@ export default function ProductionBatchesPage() {
     try {
       const result = await updateProductionBatch(selectedBatch.id, {
         status: formData.status,
-        actualQty: formData.actualQty > 0 ? formData.actualQty : undefined,
-        qualityScore: formData.qualityScore > 0 ? formData.qualityScore : undefined,
         producedBy: formData.producedBy || undefined,
         notes: formData.notes || undefined,
-        endDate: formData.endDate ? new Date(formData.endDate) : undefined,
       });
 
       if (result.success) {
@@ -264,8 +255,8 @@ export default function ProductionBatchesPage() {
       {/* New Batch Modal - Refined for premium UI */}
       <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) { resetForm(); setMaterialRows([]); } }}>
         <DialogContent className="sm:max-w-xl border-[var(--border)] shadow-2xl p-0 overflow-hidden" style={{ background: 'var(--card)' }}>
-          <div className="bg-[var(--muted)]/50 p-6 border-b border-[var(--border)]">
-            <DialogHeader>
+          <div className={cn("bg-[var(--muted)]/50 p-6 border-b border-[var(--border)]", isRTL ? "text-right" : "")}>
+            <DialogHeader className={isRTL ? "items-end" : ""}>
               <DialogTitle className="text-xl font-bold text-[var(--text-primary)]">{t.createNewBatch}</DialogTitle>
               <p className="text-sm text-[var(--text-secondary)] mt-1">{t.productAndTarget}</p>
             </DialogHeader>
@@ -274,31 +265,29 @@ export default function ProductionBatchesPage() {
           <div className="p-6 grid gap-6 overflow-y-auto max-h-[65vh]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.product} <span className="text-red-500">*</span></Label>
+                <Label className={cn("text-xs font-bold uppercase text-[var(--text-secondary)] block", isRTL ? "text-right" : "")}>{t.product} <span className="text-red-500">*</span></Label>
                 <Select value={formData.productId} onValueChange={(v) => setFormData({ productId: v })}>
-                  <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] h-11">
-                    <SelectValue placeholder="Select product" />
+                  <SelectTrigger className={cn("bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] h-11", isRTL ? "flex-row-reverse" : "")}>
+                    <SelectValue placeholder={t.selectProductPlaceholder} />
                   </SelectTrigger>
                   <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
                     {products.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      <SelectItem key={p.id} value={p.id} className={isRTL ? "text-right" : ""}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.status}</Label>
+                <Label className={cn("text-xs font-bold uppercase text-[var(--text-secondary)] block", isRTL ? "text-right" : "")}>{t.status}</Label>
                 <Select value={formData.status} onValueChange={(v) => setFormData({ status: v })}>
-                  <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] h-11">
+                  <SelectTrigger className={cn("bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-[#E8A838] h-11", isRTL ? "flex-row-reverse" : "")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
-                    <SelectItem value="planned">{t.planned}</SelectItem>
-                    <SelectItem value="in_progress">{t.inProgress}</SelectItem>
-                    <SelectItem value="quality_check">{t.qualityCheck}</SelectItem>
-                    <SelectItem value="completed">{t.completed}</SelectItem>
-                    <SelectItem value="failed">{t.failed}</SelectItem>
+                    <SelectItem value="planned" className={isRTL ? "text-right" : ""}>{t.planned}</SelectItem>
+                    <SelectItem value="in_progress" className={isRTL ? "text-right" : ""}>{t.inProgress}</SelectItem>
+                    <SelectItem value="quality_check" className={isRTL ? "text-right" : ""}>{t.qualityCheck}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,7 +295,7 @@ export default function ProductionBatchesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.targetQtyKg} <span className="text-red-500">*</span></Label>
+                <Label className={cn("text-xs font-bold uppercase text-[var(--text-secondary)] block", isRTL ? "text-right" : "")}>{t.targetQtyKg} <span className="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   value={formData.targetQty || ''}
@@ -314,47 +303,25 @@ export default function ProductionBatchesPage() {
                   min={0}
                   step={0.1}
                   placeholder={t.plannedProduction}
-                  className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11"
+                  className={cn(
+                    "bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                    isRTL ? "text-right [direction:rtl]" : "text-left [direction:ltr]"
+                  )}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.actualQtyKg}</Label>
-                <Input
-                  type="number"
-                  value={formData.actualQty || ''}
-                  onChange={(e) => setFormData({ actualQty: parseFloat(e.target.value) || 0 })}
-                  min={0}
-                  step={0.1}
-                  placeholder={t.actualOutput}
-                  className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.startDate}</Label>
+                <Label className={cn("text-xs font-bold uppercase text-[var(--text-secondary)] block", isRTL ? "text-right" : "")}>{t.startDate}</Label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]" />
+                  <Calendar className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]", isRTL ? "right-3" : "left-3")} />
                   <Input
                     type="date"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ startDate: e.target.value })}
-                    className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11 pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.endDate}</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]" />
-                  <Input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ endDate: e.target.value })}
-                    className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11 pl-10"
+                    className={cn(
+                      "bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11",
+                      isRTL ? "pr-10 text-right" : "pl-10"
+                    )}
                   />
                 </div>
               </div>
@@ -362,57 +329,47 @@ export default function ProductionBatchesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.producedBy}</Label>
+                <Label className={cn("text-xs font-bold uppercase text-[var(--text-secondary)] block", isRTL ? "text-right" : "")}>{t.producedBy}</Label>
                 <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]" />
+                  <Users className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]", isRTL ? "right-3" : "left-3")} />
                   <Input
                     value={formData.producedBy}
                     onChange={(e) => setFormData({ producedBy: e.target.value })}
                     placeholder={t.productionManager}
-                    className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11 pl-10"
+                    className={cn(
+                      "bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11",
+                      isRTL ? "pr-10 text-right" : "pl-10"
+                    )}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.qualityScore} (1-10)</Label>
-                <Input
-                  type="number"
-                  value={formData.qualityScore || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    if (val >= 0 && val <= 10) setFormData({ qualityScore: val });
-                  }}
-                  min={0}
-                  max={10}
-                  placeholder={t.qcRating}
-                  className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11"
-                />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase text-[var(--text-secondary)]">{t.notes}</Label>
+              <Label className={cn("text-xs font-bold uppercase text-[var(--text-secondary)] block", isRTL ? "text-right" : "")}>{t.notes}</Label>
               <div className="relative">
-                <FileText className="absolute left-3 top-3 w-4 h-4 text-[var(--text-secondary)]" />
+                <FileText className={cn("absolute top-3 w-4 h-4 text-[var(--text-secondary)]", isRTL ? "right-3" : "left-3")} />
                 <Input
                   value={formData.notes}
                   onChange={(e) => setFormData({ notes: e.target.value })}
                   placeholder={t.productionNotes}
-                  className="bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11 pl-10"
+                  className={cn(
+                    "bg-[var(--muted)] border-[var(--border)] text-[var(--text-primary)] focus:ring-1 focus:ring-[#E8A838] h-11",
+                    isRTL ? "pr-10 text-right" : "pl-10"
+                  )}
                 />
               </div>
             </div>
 
             {/* Raw Materials Used - Professional Table Style */}
             <div className="space-y-4 border-t border-[var(--border)] pt-6 mt-2">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                <div className={isRTL ? "text-right" : ""}>
                   <Label className="text-sm font-bold text-[var(--text-primary)]">{t.materialsBreakdown}</Label>
                   <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest">{t.trackConsumption}</p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={() => setMaterialRows(prev => [...prev, { rawMaterialId: '', materialName: '', quantityUsed: 0 }])} className="border-[var(--border)] hover:bg-[#E8A838]/10 hover:text-[#E8A838] h-8 font-bold">
-                  <Plus className="w-3 h-3 mr-1" /> {t.addMaterial}
+                  <Plus className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} /> {t.addMaterial}
                 </Button>
               </div>
 
@@ -423,60 +380,90 @@ export default function ProductionBatchesPage() {
               )}
 
               <div className="space-y-3">
-                {materialRows.map((row, idx) => (
-                  <div key={idx} className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex-1">
-                      <Select value={row.rawMaterialId} onValueChange={(v) => {
-                        const mat = rawMaterials.find(m => m.id === v);
-                        setMaterialRows(prev => prev.map((r, i) => i === idx ? { ...r, rawMaterialId: v, materialName: mat?.name || '' } : r));
-                      }}>
-                        <SelectTrigger className="bg-[var(--muted)] border-[var(--border)] h-11">
-                          <SelectValue placeholder="Select material" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
-                          {rawMaterials.map(m => (
-                            <SelectItem key={m.id} value={m.id}>{m.name} ({m.currentStock} kg)</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                {materialRows.map((row, idx) => {
+                  const selectedMat = rawMaterials.find(m => m.id === row.rawMaterialId);
+                  const isInsufficient = selectedMat && row.quantityUsed > selectedMat.currentStock;
+                  const isDuplicate = materialRows.some((r, i) => r.rawMaterialId === row.rawMaterialId && i !== idx && row.rawMaterialId !== '');
+
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className={cn("flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200", isRTL ? "flex-row-reverse" : "")}>
+                        <div className="flex-1">
+                          <Select value={row.rawMaterialId} onValueChange={(v) => {
+                            const mat = rawMaterials.find(m => m.id === v);
+                            setMaterialRows(prev => prev.map((r, i) => i === idx ? { ...r, rawMaterialId: v, materialName: mat?.name || '' } : r));
+                          }}>
+                            <SelectTrigger className={cn("bg-[var(--muted)] border-[var(--border)] h-11", isRTL ? "flex-row-reverse" : "")}>
+                              <SelectValue placeholder={t.selectMaterialPlaceholder} />
+                            </SelectTrigger>
+                            <SelectContent className="z-[105] bg-[var(--card)] border-[var(--border)]">
+                              {rawMaterials
+                                .filter(m => m.id === row.rawMaterialId || !materialRows.some(r => r.rawMaterialId === m.id))
+                                .map(m => (
+                                  <SelectItem 
+                                    key={m.id} 
+                                    value={m.id} 
+                                    className={isRTL ? "text-right" : "text-left"}
+                                  >
+                                    {m.name} ({Math.max(0, Number(m.currentStock))} kg)
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-28">
+                          <Input
+                            type="number"
+                            placeholder="Qty (kg)"
+                            className={cn(
+                              "bg-[var(--muted)] border-[var(--border)] h-11 font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                              isRTL ? "text-right [direction:rtl]" : "text-left [direction:ltr]"
+                            )}
+                            value={row.quantityUsed || ''}
+                            min={0}
+                            step={0.1}
+                            onChange={(e) => setMaterialRows(prev => prev.map((r, i) => i === idx ? { ...r, quantityUsed: parseFloat(e.target.value) || 0 } : r))}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setMaterialRows(prev => prev.filter((_, i) => i !== idx))}
+                          className="h-11 w-11 p-0 hover:bg-red-500/10 text-red-500 rounded-xl transition-all"
+                        >
+                          <Plus className="rotate-45 h-5 w-5" />
+                        </Button>
+                      </div>
+                      {isInsufficient && (
+                        <p className={cn("text-[10px] text-red-500 font-bold uppercase px-1", isRTL ? "text-right" : "")}>{t.needRawMaterials}</p>
+                      )}
+                      {isDuplicate && (
+                        <p className={cn("text-[10px] text-amber-500 font-bold uppercase px-1", isRTL ? "text-right" : "")}>{t.duplicateMaterial}</p>
+                      )}
                     </div>
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        placeholder="Qty (kg)"
-                        className="bg-[var(--muted)] border-[var(--border)] h-11 text-right font-mono"
-                        value={row.quantityUsed || ''}
-                        min={0}
-                        step={0.1}
-                        onChange={(e) => setMaterialRows(prev => prev.map((r, i) => i === idx ? { ...r, quantityUsed: parseFloat(e.target.value) || 0 } : r))}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setMaterialRows(prev => prev.filter((_, i) => i !== idx))}
-                      className="h-11 w-11 p-0 hover:bg-red-500/10 text-red-500 rounded-xl transition-all"
-                    >
-                      <Plus className="rotate-45 h-5 w-5" />
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          <DialogFooter className="p-6 pt-2 border-t border-[var(--border)] gap-2">
+          <DialogFooter className={cn("p-6 pt-2 border-t border-[var(--border)] gap-2", isRTL ? "flex-row-reverse" : "")}>
             <Button variant="ghost" onClick={() => { setIsModalOpen(false); resetForm(); }} className="flex-1 text-[var(--text-secondary)] hover:bg-[var(--muted)] h-11 font-medium">
               {t.cancel}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSaving}
-              className="flex-[2] bg-[#E8A838] hover:bg-[#d49a2d] text-black font-bold h-11 shadow-lg shadow-[#E8A838]/20 transition-all active:scale-95 gap-2"
-            >
-              {isSaving ? '...' : t.createBatch}
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            {materialRows.length > 0 && (
+              <Button
+                onClick={handleSubmit}
+                disabled={isSaving || materialRows.some(r => !r.rawMaterialId || r.quantityUsed <= 0) || materialRows.some((r, idx) => {
+                  const mat = rawMaterials.find(m => m.id === r.rawMaterialId);
+                  return (mat && r.quantityUsed > mat.currentStock) || materialRows.some((row, i) => row.rawMaterialId === r.rawMaterialId && i !== idx);
+                })}
+                className="flex-[2] bg-[#E8A838] hover:bg-[#d49a2d] text-black font-bold h-11 shadow-lg shadow-[#E8A838]/20 transition-all active:scale-95 gap-2"
+              >
+                {isSaving ? '...' : t.createBatch}
+                <ChevronRight className={cn("w-4 h-4", isRTL ? "rotate-180" : "")} />
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -572,8 +559,6 @@ export default function ProductionBatchesPage() {
                             <SelectItem value="planned">{t.planned}</SelectItem>
                             <SelectItem value="in_progress">{t.inProgress}</SelectItem>
                             <SelectItem value="quality_check">{t.qualityCheck}</SelectItem>
-                            <SelectItem value="completed">{t.completed}</SelectItem>
-                            <SelectItem value="failed">{t.failed}</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
@@ -602,11 +587,7 @@ export default function ProductionBatchesPage() {
 
                     <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
                       <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">{t.endDate}</span>
-                      {isEditingBatch ? (
-                        <Input className="w-[140px] h-9 text-xs bg-[var(--muted)] border-[var(--border)]" type="date" value={formData.endDate} onChange={e => setFormData({ endDate: e.target.value })} />
-                      ) : (
-                        <span className="text-sm font-black text-[var(--text-primary)]">{selectedBatch.endDate ? new Date(selectedBatch.endDate).toLocaleDateString() : '-'}</span>
-                      )}
+                      <span className="text-sm font-black text-[var(--text-primary)]">{selectedBatch.endDate ? new Date(selectedBatch.endDate).toLocaleDateString() : '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -629,11 +610,7 @@ export default function ProductionBatchesPage() {
 
                     <div className={cn("flex items-center justify-between pb-3 border-b border-[var(--border)]/50", isRTL ? "flex-row-reverse" : "")}>
                       <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">{t.actualQtyKg}</span>
-                      {isEditingBatch ? (
-                        <Input className={cn("w-[100px] h-9 text-xs bg-[var(--muted)] border-[var(--border)]", isRTL ? "text-right" : "")} type="number" step="0.1" value={formData.actualQty} onChange={e => setFormData({ actualQty: parseFloat(e.target.value) || 0 })} />
-                      ) : (
-                        <span className="text-sm font-black text-[var(--text-primary)]">{selectedBatch.actualQty ?? '-'} kg</span>
-                      )}
+                      <span className="text-sm font-black text-[var(--text-primary)]">{selectedBatch.actualQty ?? '-'} kg</span>
                     </div>
 
                     <div className={cn("flex items-center justify-between pb-3 border-b border-[var(--border)]/50", isRTL ? "flex-row-reverse" : "")}>
@@ -649,14 +626,10 @@ export default function ProductionBatchesPage() {
 
                     <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
                       <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">{t.qualityScore}</span>
-                      {isEditingBatch ? (
-                        <Input className={cn("w-[100px] h-9 text-xs bg-[var(--muted)] border-[var(--border)]", isRTL ? "text-right" : "")} type="number" min="0" max="10" value={formData.qualityScore} onChange={e => setFormData({ qualityScore: parseInt(e.target.value) || 0 })} />
-                      ) : (
-                        <div className={cn("flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")}>
-                          <span className="text-lg font-black text-[#E8A838] leading-none">{selectedBatch.qualityScore ?? '-'}</span>
-                          <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase">/ 10</span>
-                        </div>
-                      )}
+                      <div className={cn("flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")}>
+                        <span className="text-lg font-black text-[#E8A838] leading-none">{selectedBatch.qualityScore ?? '-'}</span>
+                        <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase">/ 10</span>
+                      </div>
                     </div>
                   </div>
                 </div>

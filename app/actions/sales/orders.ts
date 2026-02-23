@@ -157,6 +157,7 @@ export async function createOrder(data: CreateOrderInput) {
         });
 
         revalidatePath('/sales/orders');
+        revalidatePath('/');
         return { success: true, orderId: order.id };
     } catch (error: any) {
         console.error('Detailed Order Creation Error:', {

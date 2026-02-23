@@ -4,11 +4,8 @@ import { ProductionBatchWithProduct, RndProjectType } from '@/app/actions/produc
 interface ProductionBatchForm {
   productId: string;
   targetQty: number;
-  actualQty: number;
   status: string;
   startDate: string;
-  endDate: string;
-  qualityScore: number;
   producedBy: string;
   notes: string;
 }
@@ -51,11 +48,8 @@ interface ProductionStore {
 const initialFormData: ProductionBatchForm = {
   productId: '',
   targetQty: 0,
-  actualQty: 0,
   status: 'planned',
   startDate: new Date().toISOString().split('T')[0],
-  endDate: '',
-  qualityScore: 0,
   producedBy: '',
   notes: '',
 };

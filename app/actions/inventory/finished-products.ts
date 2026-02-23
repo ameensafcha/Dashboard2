@@ -78,6 +78,8 @@ export async function createFinishedProduct(data: {
         });
 
         revalidatePath('/inventory/finished');
+        revalidatePath('/inventory');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Error creating finished product:', error);

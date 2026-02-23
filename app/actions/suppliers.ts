@@ -40,6 +40,7 @@ export async function createSupplier(data: Omit<Supplier, 'id' | 'createdAt'>): 
   });
   revalidatePath('/products/suppliers');
   revalidatePath('/inventory/raw-materials');
+  revalidatePath('/');
   return result;
 }
 
@@ -51,6 +52,7 @@ export async function updateSupplier(id: string, data: Partial<Omit<Supplier, 'i
     });
     revalidatePath('/products/suppliers');
     revalidatePath('/inventory/raw-materials');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error updating supplier:', error);
@@ -63,6 +65,7 @@ export async function deleteSupplier(id: string) {
     await prisma.supplier.delete({ where: { id } });
     revalidatePath('/products/suppliers');
     revalidatePath('/inventory/raw-materials');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error deleting supplier:', error);

@@ -138,6 +138,8 @@ export async function logMovement(data: LogMovementInput) {
 
         revalidatePath('/inventory/raw-materials');
         revalidatePath('/inventory/finished');
+        revalidatePath('/inventory');
+        revalidatePath('/');
         return { success: true, movementId };
     } catch (error) {
         console.error('Error logging stock movement:', error);

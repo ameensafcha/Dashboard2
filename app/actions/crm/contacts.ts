@@ -97,6 +97,7 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
 
         revalidatePath('/crm/contacts');
         revalidatePath('/crm/companies'); // Count of contacts inside companies might effectively change
+        revalidatePath('/');
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
     } catch (error) {
         console.error('Error creating contact:', error);
@@ -135,6 +136,7 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
         revalidatePath('/crm/contacts');
         revalidatePath(`/crm/contacts/${id}`);
         revalidatePath('/crm/companies');
+        revalidatePath('/');
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
     } catch (error) {
         console.error('Error updating contact:', error);
@@ -150,6 +152,7 @@ export async function deleteContact(id: string) {
 
         revalidatePath('/crm/contacts');
         revalidatePath('/crm/companies');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Error deleting contact:', error);

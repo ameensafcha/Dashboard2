@@ -44,6 +44,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
     });
     const [notes, setNotes] = useState<Record<string, string>>({});
     const [generalNotes, setGeneralNotes] = useState('');
+    const [actualQty, setActualQty] = useState<number | ''>('');
 
     useEffect(() => {
         (async () => {
@@ -72,6 +73,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
 
     const handleSubmit = async () => {
         if (!batchId) { setError(t.selectBatchToInspect); return; }
+        if (actualQty === '' || actualQty <= 0) { setError(t.enterActualQty); return; }
         if (!allFilled) { setError(t.error); return; }
 
         setIsSaving(true);
@@ -79,6 +81,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
 
         const result = await createQualityCheck({
             batchId,
+            actualQty: Number(actualQty),
             visualInspection: results.visualInspection,
             visualNotes: notes.visualInspection || undefined,
             weightVerification: results.weightVerification,
@@ -99,6 +102,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
             setBatchId('');
             setResults({ visualInspection: '', weightVerification: '', tasteTest: '', labAnalysis: '', sfdaCompliance: '' });
             setNotes({});
+            setActualQty('');
             setGeneralNotes('');
             onSuccess();
         } else {
@@ -162,6 +166,35 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
                     </SelectContent>
                 </Select>
             </div>
+
+            {/* Actual Quantity Field - Mandatory here */}
+            {batchId && batchId !== '__none' && (
+                <div className="mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <Label className={cn("text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] mb-2 block px-1", isRTL ? "text-right" : "")}>
+                        {t.actualQtyKg} <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] font-bold text-xs">
+                            KG
+                        </div>
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            placeholder={t.actualOutput}
+                            value={actualQty}
+                            onChange={(e) => setActualQty(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                            className={cn(
+                                "w-full h-12 bg-[var(--muted)]/30 border-[var(--border)] rounded-xl focus:ring-1 focus:ring-[#E8A838] transition-all hover:bg-[var(--muted)]/50 text-sm font-black pl-12 pr-4 outline-none",
+                                isRTL ? "text-right" : ""
+                            )}
+                        />
+                    </div>
+                    <p className={cn("text-[9px] text-[var(--text-secondary)] mt-2 font-bold uppercase tracking-tight px-1", isRTL ? "text-right" : "")}>
+                        {t.enterActualQtyHelp || "Enter the total weight produced after processing."}
+                    </p>
+                </div>
+            )}
 
             {/* Conditional Content: Only show when a batch is selected */}
             {batchId && batchId !== '__none' && (

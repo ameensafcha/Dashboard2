@@ -26,12 +26,19 @@ export async function getPricingTiers(): Promise<PricingTierWithCategory[]> {
     });
 
     return tiers.map(tier => ({
-      ...tier,
+      id: tier.id,
+      productId: tier.productId,
+      tierName: tier.tierName,
       minOrderKg: tier.minOrderKg.toNumber(),
-      maxOrderKg: tier.maxOrderKg ? tier.maxOrderKg.toNumber() : 0, // Handle existing nulls safely if any
+      maxOrderKg: tier.maxOrderKg ? tier.maxOrderKg.toNumber() : 0,
       pricePerKg: tier.pricePerKg.toNumber(),
       discountPercent: tier.discountPercent.toNumber(),
       marginPercent: tier.marginPercent.toNumber(),
+      isGlobal: tier.isGlobal,
+      createdAt: tier.createdAt,
+      updatedAt: tier.updatedAt,
+      categoryId: tier.categoryId,
+      category: tier.category,
     }));
   } catch (error) {
     console.error('Error fetching pricing tiers:', error);
@@ -66,6 +73,8 @@ export async function createPricingTier(data: {
     });
 
     revalidatePath('/products/pricing');
+    revalidatePath('/products/catalog');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error creating pricing tier:', error);
@@ -95,6 +104,8 @@ export async function updatePricingTier(id: string, data: {
     });
 
     revalidatePath('/products/pricing');
+    revalidatePath('/products/catalog');
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('Error updating pricing tier:', error);
@@ -108,6 +119,8 @@ export async function deletePricingTier(id: string): Promise<boolean> {
       where: { id },
     });
     revalidatePath('/products/pricing');
+    revalidatePath('/products/catalog');
+    revalidatePath('/');
     return true;
   } catch (error) {
     console.error('Error deleting pricing tier:', error);

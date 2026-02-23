@@ -97,6 +97,8 @@ export async function createRawMaterial(data: CreateRawMaterialInput) {
         });
 
         revalidatePath('/inventory/raw-materials');
+        revalidatePath('/inventory');
+        revalidatePath('/');
         return { success: true, materialId: material.id };
     } catch (error) {
         console.error('Failed to create raw material:', error);
@@ -131,6 +133,8 @@ export async function updateRawMaterial(id: string, data: UpdateRawMaterialInput
         });
 
         revalidatePath('/inventory/raw-materials');
+        revalidatePath('/inventory');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to update raw material:', error);

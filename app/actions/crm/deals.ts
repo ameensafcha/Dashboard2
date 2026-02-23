@@ -74,6 +74,7 @@ export async function createDeal(data: z.infer<typeof dealSchema>) {
         });
 
         revalidatePath('/crm/pipeline');
+        revalidatePath('/');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
     } catch (error) {
         console.error('Error creating deal:', error);
@@ -98,6 +99,7 @@ export async function updateDeal(id: string, data: Partial<z.infer<typeof dealSc
         });
 
         revalidatePath('/crm/pipeline');
+        revalidatePath('/');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
     } catch (error) {
         console.error('Error updating deal:', error);
@@ -118,6 +120,7 @@ export async function updateDealStage(id: string, stage: DealStage) {
         });
 
         revalidatePath('/crm/pipeline');
+        revalidatePath('/');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
     } catch (error) {
         console.error('Error updating deal stage:', error);
@@ -132,6 +135,7 @@ export async function deleteDeal(id: string) {
         });
 
         revalidatePath('/crm/pipeline');
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Error deleting deal:', error);
