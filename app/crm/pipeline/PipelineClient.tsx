@@ -6,26 +6,29 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Building2, User, Clock, Settings, Search } from 'lucide-react';
+import {
+    Plus,
+    Building2,
+    User,
+    Clock,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+    Briefcase,
+    TrendingUp,
+    MoreHorizontal
+} from 'lucide-react';
 import { useCrmStore, DealStageType, Deal } from '@/stores/crmStore';
 import { getDeals, updateDealStage } from '@/app/actions/crm/deals';
 import { getCompanies } from '@/app/actions/crm/companies';
 import { getContacts } from '@/app/actions/crm/contacts';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import NewDealModal from './NewDealModal';
 import DealDetailDrawer from './DealDetailDrawer';
 
-const COLUMNS: { id: DealStageType; title: string; color: string }[] = [
-    { id: 'new_lead', title: 'New Lead', color: 'border-l-blue-500' },
-    { id: 'qualified', title: 'Qualified', color: 'border-l-indigo-500' },
-    { id: 'sample_sent', title: 'Sample Sent', color: 'border-l-purple-500' },
-    { id: 'proposal', title: 'Proposal', color: 'border-l-yellow-500' },
-    { id: 'negotiation', title: 'Negotiation', color: 'border-l-orange-500' },
-    { id: 'closed_won', title: 'Closed Won', color: 'border-l-green-500' },
-    { id: 'closed_lost', title: 'Closed Lost', color: 'border-l-red-500' },
-];
-
 export default function PipelineClient() {
+    const { t, isRTL } = useTranslation();
     const {
         deals,
         setDeals,
@@ -38,6 +41,16 @@ export default function PipelineClient() {
     } = useCrmStore();
 
     const [isLoading, setIsLoading] = useState(true);
+
+    const COLUMNS: { id: DealStageType; title: string; color: string; bg: string }[] = [
+        { id: 'new_lead', title: (t as any).stage_new_lead, color: 'border-blue-500', bg: 'bg-blue-500/5' },
+        { id: 'qualified', title: (t as any).stage_qualified, color: 'border-indigo-500', bg: 'bg-indigo-500/5' },
+        { id: 'sample_sent', title: (t as any).stage_sample_sent, color: 'border-cyan-500', bg: 'bg-cyan-500/5' },
+        { id: 'proposal', title: (t as any).stage_proposal, color: 'border-[var(--primary)]', bg: 'bg-[var(--primary)]/5' },
+        { id: 'negotiation', title: (t as any).stage_negotiation, color: 'border-purple-500', bg: 'bg-purple-500/5' },
+        { id: 'closed_won', title: (t as any).stage_closed_won, color: 'border-emerald-500', bg: 'bg-emerald-500/5' },
+        { id: 'closed_lost', title: (t as any).stage_closed_lost, color: 'border-red-500', bg: 'bg-red-500/5' },
+    ];
 
     const loadData = async () => {
         setIsLoading(true);
@@ -59,7 +72,6 @@ export default function PipelineClient() {
 
     useEffect(() => {
         loadData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleDragEnd = async (result: DropResult) => {
@@ -71,14 +83,10 @@ export default function PipelineClient() {
         if (sourceCol === destCol && result.source.index === result.destination.index) return;
 
         const dealId = result.draggableId;
-
-        // Optimistic UI update
         moveDealOptimistic(dealId, destCol);
 
-        // Server update
         const response = await updateDealStage(dealId, destCol as any);
         if (!response.success) {
-            // Revert on failure by reloading
             loadData();
         }
     };
@@ -89,29 +97,50 @@ export default function PipelineClient() {
     };
 
     return (
-        <div className="p-4 sm:p-6 space-y-6 h-[calc(100vh-theme(spacing.16))] flex flex-col overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-shrink-0">
-                <PageHeader title="Deals Pipeline" />
-                <Button onClick={() => setIsNewDealModalOpen(true)} className="bg-[#E8A838] hover:bg-[#d69628] text-black w-full sm:w-auto">
-                    <Plus className="h-4 w-4 mr-2" /> Add Deal
-                </Button>
+        <div className="p-4 sm:p-8 space-y-8 h-[calc(100vh-theme(spacing.16))] flex flex-col overflow-hidden animate-in fade-in duration-700">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 flex-shrink-0">
+                <div>
+                    <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight uppercase flex items-center gap-3">
+                        <Briefcase className="w-8 h-8 text-[var(--primary)]" />
+                        {(t as any).dealsPipeline}
+                    </h1>
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-disabled)] mt-2">
+                        Visual sales funnel & revenue forecasting
+                    </p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <Button
+                        onClick={() => setIsNewDealModalOpen(true)}
+                        className="h-14 px-8 flex items-center justify-center rounded-2xl text-[11px] font-black uppercase tracking-widest text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 shadow-2xl shadow-[var(--primary)]/20 transition-all active:scale-95"
+                    >
+                        <Plus className="h-4 w-4 mr-2" /> {(t as any).addDeal}
+                    </Button>
+                </div>
             </div>
 
-            <div className="flex-1 overflow-x-auto pb-4">
+            {/* Board Area */}
+            <div className="flex-1 overflow-x-auto pb-6 scrollbar-hide">
                 <DragDropContext onDragEnd={handleDragEnd}>
-                    <div className="flex gap-4 h-full min-w-max">
+                    <div className="flex gap-6 h-full min-w-max px-2">
                         {COLUMNS.map(column => {
                             const columnDeals = deals.filter(deal => deal.stage === column.id);
                             const columnTotal = columnDeals.reduce((sum, deal) => sum + Number(deal.value), 0);
 
                             return (
-                                <div key={column.id} className="w-[300px] flex flex-col rounded-lg border flex-shrink-0" style={{ background: 'var(--muted)', borderColor: 'var(--border)' }}>
-                                    <div className="p-3 border-b flex justify-between items-center" style={{ borderColor: 'var(--border)' }}>
-                                        <div>
-                                            <h3 className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>{column.title}</h3>
-                                            <div className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                                {formatCurrency(columnTotal)} • {columnDeals.length} deals
-                                            </div>
+                                <div
+                                    key={column.id}
+                                    className="w-[320px] flex flex-col rounded-[2rem] border border-[var(--border)] overflow-hidden flex-shrink-0 bg-[var(--card)] shadow-xl shadow-black/5"
+                                >
+                                    <div className={cn("p-5 border-b border-[var(--border)]/50", column.bg)}>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <h3 className="font-black text-[10px] uppercase tracking-widest text-[var(--text-primary)]">{column.title}</h3>
+                                            <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-[var(--border)] bg-[var(--card)] text-[var(--text-secondary)] font-black">
+                                                {columnDeals.length}
+                                            </Badge>
+                                        </div>
+                                        <div className="text-sm font-black text-[var(--primary)] tracking-tight">
+                                            SAR {columnTotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}
                                         </div>
                                     </div>
 
@@ -120,11 +149,11 @@ export default function PipelineClient() {
                                             <div
                                                 ref={provided.innerRef}
                                                 {...provided.droppableProps}
-                                                className="flex-1 p-2 space-y-2 overflow-y-auto min-h-[150px]"
+                                                className="flex-1 p-4 space-y-4 overflow-y-auto min-h-[150px] scrollbar-hide"
                                             >
                                                 {isLoading ? (
-                                                    <div className="h-20 border-2 border-dashed rounded-lg flex items-center justify-center" style={{ borderColor: 'var(--border)' }}>
-                                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading...</span>
+                                                    <div className="h-32 border-2 border-dashed rounded-3xl flex items-center justify-center border-[var(--border)] animate-pulse">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">Synchronizing...</span>
                                                     </div>
                                                 ) : columnDeals.map((deal, index) => (
                                                     <Draggable key={deal.id} draggableId={deal.id} index={index}>
@@ -134,49 +163,59 @@ export default function PipelineClient() {
                                                                 {...provided.draggableProps}
                                                                 {...provided.dragHandleProps}
                                                                 onClick={() => handleCardClick(deal)}
-                                                                className={`p-3 rounded-lg border cursor-pointer shadow-sm hover:shadow-md transition-shadow border-l-4 ${column.color}`}
+                                                                className={cn(
+                                                                    "p-5 rounded-3xl border border-[var(--border)] cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative group overflow-hidden border-l-4",
+                                                                    column.color,
+                                                                    snapshot.isDragging ? "rotate-2 scale-105 z-50 bg-[var(--primary)]/5" : "bg-[var(--card)]"
+                                                                )}
                                                                 style={{
                                                                     ...provided.draggableProps.style,
-                                                                    background: 'var(--card)',
-                                                                    borderColor: snapshot.isDragging ? 'var(--text-muted)' : '',
-                                                                    opacity: snapshot.isDragging ? 0.9 : 1
                                                                 }}
                                                             >
-                                                                <div className="font-medium text-sm mb-1 leading-tight" style={{ color: 'var(--foreground)' }}>{deal.title}</div>
-                                                                <div className="font-bold text-sm mb-2" style={{ color: 'var(--foreground)' }}>{formatCurrency(Number(deal.value))}</div>
+                                                                <div className="flex items-start justify-between mb-3">
+                                                                    <div className="min-w-0">
+                                                                        <h4 className="font-black text-sm text-[var(--text-primary)] truncate leading-tight group-hover:text-[var(--primary)] transition-colors">{deal.title}</h4>
+                                                                        <p className="text-[11px] font-bold text-[var(--text-disabled)] mt-0.5 truncate">
+                                                                            {deal.company?.name || deal.client?.name || 'No contact'}
+                                                                        </p>
+                                                                    </div>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100">
+                                                                        <MoreHorizontal className="w-4 h-4 text-[var(--text-disabled)]" />
+                                                                    </Button>
+                                                                </div>
 
-                                                                <div className="space-y-1 mt-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-                                                                    {deal.company?.name && (
-                                                                        <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                                                                            <Building2 className="h-3 w-3" />
-                                                                            <span className="truncate">{deal.company.name}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {deal.client?.name && (
-                                                                        <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                                                                            <User className="h-3 w-3" />
-                                                                            <span className="truncate">{deal.client.name}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {deal.expectedCloseDate && (
-                                                                        <div className="flex items-center gap-1.5 text-[10px] mt-2 font-medium" style={{ color: 'var(--text-secondary)' }}>
-                                                                            <Clock className="h-3 w-3" />
-                                                                            {new Date(deal.expectedCloseDate).toLocaleDateString()}
+                                                                <div className="flex items-end justify-between mt-auto">
+                                                                    <div className="space-y-1">
+                                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{(t as any).estValue}</p>
+                                                                        <p className="text-base font-black text-[var(--text-primary)] tracking-tighter">
+                                                                            SAR {Number(deal.value).toLocaleString()}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    {deal.priority && (
+                                                                        <div className={cn(
+                                                                            "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter",
+                                                                            deal.priority === 'high' ? "bg-red-500/10 text-red-500 border border-red-500/20" :
+                                                                                deal.priority === 'medium' ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
+                                                                                    "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                                                        )}>
+                                                                            {(t as any)[`priority_${deal.priority}`] || deal.priority}
                                                                         </div>
                                                                     )}
                                                                 </div>
 
-                                                                <div className="mt-3 flex gap-1 flex-wrap">
-                                                                    {deal.priority === 'high' && (
-                                                                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-red-200 bg-red-50 text-red-700 h-4">High</Badge>
-                                                                    )}
-                                                                    {deal.priority === 'medium' && (
-                                                                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-amber-200 bg-amber-50 text-amber-700 h-4">Medium</Badge>
-                                                                    )}
-                                                                    {deal.priority === 'low' && (
-                                                                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-green-200 bg-green-50 text-green-700 h-4">Low</Badge>
-                                                                    )}
-                                                                </div>
+                                                                {deal.expectedCloseDate && (
+                                                                    <div className="mt-4 pt-3 border-t border-[var(--border)]/30 flex items-center justify-between text-[9px] font-bold text-[var(--text-disabled)] uppercase tracking-widest">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <Clock className="w-3 h-3" />
+                                                                            <span>{new Date(deal.expectedCloseDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                                                        </div>
+                                                                        <TrendingUp className="w-3 h-3 text-emerald-500 opacity-50" />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Hover Accent */}
+                                                                <div className="absolute top-0 right-0 w-24 h-24 -mr-12 -mt-12 bg-[var(--primary)]/5 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500" />
                                                             </div>
                                                         )}
                                                     </Draggable>

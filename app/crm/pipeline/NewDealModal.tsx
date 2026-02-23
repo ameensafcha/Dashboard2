@@ -10,8 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 import { useCrmStore, DealStageType } from '@/stores/crmStore';
 import { createDeal } from '@/app/actions/crm/deals';
+import { useTranslation } from '@/lib/i18n';
 
 export default function NewDealModal({ onDealAdded }: { onDealAdded: () => void }) {
+    const { t } = useTranslation();
     const { isNewDealModalOpen, setIsNewDealModalOpen, companies, contacts } = useCrmStore();
     const [isSaving, setIsSaving] = useState(false);
 
@@ -40,12 +42,12 @@ export default function NewDealModal({ onDealAdded }: { onDealAdded: () => void 
         e.preventDefault();
 
         if (!title.trim()) {
-            toast({ title: 'Error', description: 'Deal title is required', type: 'error' });
+            toast({ title: t.error, description: 'Deal title is required', type: 'error' });
             return;
         }
 
         if (companyId === 'none' && clientId === 'none') {
-            toast({ title: 'Error', description: 'Please link the deal to either a Company or a Contact', type: 'error' });
+            toast({ title: t.error, description: 'Please link the deal to either a Company or a Contact', type: 'error' });
             return;
         }
 
@@ -63,15 +65,15 @@ export default function NewDealModal({ onDealAdded }: { onDealAdded: () => void 
             });
 
             if (result.success) {
-                toast({ title: 'Success', description: 'Deal added to pipeline' });
+                toast({ title: t.success, description: 'Deal added to pipeline' });
                 setIsNewDealModalOpen(false);
                 resetForm();
                 onDealAdded();
             } else {
-                toast({ title: 'Error', description: result.error || 'Failed to add deal', type: 'error' });
+                toast({ title: t.error, description: result.error || 'Failed to add deal', type: 'error' });
             }
         } catch (error) {
-            toast({ title: 'Error', description: 'An unexpected error occurred', type: 'error' });
+            toast({ title: t.error, description: 'An unexpected error occurred', type: 'error' });
         } finally {
             setIsSaving(false);
         }
@@ -82,25 +84,28 @@ export default function NewDealModal({ onDealAdded }: { onDealAdded: () => void 
             if (!open) resetForm();
             setIsNewDealModalOpen(open);
         }}>
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-[2rem] border-[var(--border)] bg-[var(--card)] p-8">
                 <DialogHeader>
-                    <DialogTitle>Add New Deal</DialogTitle>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight text-[var(--text-primary)]">
+                        {(t as any).addDeal}
+                    </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-6 mt-6">
                     <div className="space-y-2">
-                        <Label htmlFor="title">Deal Title *</Label>
+                        <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{(t as any).productName} *</Label>
                         <Input
                             id="title"
                             placeholder="e.g. Annual Wholesale Contract"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
+                            className="h-12 rounded-xl bg-[var(--muted)]/50 border-[var(--border)]"
                             required
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="value">Deal Value (SAR)</Label>
+                            <Label htmlFor="value" className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{(t as any).estValue} (SAR)</Label>
                             <Input
                                 id="value"
                                 type="number"
@@ -109,33 +114,34 @@ export default function NewDealModal({ onDealAdded }: { onDealAdded: () => void 
                                 placeholder="0.00"
                                 value={value}
                                 onChange={(e) => setValue(e.target.value)}
+                                className="h-12 rounded-xl bg-[var(--muted)]/50 border-[var(--border)]"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="stage">Initial Stage</Label>
+                            <Label htmlFor="stage" className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{t.status}</Label>
                             <Select value={stage} onValueChange={(val: DealStageType) => setStage(val)}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-12 rounded-xl bg-[var(--muted)]/50 border-[var(--border)] font-bold">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent position="popper" className="z-[100]">
-                                    <SelectItem value="new_lead">New Lead</SelectItem>
-                                    <SelectItem value="qualified">Qualified</SelectItem>
-                                    <SelectItem value="sample_sent">Sample Sent</SelectItem>
-                                    <SelectItem value="proposal">Proposal</SelectItem>
-                                    <SelectItem value="negotiation">Negotiation</SelectItem>
-                                    <SelectItem value="closed_won">Closed Won</SelectItem>
-                                    <SelectItem value="closed_lost">Closed Lost</SelectItem>
+                                <SelectContent position="popper" className="z-[100] rounded-2xl border-[var(--border)] bg-[var(--card)] shadow-2xl p-1">
+                                    <SelectItem value="new_lead">{(t as any).stage_new_lead}</SelectItem>
+                                    <SelectItem value="qualified">{(t as any).stage_qualified}</SelectItem>
+                                    <SelectItem value="sample_sent">{(t as any).stage_sample_sent}</SelectItem>
+                                    <SelectItem value="proposal">{(t as any).stage_proposal}</SelectItem>
+                                    <SelectItem value="negotiation">{(t as any).stage_negotiation}</SelectItem>
+                                    <SelectItem value="closed_won">{(t as any).stage_closed_won}</SelectItem>
+                                    <SelectItem value="closed_lost">{(t as any).stage_closed_lost}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2 col-span-2">
-                            <Label htmlFor="company">Linked Company</Label>
+                            <Label htmlFor="company" className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{t.companies}</Label>
                             <Select value={companyId} onValueChange={setCompanyId}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-12 rounded-xl bg-[var(--muted)]/50 border-[var(--border)] font-bold">
                                     <SelectValue placeholder="Select a company" />
                                 </SelectTrigger>
-                                <SelectContent position="popper" className="max-h-[16rem] z-[100]">
+                                <SelectContent position="popper" className="max-h-[16rem] z-[100] rounded-2xl border-[var(--border)] bg-[var(--card)] shadow-2xl p-1">
                                     <SelectItem value="none">No Company Linked</SelectItem>
                                     {companies.map(c => (
                                         <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -145,12 +151,12 @@ export default function NewDealModal({ onDealAdded }: { onDealAdded: () => void 
                         </div>
 
                         <div className="space-y-2 col-span-2">
-                            <Label htmlFor="client">Linked Contact / Individual</Label>
+                            <Label htmlFor="client" className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{t.contacts}</Label>
                             <Select value={clientId} onValueChange={setClientId}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-12 rounded-xl bg-[var(--muted)]/50 border-[var(--border)] font-bold">
                                     <SelectValue placeholder="Select a contact" />
                                 </SelectTrigger>
-                                <SelectContent position="popper" className="max-h-[16rem] z-[100]">
+                                <SelectContent position="popper" className="max-h-[16rem] z-[100] rounded-2xl border-[var(--border)] bg-[var(--card)] shadow-2xl p-1">
                                     <SelectItem value="none">No Contact Linked</SelectItem>
                                     {contacts.map(c => (
                                         <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -160,47 +166,49 @@ export default function NewDealModal({ onDealAdded }: { onDealAdded: () => void 
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="expectedCloseDate">Expected Close Date</Label>
+                            <Label htmlFor="expectedCloseDate" className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{(t as any).expectedClose}</Label>
                             <Input
                                 id="expectedCloseDate"
                                 type="date"
                                 value={expectedCloseDate}
                                 onChange={(e) => setExpectedCloseDate(e.target.value)}
+                                className="h-12 rounded-xl bg-[var(--muted)]/50 border-[var(--border)]"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Priority</Label>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{t.status}</Label>
                             <Select value={priority} onValueChange={setPriority}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-12 rounded-xl bg-[var(--muted)]/50 border-[var(--border)] font-bold">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent position="popper" className="z-[100]">
-                                    <SelectItem value="low">Low</SelectItem>
-                                    <SelectItem value="medium">Medium</SelectItem>
-                                    <SelectItem value="high">High</SelectItem>
+                                <SelectContent position="popper" className="z-[100] rounded-2xl border-[var(--border)] bg-[var(--card)] shadow-2xl p-1">
+                                    <SelectItem value="low">{(t as any).priority_low}</SelectItem>
+                                    <SelectItem value="medium">{(t as any).priority_medium}</SelectItem>
+                                    <SelectItem value="high">{(t as any).priority_high}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2 col-span-2">
-                            <Label htmlFor="notes">Notes & Next Steps</Label>
+                            <Label htmlFor="notes" className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{t.notes}</Label>
                             <Textarea
                                 id="notes"
                                 placeholder="..."
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
+                                className="rounded-xl bg-[var(--muted)]/50 border-[var(--border)] min-h-[100px]"
                                 rows={3}
                             />
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button type="button" variant="outline" onClick={() => setIsNewDealModalOpen(false)} disabled={isSaving}>
-                            Cancel
+                    <div className="flex justify-end gap-3 pt-6">
+                        <Button type="button" variant="outline" onClick={() => setIsNewDealModalOpen(false)} disabled={isSaving} className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px]">
+                            {t.cancel}
                         </Button>
-                        <Button type="submit" disabled={isSaving} className="bg-[#E8A838] text-black hover:bg-[#d69628]">
-                            {isSaving ? 'Saving...' : 'Create Deal'}
+                        <Button type="submit" disabled={isSaving} className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px] bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 shadow-xl shadow-[var(--primary)]/20">
+                            {isSaving ? '...' : (t as any).addDeal}
                         </Button>
                     </div>
                 </form>
