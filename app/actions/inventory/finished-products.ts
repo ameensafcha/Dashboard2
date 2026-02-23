@@ -2,10 +2,11 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { toSafeNumber } from '@/lib/decimal';
 
 export async function getFinishedProducts(search?: string, location?: string) {
     try {
-        const where: any = {};
+        const where: any = { deletedAt: null };
         if (search) {
             where.OR = [
                 { sku: { contains: search, mode: 'insensitive' } },
@@ -26,13 +27,26 @@ export async function getFinishedProducts(search?: string, location?: string) {
         return {
             success: true,
             products: products.map(p => ({
-                ...p,
-                currentStock: p.currentStock ? Number(p.currentStock.toString()) : 0,
-                reservedStock: p.reservedStock ? Number(p.reservedStock.toString()) : 0,
-                unitCost: p.unitCost ? Number(p.unitCost.toString()) : 0,
-                retailPrice: p.retailPrice ? Number(p.retailPrice.toString()) : 0,
-                reorderThreshold: p.reorderThreshold ? Number(p.reorderThreshold.toString()) : null,
-                availableStock: Number(p.currentStock.toString()) - Number(p.reservedStock.toString()),
+                id: p.id,
+                productId: p.productId,
+                variant: p.variant,
+                sku: p.sku,
+                currentStock: toSafeNumber(p.currentStock, 3),
+                reservedStock: toSafeNumber(p.reservedStock, 3),
+                unitCost: toSafeNumber(p.unitCost, 2),
+                retailPrice: toSafeNumber(p.retailPrice, 2),
+                reorderThreshold: toSafeNumber(p.reorderThreshold, 3),
+                availableStock: toSafeNumber(p.currentStock, 3) - toSafeNumber(p.reservedStock, 3),
+                location: p.location,
+                batchNumber: p.batchNumber,
+                expiryDate: p.expiryDate,
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt,
+                product: p.product ? {
+                    id: p.product.id,
+                    name: p.product.name,
+                    skuPrefix: p.product.skuPrefix
+                } : null
             })),
         };
     } catch (error) {
@@ -84,5 +98,22 @@ export async function createFinishedProduct(data: {
     } catch (error) {
         console.error('Error creating finished product:', error);
         return { success: false, error: 'Failed to create finished product.' };
+    }
+}
+
+export async function deleteFinishedProduct(id: string) {
+    try {
+        await prisma.finishedProduct.update({
+            where: { id },
+            data: { deletedAt: new Date() }
+        });
+
+        revalidatePath('/inventory/finished');
+        revalidatePath('/inventory');
+        revalidatePath('/');
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting finished product:', error);
+        return { success: false, error: 'Failed to delete finished product' };
     }
 }

@@ -10,7 +10,7 @@ export async function getRawMaterials(
     location?: InventoryLocation | 'all'
 ) {
     try {
-        const whereClause: any = {};
+        const whereClause: any = { deletedAt: null };
 
         if (category && category !== 'all') {
             whereClause.category = category;
@@ -139,5 +139,22 @@ export async function updateRawMaterial(id: string, data: UpdateRawMaterialInput
     } catch (error) {
         console.error('Failed to update raw material:', error);
         return { success: false, error: 'Failed to update material' };
+    }
+}
+
+export async function deleteRawMaterial(id: string) {
+    try {
+        await prisma.rawMaterial.update({
+            where: { id },
+            data: { deletedAt: new Date() }
+        });
+
+        revalidatePath('/inventory/raw-materials');
+        revalidatePath('/inventory');
+        revalidatePath('/');
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to delete raw material:', error);
+        return { success: false, error: 'Failed to delete material' };
     }
 }

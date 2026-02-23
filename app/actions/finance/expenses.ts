@@ -66,7 +66,7 @@ async function generateTransactionId(tx: any): Promise<string> {
 
 export async function getExpenses(category?: ExpenseCategory | 'all') {
     try {
-        const where: any = {};
+        const where: any = { deletedAt: null };
         if (category && category !== 'all') where.category = category;
 
         const expenses = await prisma.expense.findMany({
@@ -153,7 +153,7 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
         }
         const validated = parsed.data;
 
-        const existing = await prisma.expense.findUnique({ where: { id } });
+        const existing = await prisma.expense.findFirst({ where: { id, deletedAt: null } });
         if (!existing) return { success: false, error: 'Expense not found.' };
 
         await prisma.$transaction(async (tx) => {
@@ -199,16 +199,20 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
 
 export async function deleteExpense(id: string) {
     try {
-        const existing = await prisma.expense.findUnique({ where: { id } });
+        const existing = await prisma.expense.findFirst({ where: { id, deletedAt: null } });
         if (!existing) return { success: false, error: 'Expense not found.' };
 
         await prisma.$transaction(async (tx) => {
-            // Delete linked transaction first
-            await tx.transaction.deleteMany({
+            // Soft delete linked transactions
+            await tx.transaction.updateMany({
                 where: { referenceId: existing.expenseId, type: 'expense' },
+                data: { deletedAt: new Date() }
             });
-            // Delete expense
-            await tx.expense.delete({ where: { id } });
+            // Soft delete expense
+            await tx.expense.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
         });
 
         revalidatePath('/finance');
@@ -229,16 +233,17 @@ export async function getFinanceSummary() {
     try {
         const [revenueAgg, expenseAgg, transactions] = await Promise.all([
             prisma.transaction.aggregate({
-                where: { type: 'revenue' },
+                where: { type: 'revenue', deletedAt: null },
                 _sum: { amount: true },
                 _count: true,
             }),
             prisma.transaction.aggregate({
-                where: { type: 'expense' },
+                where: { type: 'expense', deletedAt: null },
                 _sum: { amount: true },
                 _count: true,
             }),
             prisma.transaction.findMany({
+                where: { deletedAt: null },
                 orderBy: { date: 'desc' },
                 take: 20,
             }),
@@ -278,12 +283,15 @@ export async function getFinanceSummary() {
 export async function getTransactions(page = 1, limit = 50) {
     try {
         const transactions = await prisma.transaction.findMany({
+            where: { deletedAt: null },
             orderBy: { date: 'desc' },
             skip: (page - 1) * limit,
             take: limit,
         });
 
-        const total = await prisma.transaction.count();
+        const total = await prisma.transaction.count({
+            where: { deletedAt: null }
+        });
 
         return {
             transactions: transactions.map(t => ({

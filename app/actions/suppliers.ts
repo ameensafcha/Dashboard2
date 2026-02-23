@@ -18,6 +18,7 @@ export interface Supplier {
 export async function getSuppliers(): Promise<Supplier[]> {
   try {
     return await prisma.supplier.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
   } catch (error) {
@@ -62,7 +63,10 @@ export async function updateSupplier(id: string, data: Partial<Omit<Supplier, 'i
 
 export async function deleteSupplier(id: string) {
   try {
-    await prisma.supplier.delete({ where: { id } });
+    await prisma.supplier.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
     revalidatePath('/products/suppliers');
     revalidatePath('/inventory/raw-materials');
     revalidatePath('/');

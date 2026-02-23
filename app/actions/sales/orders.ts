@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { OrderChannel, OrderStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { toSafeNumber } from '@/lib/decimal';
 
 // ===================== Validation Schemas =====================
 
@@ -33,7 +34,7 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 export async function getOrders(search?: string, channel?: OrderChannel, status?: OrderStatus) {
     try {
-        const whereClause: any = {};
+        const whereClause: any = { deletedAt: null };
 
         if (channel && channel !== 'all' as any) {
             whereClause.channel = channel;
@@ -79,21 +80,21 @@ export async function getOrders(search?: string, channel?: OrderChannel, status?
         // Convert Decimal to Number for frontend
         const serializedOrders = orders.map(order => ({
             ...order,
-            subTotal: order.subTotal ? Number(order.subTotal.toString()) : 0,
-            discount: order.discount ? Number(order.discount.toString()) : 0,
-            vat: order.vat ? Number(order.vat.toString()) : 0,
-            shippingCost: order.shippingCost ? Number(order.shippingCost.toString()) : 0,
-            grandTotal: order.grandTotal ? Number(order.grandTotal.toString()) : 0,
+            subTotal: toSafeNumber(order.subTotal),
+            discount: toSafeNumber(order.discount),
+            vat: toSafeNumber(order.vat),
+            shippingCost: toSafeNumber(order.shippingCost),
+            grandTotal: toSafeNumber(order.grandTotal),
             orderItems: order.orderItems.map(item => ({
                 ...item,
-                unitPrice: item.unitPrice ? Number(item.unitPrice.toString()) : 0,
-                discount: item.discount ? Number(item.discount.toString()) : 0,
-                total: item.total ? Number(item.total.toString()) : 0,
+                unitPrice: toSafeNumber(item.unitPrice),
+                discount: toSafeNumber(item.discount),
+                total: toSafeNumber(item.total),
                 productName: item.product?.name || 'Unknown Product',
             })),
             invoice: order.invoice ? {
                 ...order.invoice,
-                totalAmount: order.invoice.totalAmount ? Number(order.invoice.totalAmount.toString()) : 0
+                totalAmount: toSafeNumber(order.invoice.totalAmount)
             } : null
         }));
 
@@ -122,7 +123,7 @@ export async function createOrder(data: CreateOrderInput) {
         // Calculate item totals
         const itemsWithTotals = validated.items.map(item => ({
             ...item,
-            total: (item.quantity * item.unitPrice) - item.discount
+            total: toSafeNumber((item.quantity * item.unitPrice) - item.discount)
         }));
 
         const order = await prisma.$transaction(async (tx) => {
@@ -160,12 +161,31 @@ export async function createOrder(data: CreateOrderInput) {
         revalidatePath('/');
         return { success: true, orderId: order.id };
     } catch (error: any) {
-        console.error('Detailed Order Creation Error:', {
-            message: error.message,
-            code: error.code,
-            meta: error.meta,
-            stack: error.stack
-        });
+        console.error('Detailed Order Creation Error:', error);
         return { success: false, error: error.message || 'Failed to create order' };
+    }
+}
+
+export async function deleteOrder(id: string) {
+    try {
+        await prisma.$transaction(async (tx) => {
+            // Soft delete linked transactions
+            await tx.transaction.updateMany({
+                where: { orderId: id, type: 'revenue' },
+                data: { deletedAt: new Date() }
+            });
+            // Soft delete order
+            await tx.order.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
+        });
+
+        revalidatePath('/sales/orders');
+        revalidatePath('/');
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        return { success: false, error: 'Failed to delete order' };
     }
 }

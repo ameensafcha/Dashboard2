@@ -60,7 +60,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
   try {
     const { page = 1, limit = 5, search = '', status = '' } = params;
 
-    const where: Prisma.ProductWhereInput = {};
+    const where: Prisma.ProductWhereInput = { deletedAt: null };
 
     if (search) {
       where.OR = [
@@ -104,8 +104,8 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
 }
 
 export async function getProduct(id: string) {
-  const product = await prisma.product.findUnique({
-    where: { id },
+  const product = await prisma.product.findFirst({
+    where: { id, deletedAt: null },
     include: {
       category: true,
     },
@@ -206,16 +206,20 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
 }
 
 export async function deleteProduct(id: string) {
-  await prisma.product.delete({ where: { id } });
+  await prisma.product.update({
+    where: { id },
+    data: { deletedAt: new Date() }
+  });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
   revalidatePath('/');
 }
 
 export async function getCategories(search?: string) {
-  const whereClause = search
-    ? { name: { contains: search, mode: 'insensitive' as const } }
-    : {};
+  const whereClause: any = { deletedAt: null };
+  if (search) {
+    whereClause.name = { contains: search, mode: 'insensitive' as const };
+  }
 
   return prisma.category.findMany({
     where: whereClause,
@@ -252,7 +256,10 @@ export async function updateCategory(id: string, data: { name?: string; descript
 }
 
 export async function deleteCategory(id: string) {
-  await prisma.category.delete({ where: { id } });
+  await prisma.category.update({
+    where: { id },
+    data: { deletedAt: new Date() }
+  });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
   revalidatePath('/');

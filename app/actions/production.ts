@@ -93,6 +93,7 @@ async function generateBatchNumber(date: Date = new Date()): Promise<string> {
 export async function getProductionBatches(): Promise<ProductionBatchWithProduct[]> {
   try {
     const batches = await prisma.productionBatch.findMany({
+      where: { deletedAt: null },
       include: {
         product: { select: { id: true, name: true, size: true, unit: true } },
         batchItems: true,
@@ -128,8 +129,8 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
 
 export async function getProductionBatchById(id: string) {
   try {
-    const batch = await prisma.productionBatch.findUnique({
-      where: { id },
+    const batch = await prisma.productionBatch.findFirst({
+      where: { id, deletedAt: null },
       include: {
         product: true,
         batchItems: true,
@@ -268,7 +269,10 @@ export async function updateProductionBatch(id: string, data: {
 
 export async function deleteProductionBatch(id: string) {
   try {
-    await prisma.productionBatch.delete({ where: { id } });
+    await prisma.productionBatch.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
     revalidatePath('/production/batches');
     revalidatePath('/');
     return { success: true };

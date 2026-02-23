@@ -29,7 +29,7 @@ interface FinishedProductData {
     retailPrice: number;
     location: string;
     batchNumber: string | null;
-    product: { id: string; name: string; skuPrefix: string };
+    product: { id: string; name: string; skuPrefix: string } | null;
 }
 
 interface Props {
@@ -132,7 +132,7 @@ export default function FinishedProductsClient({ initialProducts, catalogProduct
                                     const isWarn = !isLow && threshold !== null && available <= threshold;
                                     return (
                                         <TableRow key={fp.id} className={`border-b-[var(--border)] hover:bg-[var(--background)]/50 ${isLow ? 'bg-red-500/5' : isWarn ? 'bg-amber-500/5' : ''}`}>
-                                            <TableCell className="font-medium text-[var(--text-primary)]">{fp.product.name}</TableCell>
+                                            <TableCell className="font-medium text-[var(--text-primary)]">{fp.product?.name || 'Unknown Product'}</TableCell>
                                             <TableCell className="text-[var(--text-secondary)]">{fp.variant}</TableCell>
                                             <TableCell className="text-[var(--text-muted)] font-mono text-xs">{fp.sku}</TableCell>
                                             <TableCell className="text-right text-[var(--text-primary)]">{fp.currentStock}</TableCell>
@@ -150,7 +150,7 @@ export default function FinishedProductsClient({ initialProducts, catalogProduct
                                                 <LogMovementModal
                                                     targetType="finished"
                                                     targetId={fp.id}
-                                                    targetName={`${fp.product.name} - ${fp.variant}`}
+                                                    targetName={`${fp.product?.name || 'Unknown'} - ${fp.variant}`}
                                                     onSuccess={fetchProducts}
                                                 />
                                             </TableCell>

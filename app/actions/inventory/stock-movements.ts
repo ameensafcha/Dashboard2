@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { StockMovementType, StockMovementReason } from '@prisma/client';
+import { toSafeNumber } from '@/lib/decimal';
 
 // ==========================================
 // Validation Schemas
@@ -54,7 +55,7 @@ export async function getStockMovements(filters?: {
             success: true,
             movements: movements.map(m => ({
                 ...m,
-                quantity: m.quantity ? Number(m.quantity.toString()) : 0,
+                quantity: toSafeNumber(m.quantity, 3),
             })),
         };
     } catch (error) {

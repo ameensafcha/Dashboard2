@@ -16,14 +16,28 @@ import {
     ChevronRight,
     Briefcase,
     TrendingUp,
-    MoreHorizontal
+    MoreHorizontal,
+    ShoppingCart,
+    Loader2
 } from 'lucide-react';
 import { useCrmStore, DealStageType, Deal } from '@/stores/crmStore';
-import { getDeals, updateDealStage } from '@/app/actions/crm/deals';
+import { getDeals, updateDealStage, convertDealToOrder } from '@/app/actions/crm/deals';
 import { getCompanies } from '@/app/actions/crm/companies';
 import { getContacts } from '@/app/actions/crm/contacts';
 import { formatCurrency, cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from '@/components/ui/toast';
+import { useRouter } from 'next/navigation';
 import NewDealModal from './NewDealModal';
 import DealDetailDrawer from './DealDetailDrawer';
 
@@ -40,7 +54,10 @@ export default function PipelineClient() {
         setIsDealDrawerOpen
     } = useCrmStore();
 
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
+    const [isConverting, setIsConverting] = useState(false);
+    const [dealToConvert, setDealToConvert] = useState<Deal | null>(null);
 
     const COLUMNS: { id: DealStageType; title: string; color: string; bg: string }[] = [
         { id: 'new_lead', title: (t as any).stage_new_lead, color: 'border-blue-500', bg: 'bg-blue-500/5' },
@@ -94,6 +111,32 @@ export default function PipelineClient() {
     const handleCardClick = (deal: Deal) => {
         setSelectedDeal(deal);
         setIsDealDrawerOpen(true);
+    };
+
+    const handleConvertToOrder = async () => {
+        if (!dealToConvert) return;
+
+        setIsConverting(true);
+        try {
+            const result = await convertDealToOrder(dealToConvert.id);
+            if (result.success) {
+                toast({
+                    title: t.success,
+                    description: (t as any).successOrderConverted + ". Redirecting...",
+                });
+                router.push(`/sales/orders?status=draft`);
+            } else {
+                toast({
+                    title: t.error,
+                    description: result.error || (t as any).failedToConvert, // I should add failedToConvert too if I want but result.error is fine
+                });
+            }
+        } catch (error) {
+            toast({ title: "Error", description: "An unexpected error occurred" });
+        } finally {
+            setIsConverting(false);
+            setDealToConvert(null);
+        }
     };
 
     return (
@@ -155,71 +198,95 @@ export default function PipelineClient() {
                                                     <div className="h-32 border-2 border-dashed rounded-3xl flex items-center justify-center border-[var(--border)] animate-pulse">
                                                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">Synchronizing...</span>
                                                     </div>
-                                                ) : columnDeals.map((deal, index) => (
-                                                    <Draggable key={deal.id} draggableId={deal.id} index={index}>
-                                                        {(provided, snapshot) => (
-                                                            <div
-                                                                ref={provided.innerRef}
-                                                                {...provided.draggableProps}
-                                                                {...provided.dragHandleProps}
-                                                                onClick={() => handleCardClick(deal)}
-                                                                className={cn(
-                                                                    "p-5 rounded-3xl border border-[var(--border)] cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative group overflow-hidden border-l-4",
-                                                                    column.color,
-                                                                    snapshot.isDragging ? "rotate-2 scale-105 z-50 bg-[var(--primary)]/5" : "bg-[var(--card)]"
-                                                                )}
-                                                                style={{
-                                                                    ...provided.draggableProps.style,
-                                                                }}
-                                                            >
-                                                                <div className="flex items-start justify-between mb-3">
-                                                                    <div className="min-w-0">
-                                                                        <h4 className="font-black text-sm text-[var(--text-primary)] truncate leading-tight group-hover:text-[var(--primary)] transition-colors">{deal.title}</h4>
-                                                                        <p className="text-[11px] font-bold text-[var(--text-disabled)] mt-0.5 truncate">
-                                                                            {deal.company?.name || deal.client?.name || 'No contact'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100">
-                                                                        <MoreHorizontal className="w-4 h-4 text-[var(--text-disabled)]" />
-                                                                    </Button>
-                                                                </div>
+                                                ) : columnDeals.map((deal, index) => {
+                                                    const isLowValueLead = column.id === 'new_lead' && Number(deal.value) === 0;
 
-                                                                <div className="flex items-end justify-between mt-auto">
-                                                                    <div className="space-y-1">
-                                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{(t as any).estValue}</p>
-                                                                        <p className="text-base font-black text-[var(--text-primary)] tracking-tighter">
-                                                                            SAR {Number(deal.value).toLocaleString()}
-                                                                        </p>
+                                                    return (
+                                                        <Draggable key={deal.id} draggableId={deal.id} index={index}>
+                                                            {(provided, snapshot) => (
+                                                                <div
+                                                                    ref={provided.innerRef}
+                                                                    {...provided.draggableProps}
+                                                                    {...provided.dragHandleProps}
+                                                                    onClick={() => handleCardClick(deal)}
+                                                                    className={cn(
+                                                                        "p-5 rounded-3xl border border-[var(--border)] cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative group overflow-hidden border-l-4",
+                                                                        column.color,
+                                                                        snapshot.isDragging ? "rotate-2 scale-105 z-50 bg-[var(--primary)]/5" : "bg-[var(--card)]"
+                                                                    )}
+                                                                    style={{
+                                                                        ...provided.draggableProps.style,
+                                                                    }}
+                                                                >
+                                                                    <div className="flex items-start justify-between mb-3">
+                                                                        <div className="min-w-0">
+                                                                            <h4 className="font-black text-sm text-[var(--text-primary)] truncate leading-tight group-hover:text-[var(--primary)] transition-colors">{deal.title}</h4>
+                                                                            <p className="text-[11px] font-bold text-[var(--text-disabled)] mt-0.5 truncate">
+                                                                                {deal.company?.name || deal.client?.name || 'No contact'}
+                                                                            </p>
+                                                                        </div>
+                                                                        {column.id === 'closed_won' && (
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 active:scale-90"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setDealToConvert(deal);
+                                                                                }}
+                                                                            >
+                                                                                <ShoppingCart className="w-4 h-4" />
+                                                                            </Button>
+                                                                        )}
                                                                     </div>
 
-                                                                    {deal.priority && (
-                                                                        <div className={cn(
-                                                                            "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter",
-                                                                            deal.priority === 'high' ? "bg-red-500/10 text-red-500 border border-red-500/20" :
-                                                                                deal.priority === 'medium' ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
-                                                                                    "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                                                                        )}>
-                                                                            {(t as any)[`priority_${deal.priority}`] || deal.priority}
+                                                                    <div className="flex items-end justify-between mt-auto">
+                                                                        <div className="space-y-1">
+                                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-disabled)]">
+                                                                                {isLowValueLead ? (t as any).discoveryPhase : (t as any).estValue}
+                                                                            </p>
+                                                                            {isLowValueLead ? (
+                                                                                <div className="h-6 flex items-center">
+                                                                                    <Badge variant="ghost" className="p-0 text-[10px] font-black text-blue-500 uppercase tracking-widest">
+                                                                                        {(t as any).requirementGathering}
+                                                                                    </Badge>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <p className="text-base font-black text-[var(--text-primary)] tracking-tighter">
+                                                                                    SAR {Number(deal.value).toLocaleString()}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {deal.priority && (
+                                                                            <div className={cn(
+                                                                                "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter",
+                                                                                deal.priority === 'high' ? "bg-red-500/10 text-red-500 border border-red-500/20" :
+                                                                                    deal.priority === 'medium' ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
+                                                                                        "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                                                            )}>
+                                                                                {(t as any)[`priority_${deal.priority}`] || deal.priority}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {deal.expectedCloseDate && (
+                                                                        <div className="mt-4 pt-3 border-t border-[var(--border)]/30 flex items-center justify-between text-[9px] font-bold text-[var(--text-disabled)] uppercase tracking-widest">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Clock className="w-3 h-3" />
+                                                                                <span>{new Date(deal.expectedCloseDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                                                            </div>
+                                                                            <TrendingUp className="w-3 h-3 text-emerald-500 opacity-50" />
                                                                         </div>
                                                                     )}
+
+                                                                    {/* Hover Accent */}
+                                                                    <div className="absolute top-0 right-0 w-24 h-24 -mr-12 -mt-12 bg-[var(--primary)]/5 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500" />
                                                                 </div>
-
-                                                                {deal.expectedCloseDate && (
-                                                                    <div className="mt-4 pt-3 border-t border-[var(--border)]/30 flex items-center justify-between text-[9px] font-bold text-[var(--text-disabled)] uppercase tracking-widest">
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <Clock className="w-3 h-3" />
-                                                                            <span>{new Date(deal.expectedCloseDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                                                        </div>
-                                                                        <TrendingUp className="w-3 h-3 text-emerald-500 opacity-50" />
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Hover Accent */}
-                                                                <div className="absolute top-0 right-0 w-24 h-24 -mr-12 -mt-12 bg-[var(--primary)]/5 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500" />
-                                                            </div>
-                                                        )}
-                                                    </Draggable>
-                                                ))}
+                                                            )}
+                                                        </Draggable>
+                                                    );
+                                                })}
                                                 {provided.placeholder}
                                             </div>
                                         )}
@@ -233,6 +300,32 @@ export default function PipelineClient() {
 
             <NewDealModal onDealAdded={() => loadData()} />
             <DealDetailDrawer onDealUpdated={() => loadData()} />
+
+            <AlertDialog open={!!dealToConvert} onOpenChange={(open) => !open && setDealToConvert(null)}>
+                <AlertDialogContent className="rounded-[2rem] border-[var(--border)] bg-[var(--card)] p-8">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tight">{(t as any).convertDealToOrder}?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm font-bold text-[var(--text-secondary)]">
+                            This will create a draft order for <span className="text-[var(--primary)]">{dealToConvert?.title}</span> with value <span className="text-[var(--primary)]">SAR {dealToConvert?.value ? Number(dealToConvert.value).toLocaleString() : 0}</span>.
+                            <br /><br />
+                            You can further customize the order (add items, taxes, etc.) in the sales module.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="pt-6">
+                        <AlertDialogCancel className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px]">No, Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleConvertToOrder();
+                            }}
+                            className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px] bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-500/20"
+                            disabled={isConverting}
+                        >
+                            {isConverting ? <Loader2 className="w-4 h-4 animate-spin" /> : (t as any).save}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

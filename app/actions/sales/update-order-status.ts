@@ -33,8 +33,8 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
     try {
         // 1. Fetch order with items and their linked finished products
-        const order = await prisma.order.findUnique({
-            where: { id: orderId },
+        const order = await prisma.order.findFirst({
+            where: { id: orderId, deletedAt: null },
             include: {
                 orderItems: {
                     include: {

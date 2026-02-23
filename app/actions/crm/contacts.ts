@@ -20,7 +20,7 @@ const contactSchema = z.object({
 
 export async function getContacts(search?: string, companyId?: string) {
     try {
-        const whereClause: any = {};
+        const whereClause: any = { deletedAt: null };
 
         if (search) {
             whereClause.OR = [
@@ -40,7 +40,7 @@ export async function getContacts(search?: string, companyId?: string) {
         }
 
         const contacts = await prisma.client.findMany({
-            where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
+            where: whereClause,
             include: {
                 company: {
                     select: {
@@ -146,8 +146,9 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
 
 export async function deleteContact(id: string) {
     try {
-        await prisma.client.delete({
-            where: { id }
+        await prisma.client.update({
+            where: { id },
+            data: { deletedAt: new Date() }
         });
 
         revalidatePath('/crm/contacts');

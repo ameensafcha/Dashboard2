@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { toSafeNumber } from '@/lib/decimal';
 
 const companySchema = z.object({
     name: z.string().min(1, 'Company name is required'),
@@ -26,13 +27,16 @@ const companySchema = z.object({
 export async function getCompanies(search?: string) {
     try {
         const companies = await prisma.company.findMany({
-            where: search ? {
-                OR: [
-                    { name: { contains: search, mode: 'insensitive' } },
-                    { industry: { contains: search, mode: 'insensitive' } },
-                    { city: { contains: search, mode: 'insensitive' } },
-                ]
-            } : undefined,
+            where: {
+                deletedAt: null,
+                ...(search ? {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { industry: { contains: search, mode: 'insensitive' } },
+                        { city: { contains: search, mode: 'insensitive' } },
+                    ]
+                } : {})
+            },
             include: {
                 companyPricingTiers: {
                     include: {
@@ -50,17 +54,26 @@ export async function getCompanies(search?: string) {
 
         // Safely transform Decimal to primitive numbers for client components
         return companies.map((c: any) => ({
-            ...c,
-            lifetimeValue: c.lifetimeValue.toNumber(),
+            id: c.id,
+            name: c.name,
+            industry: c.industry,
+            city: c.city,
+            website: c.website,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+            lifetimeValue: toSafeNumber(c.lifetimeValue, 2),
+            _count: c._count,
             pricingTiers: c.companyPricingTiers.map((t: any) => ({
                 id: t.id,
                 categoryId: t.categoryId,
                 categoryName: t.category.name,
                 pricingTierId: t.pricingTierId,
                 tierName: t.pricingTier.tierName,
-                pricePerKg: t.pricingTier.pricePerKg.toNumber(),
-                minOrderKg: t.pricingTier.minOrderKg.toNumber(),
-                marginPercent: t.pricingTier.marginPercent.toNumber()
+                pricePerKg: toSafeNumber(t.pricingTier.pricePerKg, 2),
+                minOrderKg: toSafeNumber(t.pricingTier.minOrderKg, 3),
+                maxOrderKg: toSafeNumber(t.pricingTier.maxOrderKg, 3),
+                discountPercent: toSafeNumber(t.pricingTier.discountPercent, 2),
+                marginPercent: toSafeNumber(t.pricingTier.marginPercent, 2)
             }))
         }));
     } catch (error) {
@@ -145,8 +158,9 @@ export async function deleteCompany(id: string) {
     try {
         // Delete the company
         // Contacts and Deals have onDelete: SetNull setup in Prisma, so they won't block deletion
-        await prisma.company.delete({
-            where: { id }
+        await prisma.company.update({
+            where: { id },
+            data: { deletedAt: new Date() }
         });
 
         revalidatePath('/crm/companies');

@@ -17,6 +17,9 @@ export type PricingTierWithCategory = Omit<PrismaPricingTier, 'minOrderKg' | 'ma
 export async function getPricingTiers(): Promise<PricingTierWithCategory[]> {
   try {
     const tiers = await prisma.pricingTier.findMany({
+      where: {
+        deletedAt: null,
+      },
       include: {
         category: true,
       },
@@ -39,6 +42,7 @@ export async function getPricingTiers(): Promise<PricingTierWithCategory[]> {
       updatedAt: tier.updatedAt,
       categoryId: tier.categoryId,
       category: tier.category,
+      deletedAt: tier.deletedAt,
     }));
   } catch (error) {
     console.error('Error fetching pricing tiers:', error);
@@ -83,23 +87,27 @@ export async function createPricingTier(data: {
 }
 
 export async function updatePricingTier(id: string, data: {
+  categoryId: string;
   tierName: string;
   minOrderKg: number;
   maxOrderKg: number;
   pricePerKg: number;
   discountPercent: number;
   marginPercent: number;
+  isGlobal?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     await prisma.pricingTier.update({
       where: { id },
       data: {
+        categoryId: data.categoryId,
         tierName: data.tierName,
         minOrderKg: data.minOrderKg,
         maxOrderKg: data.maxOrderKg,
         pricePerKg: data.pricePerKg,
         discountPercent: data.discountPercent,
         marginPercent: data.marginPercent,
+        isGlobal: data.isGlobal ?? false,
       },
     });
 
@@ -115,8 +123,9 @@ export async function updatePricingTier(id: string, data: {
 
 export async function deletePricingTier(id: string): Promise<boolean> {
   try {
-    await prisma.pricingTier.delete({
+    await prisma.pricingTier.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
     revalidatePath('/products/pricing');
     revalidatePath('/products/catalog');
@@ -138,6 +147,7 @@ export async function getCategoriesForPricing(): Promise<Category[]> {
 
     // For now, return all, UI can disable used ones if needed
     const categories = await prisma.category.findMany({
+      where: { deletedAt: null },
       orderBy: { name: 'asc' },
     });
     return categories;

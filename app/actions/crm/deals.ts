@@ -18,22 +18,26 @@ const dealSchema = z.object({
 
 export async function getDeals(search?: string) {
     try {
-        const deals = await prisma.deal.findMany({
-            where: search ? {
-                OR: [
-                    { title: { contains: search, mode: 'insensitive' } },
-                    {
-                        company: {
-                            name: { contains: search, mode: 'insensitive' }
-                        }
-                    },
-                    {
-                        client: {
-                            name: { contains: search, mode: 'insensitive' }
-                        }
+        const whereClause: any = { deletedAt: null };
+
+        if (search) {
+            whereClause.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                {
+                    company: {
+                        name: { contains: search, mode: 'insensitive' }
                     }
-                ]
-            } : undefined,
+                },
+                {
+                    client: {
+                        name: { contains: search, mode: 'insensitive' }
+                    }
+                }
+            ];
+        }
+
+        const deals = await prisma.deal.findMany({
+            where: whereClause,
             include: {
                 company: {
                     select: { id: true, name: true, industry: true }
@@ -130,8 +134,9 @@ export async function updateDealStage(id: string, stage: DealStage) {
 
 export async function deleteDeal(id: string) {
     try {
-        await prisma.deal.delete({
-            where: { id }
+        await prisma.deal.update({
+            where: { id },
+            data: { deletedAt: new Date() }
         });
 
         revalidatePath('/crm/pipeline');
@@ -140,5 +145,43 @@ export async function deleteDeal(id: string) {
     } catch (error) {
         console.error('Error deleting deal:', error);
         return { success: false, error: 'Failed to delete deal' };
+    }
+}
+export async function convertDealToOrder(dealId: string) {
+    try {
+        const deal = await prisma.deal.findFirst({
+            where: { id: dealId, deletedAt: null },
+            include: { company: true, client: true }
+        });
+
+        if (!deal) return { success: false, error: 'Deal not found' };
+        if (!deal.clientId) return { success: false, error: 'Deal must have a linked Contact to create an order' };
+
+        // Generate Order Number
+        const { generateOrderNumber } = await import('../sales/utils');
+        const orderNumber = await generateOrderNumber();
+
+        // Create Order as Draft
+        const order = await prisma.order.create({
+            data: {
+                orderNumber,
+                clientId: deal.clientId,
+                companyId: deal.companyId,
+                dealId: deal.id,
+                subTotal: deal.value,
+                grandTotal: deal.value,
+                status: 'draft',
+                notes: `Converted from Deal: ${deal.title}. Original Value: SAR ${deal.value}\n${deal.notes || ''}`
+            }
+        });
+
+        revalidatePath('/sales/orders');
+        revalidatePath('/crm/pipeline');
+        revalidatePath('/');
+
+        return { success: true, orderId: order.id };
+    } catch (error) {
+        console.error('Error converting deal to order:', error);
+        return { success: false, error: 'Failed to convert deal to order' };
     }
 }
