@@ -10,6 +10,9 @@ import { Badge } from '@/components/ui/badge';
 type InventoryOverviewData = {
     kpis: {
         totalValue: number;
+        rawInventoryValue: number;
+        finishedInventoryCost: number;
+        finishedInventoryRetail: number;
         rawMaterialsCount: number;
         finishedProductsCount: number;
         lowStockCount: number;
@@ -18,7 +21,7 @@ type InventoryOverviewData = {
     lowStockItems: { name: string; sku: string; type: string; currentStock: number; threshold: number }[];
     expiringItems: { name: string; sku: string; type: string; expiryDate: string }[];
     recentMovements: { movementId: string; type: string; quantity: number; reason: string; itemName: string; time: string }[];
-    stockBreakdown: { name: string; sku: string; type: string; stock: number; value: number }[];
+    stockBreakdown: { name: string; sku: string; type: string; stock: number; available: number; value: number }[];
 };
 
 function daysUntil(dateStr: string) {
@@ -28,10 +31,10 @@ function daysUntil(dateStr: string) {
 
 export default function InventoryOverviewClient({ data }: { data: InventoryOverviewData }) {
     const kpis = [
-        { title: 'Total Inventory Value', value: data.kpis.totalValue, prefix: 'SAR ', icon: DollarSign, color: '#E8A838' },
-        { title: 'Raw Materials', value: data.kpis.rawMaterialsCount, icon: Package, color: '#3b82f6' },
-        { title: 'Finished Products', value: data.kpis.finishedProductsCount, icon: Package, color: '#22c55e' },
-        { title: 'Low Stock Alerts', value: data.kpis.lowStockCount, icon: AlertTriangle, color: data.kpis.lowStockCount > 0 ? '#ef4444' : '#22c55e' },
+        { title: 'Total Inventory Value (Cost)', value: data.kpis.totalValue, prefix: 'SAR ', icon: DollarSign, color: '#E8A838' },
+        { title: 'Raw Materials Value', value: data.kpis.rawInventoryValue, prefix: 'SAR ', icon: Package, color: '#3b82f6' },
+        { title: 'Finished Products (Cost)', value: data.kpis.finishedInventoryCost, prefix: 'SAR ', icon: Package, color: '#22c55e' },
+        { title: 'Finished Products (Retail)', value: data.kpis.finishedInventoryRetail, prefix: 'SAR ', icon: DollarSign, color: '#E8A838' },
     ];
 
     return (
@@ -82,7 +85,8 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
                                     <th className="text-left py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Item</th>
                                     <th className="text-left py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>SKU</th>
                                     <th className="text-left py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Type</th>
-                                    <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Stock</th>
+                                    <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Total Stock</th>
+                                    <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Available</th>
                                     <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Value</th>
                                 </tr>
                             </thead>
@@ -94,10 +98,13 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
                                         <td className="py-2.5 px-3">
                                             <Badge className={item.type === 'Raw Material' ? 'bg-blue-500 text-white text-[10px]' : 'bg-green-500 text-white text-[10px]'}>{item.type}</Badge>
                                         </td>
-                                        <td className={`py-2.5 px-3 text-right font-semibold ${item.stock <= 0 ? 'text-red-500' : ''}`} style={item.stock > 0 ? { color: 'var(--text-primary)' } : {}}>
+                                        <td className="py-2.5 px-3 text-right font-semibold" style={{ color: 'var(--text-primary)' }}>
                                             {item.stock}
                                         </td>
-                                        <td className="py-2.5 px-3 text-right" style={{ color: 'var(--text-secondary)' }}>
+                                        <td className={`py-2.5 px-3 text-right font-medium ${item.available <= 0 ? 'text-red-500' : 'text-[#E8A838]'}`}>
+                                            {item.available}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-right font-black" style={{ color: 'var(--text-primary)' }}>
                                             SAR {item.value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                         </td>
                                     </tr>

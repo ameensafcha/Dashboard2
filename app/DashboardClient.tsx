@@ -27,8 +27,11 @@ type DashboardData = {
         expenses: { value: number; change: number };
         netProfit: { value: number; change: number };
         orders: { value: number; change: number };
-        inventoryValue: { value: number; change: number };
         activeClients: { value: number; change: number };
+        inventoryValue: { value: number; change: number };
+        rawInventoryValue: { value: number; change: number };
+        finishedInventoryCost: { value: number; change: number };
+        finishedInventoryRetail: { value: number; change: number };
     };
     revenueTrend: { month: string; revenue: number; expenses: number }[];
     salesByChannel: { name: string; value: number }[];
@@ -76,7 +79,9 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
         { title: t.expensesMTD, value: data.kpis.expenses.value, change: data.kpis.expenses.change, icon: Receipt, prefix: 'SAR ', color: '#ef4444' },
         { title: t.netProfitMTD, value: data.kpis.netProfit.value, change: data.kpis.netProfit.change, icon: BarChart3, prefix: 'SAR ', color: data.kpis.netProfit.value >= 0 ? '#22c55e' : '#ef4444' },
         { title: t.ordersMTD, value: data.kpis.orders.value, change: data.kpis.orders.change, icon: ShoppingCart, color: '#3b82f6' },
-        { title: t.inventoryTotalValue, value: data.kpis.inventoryValue.value, change: data.kpis.inventoryValue.change, icon: Package, prefix: 'SAR ', color: '#E8A838' },
+        { title: 'Raw Inventory', value: data.kpis.rawInventoryValue.value, change: 0, icon: Package, prefix: 'SAR ', color: '#3b82f6' },
+        { title: 'Finished (Cost)', value: data.kpis.finishedInventoryCost.value, change: 0, icon: Package, prefix: 'SAR ', color: '#22c55e' },
+        { title: 'Finished (Retail)', value: data.kpis.finishedInventoryRetail.value, change: 0, icon: DollarSign, prefix: 'SAR ', color: '#E8A838' },
         { title: t.activeClients, value: data.kpis.activeClients.value, change: data.kpis.activeClients.change, icon: Users, color: '#a855f7' },
     ];
 

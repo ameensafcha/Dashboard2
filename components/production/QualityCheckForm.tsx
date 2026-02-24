@@ -44,7 +44,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
     });
     const [notes, setNotes] = useState<Record<string, string>>({});
     const [generalNotes, setGeneralNotes] = useState('');
-    const [actualQty, setActualQty] = useState<number | ''>('');
+    const [actualQty, setActualQty] = useState<string>('');
 
     useEffect(() => {
         (async () => {
@@ -73,7 +73,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
 
     const handleSubmit = async () => {
         if (!batchId) { setError(t.selectBatchToInspect); return; }
-        if (actualQty === '' || actualQty <= 0) { setError(t.enterActualQty); return; }
+        if (actualQty === '' || Number(actualQty) <= 0) { setError(t.enterActualQty); return; }
         if (!allFilled) { setError(t.error); return; }
 
         setIsSaving(true);
@@ -174,7 +174,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
                         <Label className={cn("text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)]", isRTL ? "text-right" : "")}>
                             {t.actualQtyKg} <span className="text-red-500">*</span>
                         </Label>
-                        {actualQty !== '' && actualQty > 0 && (
+                        {actualQty !== '' && Number(actualQty) > 0 && (
                             <Badge variant="outline" className="text-[9px] font-bold border-[#E8A838]/20 text-[#E8A838] px-2 py-0">
                                 {isRTL ? "الكمية الصافية" : "Net Weight Input"}
                             </Badge>
@@ -190,7 +190,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
                             min="0"
                             placeholder={t.actualOutput}
                             value={actualQty}
-                            onChange={(e) => setActualQty(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                            onChange={(e) => setActualQty(e.target.value)}
                             className={cn(
                                 "w-full h-12 bg-[var(--muted)]/30 border-[var(--border)] rounded-xl focus:ring-1 focus:ring-[#E8A838] transition-all hover:bg-[var(--muted)]/50 text-sm font-black pl-12 pr-4 outline-none",
                                 isRTL ? "text-right" : ""

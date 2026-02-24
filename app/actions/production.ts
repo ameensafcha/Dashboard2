@@ -366,6 +366,7 @@ export async function createQualityCheck(data: {
 
     return await prisma.$transaction(async (tx) => {
       // 1. Create QC record
+      const roundedQty = Math.round(data.actualQty * 1000) / 1000;
       const { actualQty, ...qcData } = data;
       console.log('[QC] Creating QualityCheck record...');
       await tx.qualityCheck.create({ data: qcData });
@@ -387,15 +388,16 @@ export async function createQualityCheck(data: {
       // 2. Update batch status and post-production fields
       const newStatus = data.passed ? 'completed' : 'failed';
       const targetQty = batchRef?.targetQty ? Number(batchRef.targetQty) : 0;
-      const yieldPercent = targetQty > 0 ? (actualQty / targetQty) * 100 : 0;
+      const rawYield = targetQty > 0 ? (roundedQty / targetQty) * 100 : 0;
+      const yieldPercent = Math.round(rawYield * 1000) / 1000;
 
-      console.log('[QC] Updating batch status to:', newStatus, 'actualQty:', actualQty, 'yield:', yieldPercent);
+      console.log('[QC] Updating batch status to:', newStatus, 'actualQty:', roundedQty, 'yield:', yieldPercent);
       await tx.productionBatch.update({
         where: { id: data.batchId },
         data: {
           qualityScore: data.overallScore,
           status: newStatus,
-          actualQty: actualQty,
+          actualQty: roundedQty,
           yieldPercent: yieldPercent,
           endDate: data.checkedAt,
         },
@@ -420,7 +422,7 @@ export async function createQualityCheck(data: {
         const year = new Date().getFullYear();
         // 3a. INCREASE Finished Product stock by actualQty
         let fp = batch.product?.finishedProduct;
-        const qty = actualQty;
+        const qty = roundedQty;
 
         if (qty > 0) {
           if (!fp) {
@@ -490,13 +492,20 @@ export async function createQualityCheck(data: {
       }
 
       console.log('[QC] Transaction successful!');
-      revalidatePath('/production/quality');
-      revalidatePath('/production/batches');
-      revalidatePath('/inventory/finished');
-      revalidatePath('/inventory/raw-materials');
-      revalidatePath('/inventory');
-      revalidatePath('/');
       return { success: true };
+    }, {
+      timeout: 15000, // Increase timeout to 15s to prevent "Transaction not found"
+      maxWait: 5000
+    }).then(result => {
+      if (result.success) {
+        revalidatePath('/production/quality');
+        revalidatePath('/production/batches');
+        revalidatePath('/inventory/finished');
+        revalidatePath('/inventory/raw-materials');
+        revalidatePath('/inventory');
+        revalidatePath('/');
+      }
+      return result;
     }).catch(error => {
       console.error('[QC] Transaction failed:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to create quality check' };
@@ -524,7 +533,7 @@ export async function updateQualityCheck(id: string, data: {
     const existing = await prisma.qualityCheck.findUnique({ where: { id } });
     if (!existing) return { success: false, error: 'QC record not found.' };
 
-    await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
       // 1. Get current batch and product info for inventory automation
       const batch = await tx.productionBatch.findUnique({
         where: { id: existing.batchId },
@@ -685,18 +694,21 @@ export async function updateQualityCheck(id: string, data: {
           }
         }
       }
+      return { success: true };
+    }, {
+      timeout: 15000,
+      maxWait: 5000
+    }).then(result => {
+      if (result.success) {
+        revalidatePath('/production/quality');
+        revalidatePath('/production/batches');
+        revalidatePath('/inventory/finished');
+        revalidatePath('/inventory/raw-materials');
+        revalidatePath('/inventory');
+        revalidatePath('/');
+      }
+      return result;
     });
-
-    revalidatePath('/production/quality');
-    revalidatePath('/production/batches');
-    revalidatePath('/inventory/finished');
-    revalidatePath('/inventory/raw-materials');
-    revalidatePath('/inventory');
-    revalidatePath('/');
-
-    revalidatePath('/production/quality');
-    revalidatePath('/production/batches');
-    return { success: true };
   } catch (error) {
     console.error('Error updating quality check:', error);
     return { success: false, error: 'Failed to update quality check.' };
@@ -708,7 +720,7 @@ export async function deleteQualityCheck(id: string) {
     const existing = await prisma.qualityCheck.findUnique({ where: { id } });
     if (!existing) return { success: false, error: 'QC record not found.' };
 
-    await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
       // 1. Get current batch and product info for inventory reversal
       const batch = await tx.productionBatch.findUnique({
         where: { id: existing.batchId },
@@ -787,18 +799,21 @@ export async function deleteQualityCheck(id: string) {
           }
         }
       }
+      return { success: true };
+    }, {
+      timeout: 15000,
+      maxWait: 5000
+    }).then(result => {
+      if (result.success) {
+        revalidatePath('/production/quality');
+        revalidatePath('/production/batches');
+        revalidatePath('/inventory/finished');
+        revalidatePath('/inventory/raw-materials');
+        revalidatePath('/inventory');
+        revalidatePath('/');
+      }
+      return result;
     });
-
-    revalidatePath('/production/quality');
-    revalidatePath('/production/batches');
-    revalidatePath('/inventory/finished');
-    revalidatePath('/inventory/raw-materials');
-    revalidatePath('/inventory');
-    revalidatePath('/');
-
-    revalidatePath('/production/quality');
-    revalidatePath('/production/batches');
-    return { success: true };
   } catch (error) {
     console.error('Error deleting quality check:', error);
     return { success: false, error: 'Failed to delete quality check.' };

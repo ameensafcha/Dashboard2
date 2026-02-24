@@ -90,6 +90,7 @@ export default function FinishedProductsClient({ initialProducts, catalogProduct
 
             {editingProduct && (
                 <EditFinishedProductModal
+                    key={editingProduct.id}
                     product={editingProduct}
                     open={isEditModalOpen}
                     onOpenChange={setIsEditModalOpen}

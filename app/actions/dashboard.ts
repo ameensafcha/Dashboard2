@@ -67,7 +67,18 @@ export async function getDashboardData() {
         const expMTD = expMTD_res._sum.amount ? Number(expMTD_res._sum.amount) : 0;
         const expLast = expLast_res._sum.amount ? Number(expLast_res._sum.amount) : 0;
         const netProfit = revMTD - expMTD;
-        const inventoryValue = (rawInvRes[0]?.total || 0) + (finInvRes[0]?.total || 0);
+
+        // Inventory Value Processing
+        const rawInventoryValue = rawInvRes[0]?.total || 0;
+        const finishedInventoryRetail = finInvRes[0]?.total || 0;
+
+        // Calculate Finished Inventory at Cost (Standard Accounting)
+        const products_for_cost = await prisma.finishedProduct.findMany({
+            select: { currentStock: true, unitCost: true }
+        });
+        const finishedInventoryCost = products_for_cost.reduce((sum, p) => sum + (Number(p.currentStock) * Number(p.unitCost)), 0);
+
+        const totalInventoryValue = rawInventoryValue + finishedInventoryCost;
 
         const pctChange = (current: number, previous: number) => {
             if (previous === 0) return current > 0 ? 100 : 0;
@@ -108,7 +119,10 @@ export async function getDashboardData() {
                 expenses: { value: expMTD, change: pctChange(expMTD, expLast) },
                 netProfit: { value: netProfit, change: pctChange(netProfit, revLast - expLast) },
                 orders: { value: ordMTD_res, change: pctChange(ordMTD_res, ordLast_res) },
-                inventoryValue: { value: Math.round(inventoryValue * 100) / 100, change: 0 },
+                inventoryValue: { value: Math.round(totalInventoryValue * 100) / 100, change: 0 },
+                rawInventoryValue: { value: Math.round(Number(rawInventoryValue) * 100) / 100, change: 0 },
+                finishedInventoryCost: { value: Math.round(Number(finishedInventoryCost) * 100) / 100, change: 0 },
+                finishedInventoryRetail: { value: Math.round(Number(finishedInventoryRetail) * 100) / 100, change: 0 },
                 activeClients: { value: clientRes, change: 0 },
             },
             revenueTrend,
@@ -125,6 +139,9 @@ export async function getDashboardData() {
                 netProfit: { value: 0, change: 0 },
                 orders: { value: 0, change: 0 },
                 inventoryValue: { value: 0, change: 0 },
+                rawInventoryValue: { value: 0, change: 0 },
+                finishedInventoryCost: { value: 0, change: 0 },
+                finishedInventoryRetail: { value: 0, change: 0 },
                 activeClients: { value: 0, change: 0 },
             },
             revenueTrend: [],

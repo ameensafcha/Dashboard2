@@ -33,9 +33,10 @@ export async function getInventoryOverview() {
         ]);
 
         // KPIs
-        const rawValue = rawMaterials.reduce((sum, m) => sum + (Number(m.currentStock) * Number(m.unitCost)), 0);
-        const finishedValue = finishedProducts.reduce((sum, p) => sum + (Number(p.currentStock) * Number(p.unitCost)), 0);
-        const totalValue = rawValue + finishedValue;
+        const rawInventoryValue = rawMaterials.reduce((sum, m) => sum + (Number(m.currentStock) * Number(m.unitCost)), 0);
+        const finishedInventoryCost = finishedProducts.reduce((sum, p) => sum + (Number(p.currentStock) * Number(p.unitCost)), 0);
+        const finishedInventoryRetail = finishedProducts.reduce((sum, p) => sum + (Number(p.currentStock) * Number(p.retailPrice)), 0);
+        const totalValue = rawInventoryValue + finishedInventoryCost;
 
         // Low stock items
         const lowStockRaw = rawMaterials.filter(m =>
@@ -61,6 +62,9 @@ export async function getInventoryOverview() {
         return {
             kpis: {
                 totalValue: Math.round(totalValue * 100) / 100,
+                rawInventoryValue: Math.round(rawInventoryValue * 100) / 100,
+                finishedInventoryCost: Math.round(finishedInventoryCost * 100) / 100,
+                finishedInventoryRetail: Math.round(finishedInventoryRetail * 100) / 100,
                 rawMaterialsCount: rawMaterials.length,
                 finishedProductsCount: finishedProducts.length,
                 lowStockCount: lowStockRaw.length + lowStockFinished.length,
@@ -110,13 +114,15 @@ export async function getInventoryOverview() {
                     sku: m.sku,
                     type: 'Raw Material' as const,
                     stock: Number(m.currentStock),
+                    available: Number(m.currentStock),
                     value: Math.round(Number(m.currentStock) * Number(m.unitCost) * 100) / 100,
                 })),
                 ...finishedProducts.map(p => ({
                     name: `${p.product.name} - ${p.variant}`,
                     sku: p.sku,
                     type: 'Finished' as const,
-                    stock: Number(p.currentStock) - Number(p.reservedStock),
+                    stock: Number(p.currentStock),
+                    available: Number(p.currentStock) - Number(p.reservedStock),
                     value: Math.round(Number(p.currentStock) * Number(p.unitCost) * 100) / 100,
                 })),
             ],
@@ -124,7 +130,16 @@ export async function getInventoryOverview() {
     } catch (error) {
         console.error('Error fetching inventory overview:', error);
         return {
-            kpis: { totalValue: 0, rawMaterialsCount: 0, finishedProductsCount: 0, lowStockCount: 0, expiringCount: 0 },
+            kpis: {
+                totalValue: 0,
+                rawInventoryValue: 0,
+                finishedInventoryCost: 0,
+                finishedInventoryRetail: 0,
+                rawMaterialsCount: 0,
+                finishedProductsCount: 0,
+                lowStockCount: 0,
+                expiringCount: 0
+            },
             lowStockItems: [],
             expiringItems: [],
             recentMovements: [],

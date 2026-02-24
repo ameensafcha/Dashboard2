@@ -117,7 +117,7 @@ export default function QualityPageClient({ initialChecks }: { initialChecks: Ch
             setEditCheck(null);
             refresh();
         } else {
-            setEditError(result.error || 'Failed to update.');
+            setEditError(('error' in result ? result.error : null) || 'Failed to update.');
         }
     };
 

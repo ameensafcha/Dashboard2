@@ -21,12 +21,13 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Search, AlertTriangle, ArrowUpDown } from 'lucide-react';
+import { Search, AlertTriangle, ArrowUpDown, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useInventoryStore, RawMaterialData } from '@/stores/inventoryStore';
 import { getRawMaterials } from '@/app/actions/inventory/raw-materials';
 import { useTranslation } from '@/lib/i18n';
 import NewMaterialModal from '@/components/inventory/NewMaterialModal';
+import EditRawMaterialModal from '@/components/inventory/EditRawMaterialModal';
 import LogMovementModal from '@/components/inventory/LogMovementModal';
 
 interface Props {
@@ -43,6 +44,10 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
     const [locationFilter, setLocationFilter] = useState('all');
 
     const [sortConfig, setSortConfig] = useState<{ key: keyof RawMaterialData; direction: 'asc' | 'desc' } | null>(null);
+
+    // Edit Modal State
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingMaterial, setEditingMaterial] = useState<RawMaterialData | null>(null);
 
     useEffect(() => {
         // Hydrate store on mount
@@ -132,6 +137,11 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
         setSortConfig({ key, direction });
     };
 
+    const handleEdit = (material: RawMaterialData) => {
+        setEditingMaterial(material);
+        setIsEditModalOpen(true);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -219,7 +229,7 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                                         <ArrowUpDown className="h-3 w-3" />
                                     </div>
                                 </TableHead>
-                                <TableHead className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider text-right">{t.adjust}</TableHead>
+                                <TableHead className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider text-right">{t.actions || 'Actions'}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -289,12 +299,22 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                                                 {formatCurrency(material.unitCost)}
                                             </TableCell>
                                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                                <LogMovementModal
-                                                    targetType="raw"
-                                                    targetId={material.id}
-                                                    targetName={material.name}
-                                                    onSuccess={fetchMaterials}
-                                                />
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-[#E8A838] hover:text-[#E8A838] hover:bg-[#E8A838]/10"
+                                                        onClick={() => handleEdit(material)}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <LogMovementModal
+                                                        targetType="raw"
+                                                        targetId={material.id}
+                                                        targetName={material.name}
+                                                        onSuccess={fetchMaterials}
+                                                    />
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -304,6 +324,17 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                     </Table>
                 </div>
             </Card>
+
+            {editingMaterial && (
+                <EditRawMaterialModal
+                    key={editingMaterial.id}
+                    material={editingMaterial}
+                    open={isEditModalOpen}
+                    onOpenChange={setIsEditModalOpen}
+                    onSuccess={fetchMaterials}
+                    suppliers={suppliers}
+                />
+            )}
 
             {/* <MaterialDetailDrawer /> */}
         </div>
