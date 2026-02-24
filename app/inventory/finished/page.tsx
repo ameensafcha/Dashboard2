@@ -3,6 +3,8 @@ import FinishedProductsClient from './FinishedProductsClient';
 import { getFinishedProducts } from '@/app/actions/inventory/finished-products';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
     title: 'Finished Products Inventory - Safcha Dashboard',
     description: 'Track finished product stock, reservations, and availability.',

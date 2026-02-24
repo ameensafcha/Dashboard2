@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import { getQualityChecks } from '@/app/actions/production';
 import QualityPageClient from './QualityPageClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Quality Control - Safcha Dashboard',
   description: 'Quality control checks and inspections',
