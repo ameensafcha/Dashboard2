@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { OrderStatus } from '@prisma/client';
 import { z } from 'zod';
+import { createAuditLog } from '@/lib/audit';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -190,6 +191,17 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
             await tx.order.update({
                 where: { id: orderId },
                 data: { status: newStatus },
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'UPDATE_STATUS',
+                entity: 'Order',
+                entityId: order.orderNumber,
+                details: {
+                    before: currentStatus,
+                    after: newStatus
+                }
             });
         });
 

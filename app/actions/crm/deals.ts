@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { DealStage } from '@prisma/client';
+import { createAuditLog } from '@/lib/audit';
 
 const dealSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -64,17 +65,28 @@ export async function createDeal(data: z.infer<typeof dealSchema>) {
     try {
         const validated = dealSchema.parse(data);
 
-        const deal = await prisma.deal.create({
-            data: {
-                ...validated,
-                // Ensure foreign keys are not empty strings
-                companyId: validated.companyId || null,
-                clientId: validated.clientId || null,
-            },
-            include: {
-                company: { select: { id: true, name: true } },
-                client: { select: { id: true, name: true } }
-            }
+        const deal = await prisma.$transaction(async (tx) => {
+            const newDeal = await tx.deal.create({
+                data: {
+                    ...validated,
+                    companyId: validated.companyId || null,
+                    clientId: validated.clientId || null,
+                },
+                include: {
+                    company: { select: { id: true, name: true } },
+                    client: { select: { id: true, name: true } }
+                }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'CREATE',
+                entity: 'Deal',
+                entityId: newDeal.id,
+                details: { after: validated }
+            });
+
+            return newDeal;
         });
 
         revalidatePath('/crm/pipeline');
@@ -88,18 +100,29 @@ export async function createDeal(data: z.infer<typeof dealSchema>) {
 
 export async function updateDeal(id: string, data: Partial<z.infer<typeof dealSchema>>) {
     try {
-        const deal = await prisma.deal.update({
-            where: { id },
-            data: {
-                ...data,
-                // Ensure missing strings don't turn into empty strings if updated explicitly
-                ...(data.companyId !== undefined && { companyId: data.companyId || null }),
-                ...(data.clientId !== undefined && { clientId: data.clientId || null }),
-            },
-            include: {
-                company: { select: { id: true, name: true } },
-                client: { select: { id: true, name: true } }
-            }
+        const deal = await prisma.$transaction(async (tx) => {
+            const updatedDeal = await tx.deal.update({
+                where: { id },
+                data: {
+                    ...data,
+                    ...(data.companyId !== undefined && { companyId: data.companyId || null }),
+                    ...(data.clientId !== undefined && { clientId: data.clientId || null }),
+                },
+                include: {
+                    company: { select: { id: true, name: true } },
+                    client: { select: { id: true, name: true } }
+                }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'UPDATE',
+                entity: 'Deal',
+                entityId: id,
+                details: { after: data }
+            });
+
+            return updatedDeal;
         });
 
         revalidatePath('/crm/pipeline');
@@ -114,13 +137,25 @@ export async function updateDeal(id: string, data: Partial<z.infer<typeof dealSc
 // Optimized action for drag-and-drop
 export async function updateDealStage(id: string, stage: DealStage) {
     try {
-        const deal = await prisma.deal.update({
-            where: { id },
-            data: { stage },
-            include: {
-                company: { select: { id: true, name: true } },
-                client: { select: { id: true, name: true } }
-            }
+        const deal = await prisma.$transaction(async (tx) => {
+            const updatedDeal = await tx.deal.update({
+                where: { id },
+                data: { stage },
+                include: {
+                    company: { select: { id: true, name: true } },
+                    client: { select: { id: true, name: true } }
+                }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'UPDATE_STAGE',
+                entity: 'Deal',
+                entityId: id,
+                details: { stage }
+            });
+
+            return updatedDeal;
         });
 
         revalidatePath('/crm/pipeline');
@@ -134,9 +169,20 @@ export async function updateDealStage(id: string, stage: DealStage) {
 
 export async function deleteDeal(id: string) {
     try {
-        await prisma.deal.update({
-            where: { id },
-            data: { deletedAt: new Date() }
+        // Wrap in transaction for audit logging
+        await prisma.$transaction(async (tx) => {
+            await tx.deal.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'SOFT_DELETE',
+                entity: 'Deal',
+                entityId: id,
+                details: { reason: 'User deleted deal' }
+            });
         });
 
         revalidatePath('/crm/pipeline');
@@ -161,18 +207,30 @@ export async function convertDealToOrder(dealId: string) {
         const { generateOrderNumber } = await import('../sales/utils');
         const orderNumber = await generateOrderNumber();
 
-        // Create Order as Draft
-        const order = await prisma.order.create({
-            data: {
-                orderNumber,
-                clientId: deal.clientId,
-                companyId: deal.companyId,
-                dealId: deal.id,
-                subTotal: deal.value,
-                grandTotal: deal.value,
-                status: 'draft',
-                notes: `Converted from Deal: ${deal.title}. Original Value: SAR ${deal.value}\n${deal.notes || ''}`
-            }
+        // Create Order as Draft inside transaction
+        const order = await prisma.$transaction(async (tx) => {
+            const newOrder = await tx.order.create({
+                data: {
+                    orderNumber,
+                    clientId: deal.clientId!,
+                    companyId: deal.companyId,
+                    dealId: deal.id,
+                    subTotal: deal.value,
+                    grandTotal: deal.value,
+                    status: 'draft',
+                    notes: `Converted from Deal: ${deal.title}. Original Value: SAR ${deal.value}\n${deal.notes || ''}`
+                }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'CONVERT_TO_ORDER',
+                entity: 'Deal',
+                entityId: dealId,
+                details: { orderId: newOrder.id }
+            });
+
+            return newOrder;
         });
 
         revalidatePath('/sales/orders');

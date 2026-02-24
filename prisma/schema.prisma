@@ -630,3 +630,17 @@ model Expense {
   @@index([date])
   @@map("expenses")
 }
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String // e.g., "CREATE", "UPDATE", "SOFT_DELETE", "RESTORE"
+  entity    String // e.g., "Order", "Product", "Expense"
+  entityId  String   @map("entity_id")
+  details   Json? // Stores { before: ..., after: ... } or relevant metadata
+  userId    String?  @map("user_id") // Placeholder for current implementation
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

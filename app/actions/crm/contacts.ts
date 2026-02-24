@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { ClientType, LeadSource } from '@prisma/client';
+import { createAuditLog } from '@/lib/audit';
 
 const contactSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -77,22 +78,34 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
 
         const validData = parsed.data;
 
-        const contact = await prisma.client.create({
-            data: {
-                name: validData.name,
-                email: validData.email || null,
-                phone: validData.phone || null,
-                companyId: validData.companyId || null,
-                role: validData.role || null,
-                type: validData.type,
-                source: validData.source,
-                tags: validData.tags ? validData.tags : [],
-                city: validData.city || null,
-                notes: validData.notes || null,
-            },
-            include: {
-                company: { select: { id: true, name: true, industry: true } }
-            }
+        const contact = await prisma.$transaction(async (tx) => {
+            const newContact = await tx.client.create({
+                data: {
+                    name: validData.name,
+                    email: validData.email || null,
+                    phone: validData.phone || null,
+                    companyId: validData.companyId || null,
+                    role: validData.role || null,
+                    type: validData.type,
+                    source: validData.source,
+                    tags: validData.tags ? validData.tags : [],
+                    city: validData.city || null,
+                    notes: validData.notes || null,
+                },
+                include: {
+                    company: { select: { id: true, name: true, industry: true } }
+                }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'CREATE',
+                entity: 'Contact',
+                entityId: newContact.id,
+                details: { after: validData }
+            });
+
+            return newContact;
         });
 
         revalidatePath('/crm/contacts');
@@ -114,23 +127,35 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
 
         const validData = parsed.data;
 
-        const contact = await prisma.client.update({
-            where: { id },
-            data: {
-                name: validData.name,
-                email: validData.email || null,
-                phone: validData.phone || null,
-                companyId: validData.companyId || null,
-                role: validData.role || null,
-                type: validData.type,
-                source: validData.source,
-                tags: validData.tags ? validData.tags : undefined,
-                city: validData.city || null,
-                notes: validData.notes || null,
-            },
-            include: {
-                company: { select: { id: true, name: true, industry: true } }
-            }
+        const contact = await prisma.$transaction(async (tx) => {
+            const updatedContact = await tx.client.update({
+                where: { id },
+                data: {
+                    name: validData.name,
+                    email: validData.email || null,
+                    phone: validData.phone || null,
+                    companyId: validData.companyId || null,
+                    role: validData.role || null,
+                    type: validData.type,
+                    source: validData.source,
+                    tags: validData.tags ? validData.tags : undefined,
+                    city: validData.city || null,
+                    notes: validData.notes || null,
+                },
+                include: {
+                    company: { select: { id: true, name: true, industry: true } }
+                }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'UPDATE',
+                entity: 'Contact',
+                entityId: id,
+                details: { after: validData }
+            });
+
+            return updatedContact;
         });
 
         revalidatePath('/crm/contacts');
@@ -146,9 +171,20 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
 
 export async function deleteContact(id: string) {
     try {
-        await prisma.client.update({
-            where: { id },
-            data: { deletedAt: new Date() }
+        // Wrap in transaction for audit logging
+        await prisma.$transaction(async (tx) => {
+            await tx.client.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'SOFT_DELETE',
+                entity: 'Contact',
+                entityId: id,
+                details: { reason: 'User deleted contact' }
+            });
         });
 
         revalidatePath('/crm/contacts');

@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { Prisma, BatchStatus, RndStatus, StockMovementType, StockMovementReason } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { createAuditLog } from '@/lib/audit';
 
 const createBatchSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
@@ -183,24 +184,35 @@ export async function createProductionBatch(data: {
     const validData = parsedData.data;
     const batchNumber = await generateBatchNumber(validData.startDate);
 
-    const batch = await prisma.productionBatch.create({
-      data: {
-        batchNumber,
-        productId: validData.productId,
-        targetQty: validData.targetQty,
-        status: validData.status || 'planned',
-        startDate: validData.startDate,
-        producedBy: validData.producedBy,
-        notes: validData.notes,
-        // Phase 7.1: Create batch items (raw material consumption)
-        batchItems: data.batchItems && data.batchItems.length > 0 ? {
-          create: data.batchItems.map(item => ({
-            rawMaterialId: item.rawMaterialId || null,
-            materialName: item.materialName,
-            quantityUsed: item.quantityUsed,
-          })),
-        } : undefined,
-      },
+    const batch = await prisma.$transaction(async (tx) => {
+      const newBatch = await tx.productionBatch.create({
+        data: {
+          batchNumber,
+          productId: validData.productId,
+          targetQty: validData.targetQty,
+          status: validData.status || 'planned',
+          startDate: validData.startDate,
+          producedBy: validData.producedBy,
+          notes: validData.notes,
+          batchItems: data.batchItems && data.batchItems.length > 0 ? {
+            create: data.batchItems.map(item => ({
+              rawMaterialId: item.rawMaterialId || null,
+              materialName: item.materialName,
+              quantityUsed: item.quantityUsed,
+            })),
+          } : undefined,
+        },
+      });
+
+      // Create audit log
+      await createAuditLog(tx, {
+        action: 'CREATE',
+        entity: 'ProductionBatch',
+        entityId: newBatch.batchNumber,
+        details: { after: validData }
+      });
+
+      return newBatch;
     });
 
     const serializedBatch = {
@@ -243,11 +255,23 @@ export async function updateProductionBatch(id: string, data: {
       return { success: false, error: 'Status can only be set to Completed or Failed via Quality Control.' };
     }
 
-    const batch = await prisma.productionBatch.update({
-      where: { id },
-      data: {
-        ...validData,
-      },
+    const batch = await prisma.$transaction(async (tx) => {
+      const updatedBatch = await tx.productionBatch.update({
+        where: { id },
+        data: {
+          ...validData,
+        },
+      });
+
+      // Create audit log
+      await createAuditLog(tx, {
+        action: 'UPDATE',
+        entity: 'ProductionBatch',
+        entityId: updatedBatch.batchNumber,
+        details: { after: validData }
+      });
+
+      return updatedBatch;
     });
 
     const serializedBatch = {
@@ -269,9 +293,19 @@ export async function updateProductionBatch(id: string, data: {
 
 export async function deleteProductionBatch(id: string) {
   try {
-    await prisma.productionBatch.update({
-      where: { id },
-      data: { deletedAt: new Date() }
+    await prisma.$transaction(async (tx) => {
+      const deletedBatch = await tx.productionBatch.update({
+        where: { id },
+        data: { deletedAt: new Date() }
+      });
+
+      // Create audit log
+      await createAuditLog(tx, {
+        action: 'SOFT_DELETE',
+        entity: 'ProductionBatch',
+        entityId: deletedBatch.batchNumber,
+        details: { reason: 'User deleted batch' }
+      });
     });
     revalidatePath('/production/batches');
     revalidatePath('/');
@@ -332,6 +366,14 @@ export async function createQualityCheck(data: {
       // 1. Create QC record
       const { actualQty, ...qcData } = data;
       await tx.qualityCheck.create({ data: qcData });
+
+      // Create audit log for QC
+      await createAuditLog(tx, {
+        action: 'CREATE_QC',
+        entity: 'ProductionBatch',
+        entityId: (await tx.productionBatch.findUnique({ where: { id: data.batchId }, select: { batchNumber: true } }))?.batchNumber || data.batchId,
+        details: { passed: data.passed, score: data.overallScore }
+      });
 
       // 2. Update batch status and post-production fields
       const newStatus = data.passed ? 'completed' : 'failed';
@@ -500,6 +542,14 @@ export async function updateQualityCheck(id: string, data: {
           passed: data.passed,
           notes: data.notes || null,
         },
+      });
+
+      // Create audit log for QC update
+      await createAuditLog(tx, {
+        action: 'UPDATE_QC',
+        entity: 'ProductionBatch',
+        entityId: batch.batchNumber,
+        details: { passed: data.passed, score: data.overallScore }
       });
 
       // 3. Update batch status

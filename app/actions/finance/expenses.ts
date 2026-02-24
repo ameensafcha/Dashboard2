@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { ExpenseCategory, PaymentMethod } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { createAuditLog } from '@/lib/audit';
 
 // ==========================================
 // Validation Schemas
@@ -132,6 +133,14 @@ export async function createExpense(data: CreateExpenseInput) {
                     date: validated.date,
                 },
             });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'CREATE',
+                entity: 'Expense',
+                entityId: expenseId,
+                details: { after: validated }
+            });
         });
 
         revalidatePath('/finance');
@@ -185,6 +194,22 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
                     },
                 });
             }
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'UPDATE',
+                entity: 'Expense',
+                entityId: existing.expenseId,
+                details: {
+                    before: {
+                        category: existing.category,
+                        amount: Number(existing.amount),
+                        description: existing.description,
+                        date: existing.date,
+                    },
+                    after: validated
+                }
+            });
         });
 
         revalidatePath('/finance');
@@ -212,6 +237,17 @@ export async function deleteExpense(id: string) {
             await tx.expense.update({
                 where: { id },
                 data: { deletedAt: new Date() }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'SOFT_DELETE',
+                entity: 'Expense',
+                entityId: existing.expenseId,
+                details: {
+                    reason: 'User deleted expense',
+                    deletedAt: new Date()
+                }
             });
         });
 

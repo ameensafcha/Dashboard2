@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { toSafeNumber } from '@/lib/decimal';
+import { createAuditLog } from '@/lib/audit';
 
 const companySchema = z.object({
     name: z.string().min(1, 'Company name is required'),
@@ -91,19 +92,31 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
 
         const validData = parsed.data;
 
-        const company = await prisma.company.create({
-            data: {
-                name: validData.name,
-                industry: validData.industry || null,
-                city: validData.city || null,
-                website: validData.website || null,
-                companyPricingTiers: validData.pricingTiers && validData.pricingTiers.length > 0 ? {
-                    create: validData.pricingTiers.map(t => ({
-                        categoryId: t.categoryId,
-                        pricingTierId: t.pricingTierId
-                    }))
-                } : undefined
-            }
+        const company = await prisma.$transaction(async (tx) => {
+            const newCompany = await tx.company.create({
+                data: {
+                    name: validData.name,
+                    industry: validData.industry || null,
+                    city: validData.city || null,
+                    website: validData.website || null,
+                    companyPricingTiers: validData.pricingTiers && validData.pricingTiers.length > 0 ? {
+                        create: validData.pricingTiers.map(t => ({
+                            categoryId: t.categoryId,
+                            pricingTierId: t.pricingTierId
+                        }))
+                    } : undefined
+                }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'CREATE',
+                entity: 'Company',
+                entityId: newCompany.id,
+                details: { after: validData }
+            });
+
+            return newCompany;
         });
 
         revalidatePath('/crm/companies');
@@ -126,7 +139,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
 
         // P6: Wrap in transaction for atomicity (deleteMany + create)
         const company = await prisma.$transaction(async (tx) => {
-            return tx.company.update({
+            const updatedCompany = await tx.company.update({
                 where: { id },
                 data: {
                     name: validData.name,
@@ -142,6 +155,16 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
                     }
                 }
             });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'UPDATE',
+                entity: 'Company',
+                entityId: id,
+                details: { after: validData }
+            });
+
+            return updatedCompany;
         });
 
         revalidatePath('/crm/companies');
@@ -158,9 +181,20 @@ export async function deleteCompany(id: string) {
     try {
         // Delete the company
         // Contacts and Deals have onDelete: SetNull setup in Prisma, so they won't block deletion
-        await prisma.company.update({
-            where: { id },
-            data: { deletedAt: new Date() }
+        // Wrap in transaction for audit logging
+        await prisma.$transaction(async (tx) => {
+            await tx.company.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'SOFT_DELETE',
+                entity: 'Company',
+                entityId: id,
+                details: { reason: 'User deleted company' }
+            });
         });
 
         revalidatePath('/crm/companies');

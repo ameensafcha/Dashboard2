@@ -5,6 +5,7 @@ import { OrderChannel, OrderStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { toSafeNumber } from '@/lib/decimal';
+import { createAuditLog } from '@/lib/audit';
 
 // ===================== Validation Schemas =====================
 
@@ -154,6 +155,14 @@ export async function createOrder(data: CreateOrderInput) {
                 }
             });
 
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'CREATE',
+                entity: 'Order',
+                entityId: newOrder.orderNumber,
+                details: { after: validated }
+            });
+
             return newOrder;
         });
 
@@ -175,9 +184,20 @@ export async function deleteOrder(id: string) {
                 data: { deletedAt: new Date() }
             });
             // Soft delete order
-            await tx.order.update({
+            const deletedOrder = await tx.order.update({
                 where: { id },
                 data: { deletedAt: new Date() }
+            });
+
+            // Create audit log
+            await createAuditLog(tx, {
+                action: 'SOFT_DELETE',
+                entity: 'Order',
+                entityId: deletedOrder.orderNumber,
+                details: {
+                    reason: 'User deleted order',
+                    deletedAt: new Date()
+                }
             });
         });
 
