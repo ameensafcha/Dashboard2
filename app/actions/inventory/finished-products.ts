@@ -117,3 +117,37 @@ export async function deleteFinishedProduct(id: string) {
         return { success: false, error: 'Failed to delete finished product' };
     }
 }
+
+export async function updateFinishedProduct(id: string, data: {
+    variant?: string;
+    sku?: string;
+    currentStock?: number;
+    reservedStock?: number;
+    unitCost?: number;
+    retailPrice?: number;
+    location?: string;
+    reorderThreshold?: number;
+    expiryDate?: string | null;
+}) {
+    try {
+        const updateData: any = { ...data };
+
+        if (data.expiryDate !== undefined) {
+            updateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+        }
+
+        await prisma.finishedProduct.update({
+            where: { id },
+            data: updateData
+        });
+
+        revalidatePath('/inventory/finished');
+        revalidatePath('/inventory');
+        revalidatePath('/');
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error updating finished product:', error);
+        return { success: false, error: 'Failed to update finished product.' };
+    }
+}

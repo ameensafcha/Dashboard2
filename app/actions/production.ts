@@ -362,30 +362,34 @@ export async function createQualityCheck(data: {
 }) {
   try {
     // Phase 7.3: Use transaction for QC + inventory automation
-    await prisma.$transaction(async (tx) => {
+    console.log('[QC] Starting quality check transaction for batch:', data.batchId);
+
+    return await prisma.$transaction(async (tx) => {
       // 1. Create QC record
       const { actualQty, ...qcData } = data;
+      console.log('[QC] Creating QualityCheck record...');
       await tx.qualityCheck.create({ data: qcData });
 
       // Create audit log for QC
+      console.log('[QC] Creating audit log...');
+      const batchRef = await tx.productionBatch.findUnique({
+        where: { id: data.batchId },
+        select: { batchNumber: true, targetQty: true }
+      });
+
       await createAuditLog(tx, {
         action: 'CREATE_QC',
         entity: 'ProductionBatch',
-        entityId: (await tx.productionBatch.findUnique({ where: { id: data.batchId }, select: { batchNumber: true } }))?.batchNumber || data.batchId,
+        entityId: batchRef?.batchNumber || data.batchId,
         details: { passed: data.passed, score: data.overallScore }
       });
 
       // 2. Update batch status and post-production fields
       const newStatus = data.passed ? 'completed' : 'failed';
-
-      const batchForYield = await tx.productionBatch.findUnique({
-        where: { id: data.batchId },
-        select: { targetQty: true }
-      });
-
-      const targetQty = batchForYield?.targetQty ? Number(batchForYield.targetQty) : 0;
+      const targetQty = batchRef?.targetQty ? Number(batchRef.targetQty) : 0;
       const yieldPercent = targetQty > 0 ? (actualQty / targetQty) * 100 : 0;
 
+      console.log('[QC] Updating batch status to:', newStatus, 'actualQty:', actualQty, 'yield:', yieldPercent);
       await tx.productionBatch.update({
         where: { id: data.batchId },
         data: {
@@ -399,6 +403,7 @@ export async function createQualityCheck(data: {
 
       // 3. If PASSED — automate inventory updates
       if (data.passed) {
+        console.log('[QC] Passed: Starting inventory synchronization...');
         const batch = await tx.productionBatch.findUnique({
           where: { id: data.batchId },
           include: {
@@ -407,43 +412,45 @@ export async function createQualityCheck(data: {
           },
         });
 
-        if (!batch) return;
+        if (!batch) {
+          console.error('[QC] Batch not found inside transaction');
+          throw new Error('Batch not found');
+        }
 
         const year = new Date().getFullYear();
-        let counter = await tx.stockMovement.count({
-          where: { movementId: { startsWith: `SM-${year}` } },
-        });
-
         // 3a. INCREASE Finished Product stock by actualQty
-        let fp = batch.product.finishedProduct;
-        const qty = actualQty; // Use the provided actualQty
+        let fp = batch.product?.finishedProduct;
+        const qty = actualQty;
 
         if (qty > 0) {
           if (!fp) {
-            // Auto-create FinishedProduct if missing
+            console.log('[QC] Creating new FinishedProduct for SKU prefix:', batch.product?.skuPrefix);
             fp = await tx.finishedProduct.create({
               data: {
                 productId: batch.productId,
                 variant: 'Standard',
-                sku: `fp-${batch.product.skuPrefix}-${Date.now().toString().slice(-4)}`,
+                sku: `FP-${batch.product?.skuPrefix || 'GEN'}-${Date.now().toString().slice(-4)}`,
                 currentStock: qty,
-                unitCost: Number(batch.product.baseCost),
-                retailPrice: Number(batch.product.baseRetailPrice),
+                unitCost: Number(batch.product?.baseCost || 0),
+                retailPrice: Number(batch.product?.baseRetailPrice || 0),
                 location: 'AL_AHSA_WAREHOUSE',
                 batchNumber: batch.batchNumber,
               },
             });
           } else {
+            console.log('[QC] Incrementing existing FinishedProduct stock:', fp.id, 'by:', qty);
             await tx.finishedProduct.update({
               where: { id: fp.id },
               data: { currentStock: { increment: qty } },
             });
           }
 
-          counter++;
+          // Generate a more robust unique movement ID to avoid collisions
+          const movementId = `SM-${year}-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+          console.log('[QC] Creating stock movement (IN):', movementId);
           await tx.stockMovement.create({
             data: {
-              movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+              movementId: movementId,
               type: 'STOCK_IN',
               reason: 'PURCHASE', // Closest enum for now
               quantity: qty,
@@ -458,15 +465,18 @@ export async function createQualityCheck(data: {
         for (const item of batch.batchItems) {
           if (item.rawMaterialId) {
             const usedQty = Number(item.quantityUsed);
+            console.log('[QC] Decrementing raw material:', item.rawMaterialId, 'by:', usedQty);
             await tx.rawMaterial.update({
               where: { id: item.rawMaterialId },
               data: { currentStock: { decrement: usedQty } },
             });
 
-            counter++;
+            // Generate another unique ID for the material reduction
+            const matMovementId = `SM-${year}-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            console.log('[QC] Creating stock movement (OUT):', matMovementId);
             await tx.stockMovement.create({
               data: {
-                movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
+                movementId: matMovementId,
                 type: 'STOCK_OUT',
                 reason: 'PRODUCTION_INPUT',
                 quantity: usedQty,
@@ -478,15 +488,19 @@ export async function createQualityCheck(data: {
           }
         }
       }
-    });
 
-    revalidatePath('/production/quality');
-    revalidatePath('/production/batches');
-    revalidatePath('/inventory/finished');
-    revalidatePath('/inventory/raw-materials');
-    revalidatePath('/inventory');
-    revalidatePath('/');
-    return { success: true };
+      console.log('[QC] Transaction successful!');
+      revalidatePath('/production/quality');
+      revalidatePath('/production/batches');
+      revalidatePath('/inventory/finished');
+      revalidatePath('/inventory/raw-materials');
+      revalidatePath('/inventory');
+      revalidatePath('/');
+      return { success: true };
+    }).catch(error => {
+      console.error('[QC] Transaction failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to create quality check' };
+    });
   } catch (error) {
     console.error('Error creating quality check:', error);
     return { success: false, error: 'Failed to create quality check' };

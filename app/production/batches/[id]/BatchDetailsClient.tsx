@@ -70,8 +70,14 @@ export function BatchDetailsClient({ batch }: { batch: ProductionBatchWithProduc
                             <InfoItem icon={User} label={t.producedBy} value={batch.producedBy || '-'} />
                             <InfoItem icon={Target} label={t.targetQtyKg} value={`${batch.targetQty} kg`} highlight />
                             <InfoItem icon={Activity} label={t.actualQtyKg} value={batch.actualQty ? `${batch.actualQty} kg` : '-'} color="text-green-500" />
-                            <InfoItem icon={TrendingUpIcon} label={t.yield} value={batch.yieldPercent ? `${batch.yieldPercent.toFixed(1)}%` : '-'} color={batch.yieldPercent && batch.yieldPercent >= 95 ? "text-green-500" : ""} />
-                            <InfoItem icon={StarIcon} label={t.qualityScore} value={batch.qualityScore ? `${batch.qualityScore} / 10` : '-'} highlight />
+                            <InfoItem
+                                icon={TrendingUpIcon}
+                                label={isRTL ? "كفاءة الإنتاج (Yield)" : "Production Yield %"}
+                                value={batch.yieldPercent ? `${batch.yieldPercent.toFixed(1)}%` : '-'}
+                                color={batch.yieldPercent && batch.yieldPercent >= 95 ? "text-green-500" : ""}
+                                highlight
+                            />
+                            <InfoItem icon={StarIcon} label={t.qualityScore} value={batch.qualityScore ? `${batch.qualityScore} / 10` : '-'} />
                             <InfoItem icon={Calendar} label={t.startDate} value={new Date(batch.startDate).toLocaleDateString()} />
                             <InfoItem icon={Calendar} label={t.endDate} value={batch.endDate ? new Date(batch.endDate).toLocaleDateString() : 'Ongoing'} />
                         </div>

@@ -106,7 +106,7 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
             setGeneralNotes('');
             onSuccess();
         } else {
-            setError(result.error || t.error);
+            setError((result as any).error || t.error);
         }
     };
 
@@ -170,16 +170,23 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
             {/* Actual Quantity Field - Mandatory here */}
             {batchId && batchId !== '__none' && (
                 <div className="mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <Label className={cn("text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] mb-2 block px-1", isRTL ? "text-right" : "")}>
-                        {t.actualQtyKg} <span className="text-red-500">*</span>
-                    </Label>
+                    <div className={cn("flex items-center justify-between mb-2 px-1", isRTL ? "flex-row-reverse" : "")}>
+                        <Label className={cn("text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)]", isRTL ? "text-right" : "")}>
+                            {t.actualQtyKg} <span className="text-red-500">*</span>
+                        </Label>
+                        {actualQty !== '' && actualQty > 0 && (
+                            <Badge variant="outline" className="text-[9px] font-bold border-[#E8A838]/20 text-[#E8A838] px-2 py-0">
+                                {isRTL ? "الكمية الصافية" : "Net Weight Input"}
+                            </Badge>
+                        )}
+                    </div>
                     <div className="relative group">
                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] font-bold text-xs">
                             KG
                         </div>
                         <input
                             type="number"
-                            step="0.1"
+                            step="any"
                             min="0"
                             placeholder={t.actualOutput}
                             value={actualQty}
@@ -190,8 +197,8 @@ export default function QualityCheckForm({ onSuccess }: { onSuccess: () => void 
                             )}
                         />
                     </div>
-                    <p className={cn("text-[9px] text-[var(--text-secondary)] mt-2 font-bold uppercase tracking-tight px-1", isRTL ? "text-right" : "")}>
-                        {t.enterActualQtyHelp || "Enter the total weight produced after processing."}
+                    <p className={cn("text-[9px] text-[var(--text-secondary)] mt-2 font-bold uppercase tracking-tight px-1 italic", isRTL ? "text-right" : "")}>
+                        {isRTL ? "ادخل الوزن النهائي بعد التعبئة (كجم)" : "Enter the final weight produced (Yield % will be calculated based on this)."}
                     </p>
                 </div>
             )}

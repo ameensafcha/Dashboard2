@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createQualityCheck } from '@/app/actions/production';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,7 +59,7 @@ export default function QCForm({ batchId }: { batchId: string }) {
                 toast({ title: 'Success', description: 'QC results submitted successfully' });
                 router.refresh();
             } else {
-                toast({ title: 'Error', description: result.error || 'Failed to submit QC', type: 'error' });
+                toast({ title: 'Error', description: (result as any).error || 'Failed to submit QC', type: 'error' });
             }
         } finally {
             setIsSubmitting(false);
@@ -174,19 +175,30 @@ export default function QCForm({ batchId }: { batchId: string }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4 p-6 bg-[#E8A838]/5 border border-[#E8A838]/20 rounded-2xl group">
-                        <div className={cn("flex items-center gap-2 mb-2", isRTL ? "flex-row-reverse" : "")}>
-                            <ClipboardCheck className="w-5 h-5 text-[#E8A838]" />
-                            <h4 className="font-bold text-sm tracking-tight text-[var(--text-primary)]">{t.actualQtyKg} <span className="text-red-500">*</span></h4>
+                        <div className={cn("flex items-center justify-between mb-2", isRTL ? "flex-row-reverse" : "")}>
+                            <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                <ClipboardCheck className="w-5 h-5 text-[#E8A838]" />
+                                <h4 className="font-bold text-sm tracking-tight text-[var(--text-primary)]">{t.actualQtyKg} <span className="text-red-500">*</span></h4>
+                            </div>
+                            {formData.actualQty > 0 && (
+                                <Badge className="bg-[#E8A838]/10 text-[#E8A838] border-[#E8A838]/20 font-black text-[10px] px-2 py-0.5">
+                                    {/* Simple yield preview to show why they see percentages later */}
+                                    PIVOT: YIELD PREVIEW
+                                </Badge>
+                            )}
                         </div>
                         <Input
                             type="number"
-                            step="0.1"
+                            step="any"
                             placeholder={t.actualOutput}
                             className="bg-[var(--card)] border-[var(--border)] h-12 text-xl font-black text-[#E8A838] focus:ring-[#E8A838]"
                             value={formData.actualQty || ''}
                             onChange={(e) => setFormData({ ...formData, actualQty: parseFloat(e.target.value) || 0 })}
                             required
                         />
+                        <p className="text-[10px] text-[var(--text-secondary)] font-bold italic mt-1">
+                            {isRTL ? "ادخل الكمية الفعلية بالكيلو جرام" : "Enter the final net weight in kilograms."}
+                        </p>
                     </div>
                 </div>
 
