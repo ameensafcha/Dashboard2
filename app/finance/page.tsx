@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { FinanceClient } from './FinanceClient';
 import { translations } from '@/lib/i18n';
 
+export const dynamic = 'force-dynamic';
+
 export default async function FinancePage() {
   const summary = await getFinanceSummary();
   // We don't have a server-side language hook here easily without more complex setup,

@@ -6,6 +6,8 @@ export const metadata: Metadata = {
     description: 'Track and manage your sales CRM pipeline',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default function PipelinePage() {
     return <PipelineClient />;
 }

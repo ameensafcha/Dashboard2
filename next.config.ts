@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   generateEtags: true,
+  serverExternalPackages: ["@prisma/client", "prisma"],
 };
 
 export default nextConfig;

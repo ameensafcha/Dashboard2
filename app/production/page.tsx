@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: 'Production overview and KPIs',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProductionPage() {
   const batches = await getProductionBatches();
   const qualityChecks = await getQualityChecks();

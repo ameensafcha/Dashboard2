@@ -3,6 +3,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { getExpenses } from '@/app/actions/finance/expenses';
 import ExpensesClient from './ExpensesClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ExpensesPage() {
     const expenses = await getExpenses();
 

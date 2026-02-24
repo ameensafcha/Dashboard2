@@ -8,6 +8,8 @@ export const metadata: Metadata = {
     description: 'Manage raw materials, low stock alerts, and track inventory for production.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function RawMaterialsPage() {
     // We fetch initial data to populate the client component quickly, but Zustand will manage it inside
     const initialData = await getRawMaterials();

@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getDashboardData } from '@/app/actions/dashboard';
 import DashboardClient from './DashboardClient';
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const data = await getDashboardData();
