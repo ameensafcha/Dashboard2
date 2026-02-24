@@ -209,3 +209,75 @@ export async function deleteOrder(id: string) {
         return { success: false, error: 'Failed to delete order' };
     }
 }
+
+export async function updateOrder(id: string, data: CreateOrderInput) {
+    try {
+        // Zod validation
+        const parsed = createOrderSchema.safeParse(data);
+        if (!parsed.success) {
+            const firstIssue = parsed.error.issues[0];
+            return { success: false, error: firstIssue.message };
+        }
+        const validated = parsed.data;
+
+        // Verify it's a draft
+        const existingOrder = await prisma.order.findUnique({
+            where: { id },
+            select: { status: true, orderNumber: true }
+        });
+
+        if (!existingOrder) return { success: false, error: 'Order not found' };
+        if (existingOrder.status !== 'draft') return { success: false, error: 'Only draft orders can be modified' };
+
+        // Calculate item totals
+        const itemsWithTotals = validated.items.map(item => ({
+            ...item,
+            total: toSafeNumber((item.quantity * item.unitPrice) - item.discount)
+        }));
+
+        const order = await prisma.$transaction(async (tx) => {
+            // 1. Delete old items
+            await tx.orderItem.deleteMany({
+                where: { orderId: id }
+            });
+
+            // 2. Update order
+            const updatedOrder = await tx.order.update({
+                where: { id },
+                data: {
+                    clientId: validated.clientId,
+                    companyId: validated.companyId || null,
+                    channel: validated.channel,
+                    notes: validated.notes,
+                    subTotal: validated.subTotal,
+                    discount: validated.discount,
+                    vat: validated.vat,
+                    shippingCost: validated.shippingCost,
+                    grandTotal: validated.grandTotal,
+
+                    orderItems: {
+                        create: itemsWithTotals
+                    }
+                }
+            });
+
+            // 3. Create audit log
+            await createAuditLog(tx, {
+                action: 'UPDATE',
+                entity: 'Order',
+                entityId: existingOrder.orderNumber,
+                details: { after: validated }
+            });
+
+            return updatedOrder;
+        });
+
+        revalidatePath('/sales/orders');
+        revalidatePath(`/sales/orders/${id}`);
+        revalidatePath('/');
+        return { success: true, orderId: order.id };
+    } catch (error: any) {
+        console.error('Order Update Error:', error);
+        return { success: false, error: error.message || 'Failed to update order' };
+    }
+}

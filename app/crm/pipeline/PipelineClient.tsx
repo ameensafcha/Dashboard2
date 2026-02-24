@@ -122,9 +122,9 @@ export default function PipelineClient() {
             if (result.success) {
                 toast({
                     title: t.success,
-                    description: (t as any).successOrderConverted + ". Redirecting...",
+                    description: (t as any).successOrderConverted + ". Redirecting to complete order...",
                 });
-                router.push(`/sales/orders?status=draft`);
+                router.push(`/sales/orders/${result.orderId}/edit`);
             } else {
                 toast({
                     title: t.error,

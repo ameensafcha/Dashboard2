@@ -257,6 +257,16 @@ function OrdersClientContent() {
                                                         >
                                                             View Full Details
                                                         </DropdownMenuItem>
+                                                        {order.status === 'draft' && (
+                                                            <Link href={`/sales/orders/${order.id}/edit`}>
+                                                                <DropdownMenuItem
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="rounded-lg text-xs font-bold py-2.5 px-3 focus:bg-[var(--primary)]/10 focus:text-[var(--primary)] cursor-pointer text-[var(--primary)]"
+                                                                >
+                                                                    Edit Draft Order
+                                                                </DropdownMenuItem>
+                                                            </Link>
+                                                        )}
                                                         {order.invoice && (
                                                             <DropdownMenuItem
                                                                 onClick={(e) => { e.stopPropagation(); openOrderDrawer(order.id); }}

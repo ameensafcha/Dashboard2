@@ -22,6 +22,7 @@ import {
     Calculator,
     Globe
 } from 'lucide-react';
+import Link from 'next/link';
 import { useSalesStore } from '@/stores/salesStore';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { useTranslation } from '@/lib/i18n';
@@ -160,6 +161,19 @@ export default function OrderDetailDrawer({ onInvoiceCreated }: { onInvoiceCreat
                                 </p>
                             </div>
                         </div>
+
+                        {/* Edit Order - Only for Drafts */}
+                        {order.status === 'draft' && (
+                            <Link href={`/sales/orders/${order.id}/edit`}>
+                                <Button
+                                    className="bg-[var(--primary)] text-black hover:bg-[var(--primary)]/90 h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-[var(--primary)]/10 flex items-center gap-2 active:scale-95 transition-all"
+                                    onClick={() => closeOrderDrawer()}
+                                >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    Complete / Edit Order
+                                </Button>
+                            </Link>
+                        )}
 
                         {/* Invoice Generation - Only for Processing and beyond */}
                         {order.status !== 'draft' && order.status !== 'cancelled' && (

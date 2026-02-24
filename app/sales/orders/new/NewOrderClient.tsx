@@ -109,7 +109,13 @@ export default function NewOrderClient({
 
     const handleItemChange = (index: number, field: string, value: any) => {
         const newItems = [...formData.items];
-        newItems[index] = { ...newItems[index], [field]: value };
+
+        if (field === 'quantity') {
+            const qty = Number(value);
+            newItems[index] = { ...newItems[index], [field]: qty < 1 ? 1 : qty };
+        } else {
+            newItems[index] = { ...newItems[index], [field]: value };
+        }
 
         if (field === 'productId') {
             const product = localProducts.find(p => p.productId === value);
@@ -405,9 +411,11 @@ export default function NewOrderClient({
                                                         <SelectValue placeholder="Select Finished Product..." />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {localProducts.map((p: any) => (
-                                                            <SelectItem key={p.id} value={p.productId} className="font-bold">{p.product?.name || p.sku} <span className="text-[10px] opacity-40 ml-2">({p.variant})</span></SelectItem>
-                                                        ))}
+                                                        {localProducts.map((p: any) => {
+                                                            const isSelected = formData.items.some((oi: any, i: number) => oi.productId === p.productId && i !== index);
+                                                            if (isSelected) return null;
+                                                            return <SelectItem key={p.id} value={p.productId} className="font-bold">{p.product?.name || p.sku} <span className="text-[10px] opacity-40 ml-2">({p.variant})</span></SelectItem>;
+                                                        })}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -415,8 +423,9 @@ export default function NewOrderClient({
                                                 <Label className="text-[10px] font-black uppercase tracking-widest px-1 opacity-50 text-center block">Qty</Label>
                                                 <Input
                                                     type="number"
+                                                    min="1"
                                                     value={item.quantity === 0 ? '' : item.quantity}
-                                                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value === '' ? 0 : Number(e.target.value))}
+                                                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                                                     onFocus={(e) => e.target.select()}
                                                     className="h-12 text-center bg-[var(--background)] border-[var(--border)] rounded-xl font-black focus:ring-[var(--primary)] transition-all"
                                                 />
