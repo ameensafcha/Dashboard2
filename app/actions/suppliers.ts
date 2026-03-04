@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
 
 export interface Supplier {
   id: string;
@@ -17,8 +19,13 @@ export interface Supplier {
 
 export async function getSuppliers(): Promise<Supplier[]> {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'suppliers', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
     return await prisma.supplier.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, businessId: ctx.businessId },
       orderBy: { createdAt: 'desc' },
     });
   } catch (error) {
@@ -28,8 +35,14 @@ export async function getSuppliers(): Promise<Supplier[]> {
 }
 
 export async function createSupplier(data: Omit<Supplier, 'id' | 'createdAt'>): Promise<Supplier> {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'suppliers', 'create')) {
+    throw new Error('Unauthorized');
+  }
+
   const result = await prisma.supplier.create({
     data: {
+      businessId: ctx.businessId,
       name: data.name,
       contactPerson: data.contactPerson,
       email: data.email,
@@ -47,8 +60,13 @@ export async function createSupplier(data: Omit<Supplier, 'id' | 'createdAt'>): 
 
 export async function updateSupplier(id: string, data: Partial<Omit<Supplier, 'id' | 'createdAt'>>) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'suppliers', 'edit')) {
+      throw new Error('Unauthorized');
+    }
+
     await prisma.supplier.update({
-      where: { id },
+      where: { id, businessId: ctx.businessId },
       data,
     });
     revalidatePath('/products/suppliers');
@@ -63,8 +81,13 @@ export async function updateSupplier(id: string, data: Partial<Omit<Supplier, 'i
 
 export async function deleteSupplier(id: string) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'suppliers', 'delete')) {
+      throw new Error('Unauthorized');
+    }
+
     await prisma.supplier.update({
-      where: { id },
+      where: { id, businessId: ctx.businessId },
       data: { deletedAt: new Date() }
     });
     revalidatePath('/products/suppliers');

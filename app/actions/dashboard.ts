@@ -1,9 +1,16 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
 
 export async function getDashboardData() {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'dashboard', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
         const now = new Date();
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -15,47 +22,47 @@ export async function getDashboardData() {
             rawInvRes, finInvRes, lowRawRes, lowFinRes, revTrendRes, salesChanRes, activityFeed
         ] = await Promise.all([
             // --- KPIs ---
-            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfMonth } }, _sum: { amount: true } }),
-            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfLastMonth, lt: firstOfMonth } }, _sum: { amount: true } }),
-            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfMonth } }, _sum: { amount: true } }),
-            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfLastMonth, lt: firstOfMonth } }, _sum: { amount: true } }),
-            prisma.order.count({ where: { date: { gte: firstOfMonth } } }),
-            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth } } }),
-            prisma.client.count(),
+            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
+            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
+            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
+            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
+            prisma.order.count({ where: { date: { gte: firstOfMonth }, businessId: ctx.businessId } }),
+            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId } }),
+            prisma.client.count({ where: { deletedAt: null, businessId: ctx.businessId } }),
             // --- Inventory ---
             prisma.$queryRaw<[{ total: number }]>`SELECT COALESCE(SUM(current_stock * unit_cost), 0)::float AS total FROM raw_materials`,
             prisma.$queryRaw<[{ total: number }]>`SELECT COALESCE(SUM(current_stock * retail_price), 0)::float AS total FROM finished_products`,
             // --- Low Stock ---
             prisma.rawMaterial.findMany({
-                where: { reorderThreshold: { not: null } },
+                where: { reorderThreshold: { not: null }, deletedAt: null, businessId: ctx.businessId },
                 select: { name: true, sku: true, currentStock: true, reorderThreshold: true }
             }),
             prisma.finishedProduct.findMany({
                 select: { currentStock: true, reservedStock: true, reorderThreshold: true, sku: true, variant: true, product: { select: { name: true } } },
-                where: { reorderThreshold: { not: null, gt: 0 } },
+                where: { reorderThreshold: { not: null, gt: 0 }, businessId: ctx.businessId, product: { deletedAt: null } },
             }),
             // --- Trend ---
             prisma.$queryRaw<{ month: Date; revenue: number; expenses: number }[]>`
                 SELECT DATE_TRUNC('month', date) AS month,
                 COALESCE(SUM(CASE WHEN type = 'revenue' THEN amount ELSE 0 END), 0)::float AS revenue,
                 COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)::float AS expenses
-                FROM transactions WHERE date >= ${sixMonthsAgo} GROUP BY DATE_TRUNC('month', date) ORDER BY month ASC
+                FROM transactions WHERE date >= ${sixMonthsAgo} AND business_id = ${ctx.businessId} GROUP BY DATE_TRUNC('month', date) ORDER BY month ASC
             `,
             // --- Channels ---
-            prisma.order.groupBy({ by: ['channel'], where: { date: { gte: firstOfMonth } }, _sum: { grandTotal: true } }),
+            prisma.order.groupBy({ by: ['channel'], where: { date: { gte: firstOfMonth }, businessId: ctx.businessId }, _sum: { grandTotal: true } }),
             // --- Activity Feed (Optimized UNION) ---
             prisma.$queryRaw<any[]>`
                 (SELECT 'order' as type, created_at as time, 
                     json_build_object('number', order_number, 'status', status, 'amount', grand_total::float) as data
-                FROM orders ORDER BY created_at DESC LIMIT 10)
+                FROM orders WHERE business_id = ${ctx.businessId} ORDER BY created_at DESC LIMIT 10)
                 UNION ALL
                 (SELECT 'stock' as type, created_at as time, 
                     json_build_object('id', movement_id, 'type', type, 'qty', quantity::float) as data
-                FROM stock_movements ORDER BY created_at DESC LIMIT 10)
+                FROM stock_movements WHERE business_id = ${ctx.businessId} ORDER BY created_at DESC LIMIT 10)
                 UNION ALL
                 (SELECT 'production' as type, created_at as time, 
                     json_build_object('number', batch_number, 'status', status) as data
-                FROM production_batches ORDER BY created_at DESC LIMIT 10)
+                FROM production_batches WHERE business_id = ${ctx.businessId} ORDER BY created_at DESC LIMIT 10)
                 ORDER BY time DESC LIMIT 20
             `,
         ]);
@@ -74,6 +81,7 @@ export async function getDashboardData() {
 
         // Calculate Finished Inventory at Cost (Standard Accounting)
         const products_for_cost = await prisma.finishedProduct.findMany({
+            where: { businessId: ctx.businessId, product: { deletedAt: null } },
             select: { currentStock: true, unitCost: true }
         });
         const finishedInventoryCost = products_for_cost.reduce((sum, p) => sum + (Number(p.currentStock) * Number(p.unitCost)), 0);
@@ -130,7 +138,10 @@ export async function getDashboardData() {
             activityFeed,
             lowStockAlerts,
         };
-    } catch (error) {
+    } catch (error: any) {
+        if (error.message === 'Unauthorized') {
+            throw error;
+        }
         console.error('Error fetching dashboard data:', error);
         return {
             kpis: {

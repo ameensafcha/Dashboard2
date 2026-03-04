@@ -4,7 +4,9 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { toSafeNumber } from '@/lib/decimal';
-import { createAuditLog } from '@/lib/audit';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 const companySchema = z.object({
     name: z.string().min(1, 'Company name is required'),
@@ -27,9 +29,15 @@ const companySchema = z.object({
 
 export async function getCompanies(search?: string) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
         const companies = await prisma.company.findMany({
             where: {
                 deletedAt: null,
+                businessId: ctx.businessId,
                 ...(search ? {
                     OR: [
                         { name: { contains: search, mode: 'insensitive' } },
@@ -85,6 +93,11 @@ export async function getCompanies(search?: string) {
 
 export async function createCompany(data: z.infer<typeof companySchema>) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'create')) {
+            throw new Error('Unauthorized');
+        }
+
         const parsed = companySchema.safeParse(data);
         if (!parsed.success) {
             return { success: false, error: parsed.error.issues[0].message };
@@ -95,12 +108,14 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
         const company = await prisma.$transaction(async (tx) => {
             const newCompany = await tx.company.create({
                 data: {
+                    businessId: ctx.businessId,
                     name: validData.name,
                     industry: validData.industry || null,
                     city: validData.city || null,
                     website: validData.website || null,
                     companyPricingTiers: validData.pricingTiers && validData.pricingTiers.length > 0 ? {
                         create: validData.pricingTiers.map(t => ({
+                            businessId: ctx.businessId,
                             categoryId: t.categoryId,
                             pricingTierId: t.pricingTierId
                         }))
@@ -109,14 +124,18 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'CREATE',
                 entity: 'Company',
-                entityId: newCompany.id,
-                details: { after: validData }
+                entityId: newCompany.name,
+                module: 'crm',
+                entityName: 'Company',
+                details: validData
             });
 
             return newCompany;
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/crm/companies');
@@ -130,6 +149,11 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
 
 export async function updateCompany(id: string, data: z.infer<typeof companySchema>) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'edit')) {
+            throw new Error('Unauthorized');
+        }
+
         const parsed = companySchema.safeParse(data);
         if (!parsed.success) {
             return { success: false, error: parsed.error.issues[0].message };
@@ -140,7 +164,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
         // P6: Wrap in transaction for atomicity (deleteMany + create)
         const company = await prisma.$transaction(async (tx) => {
             const updatedCompany = await tx.company.update({
-                where: { id },
+                where: { id, businessId: ctx.businessId },
                 data: {
                     name: validData.name,
                     industry: validData.industry || null,
@@ -149,6 +173,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
                     companyPricingTiers: {
                         deleteMany: {},
                         create: validData.pricingTiers?.map(t => ({
+                            businessId: ctx.businessId,
                             categoryId: t.categoryId,
                             pricingTierId: t.pricingTierId
                         })) || []
@@ -157,14 +182,18 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'UPDATE',
                 entity: 'Company',
-                entityId: id,
-                details: { after: validData }
+                entityId: updatedCompany.name,
+                module: 'crm',
+                entityName: 'Company',
+                details: validData
             });
 
             return updatedCompany;
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/crm/companies');
@@ -179,22 +208,31 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
 
 export async function deleteCompany(id: string) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'delete')) {
+            throw new Error('Unauthorized');
+        }
+
         // Delete the company
         // Contacts and Deals have onDelete: SetNull setup in Prisma, so they won't block deletion
         // Wrap in transaction for audit logging
         await prisma.$transaction(async (tx) => {
-            await tx.company.update({
-                where: { id },
+            const company = await tx.company.update({
+                where: { id, businessId: ctx.businessId },
                 data: { deletedAt: new Date() }
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'SOFT_DELETE',
                 entity: 'Company',
-                entityId: id,
+                entityId: company.name,
+                module: 'crm',
+                entityName: 'Company',
                 details: { reason: 'User deleted company' }
             });
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/crm/companies');

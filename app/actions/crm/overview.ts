@@ -1,22 +1,32 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
 
 export async function getCrmOverview() {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const businessWhere = { businessId: ctx.businessId, deletedAt: null };
+
         const [
             companiesCount,
             contactsCount,
             openDeals,
             recentDeals,
         ] = await Promise.all([
-            prisma.company.count(),
-            prisma.client.count(),
+            prisma.company.count({ where: businessWhere }),
+            prisma.client.count({ where: businessWhere }),
             prisma.deal.findMany({
-                where: { stage: { notIn: ['closed_won', 'closed_lost'] } },
+                where: { stage: { notIn: ['closed_won', 'closed_lost'] }, ...businessWhere },
                 select: { id: true, value: true, stage: true },
             }),
             prisma.deal.findMany({
+                where: businessWhere,
                 take: 10,
                 orderBy: { updatedAt: 'desc' },
                 select: {

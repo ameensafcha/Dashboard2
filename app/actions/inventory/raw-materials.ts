@@ -3,6 +3,9 @@
 import prisma from '@/lib/prisma';
 import { MaterialCategory, InventoryLocation } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 export async function getRawMaterials(
     search?: string,
@@ -10,7 +13,12 @@ export async function getRawMaterials(
     location?: InventoryLocation | 'all'
 ) {
     try {
-        const whereClause: any = { deletedAt: null };
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const whereClause: any = { deletedAt: null, businessId: ctx.businessId };
 
         if (category && category !== 'all') {
             whereClause.category = category;
@@ -65,6 +73,11 @@ export type CreateRawMaterialInput = {
 
 export async function createRawMaterial(data: CreateRawMaterialInput) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'create')) {
+            throw new Error('Unauthorized');
+        }
+
         // Validate and construct SKU
         if (!data.skuNumber) {
             return { success: false, error: 'SKU Number is required' };
@@ -74,7 +87,7 @@ export async function createRawMaterial(data: CreateRawMaterialInput) {
 
         // Check if SKU already exists
         const existing = await prisma.rawMaterial.findUnique({
-            where: { sku: generatedSku }
+            where: { sku: generatedSku, businessId: ctx.businessId }
         });
 
         if (existing) {
@@ -83,6 +96,7 @@ export async function createRawMaterial(data: CreateRawMaterialInput) {
 
         const material = await prisma.rawMaterial.create({
             data: {
+                businessId: ctx.businessId,
                 name: data.name,
                 sku: generatedSku,
                 category: data.category,
@@ -112,6 +126,14 @@ export type UpdateRawMaterialInput = Partial<Omit<CreateRawMaterialInput, 'skuNu
 
 export async function updateRawMaterial(id: string, data: UpdateRawMaterialInput) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'edit')) {
+            throw new Error('Unauthorized');
+        }
+
+        const rm = await prisma.rawMaterial.findUnique({ where: { id, businessId: ctx.businessId } });
+        if (!rm) throw new Error('Not found')
+
         const updateData: any = { ...data };
 
         if (data.skuNumber) {
@@ -120,7 +142,7 @@ export async function updateRawMaterial(id: string, data: UpdateRawMaterialInput
 
             // Check for uniqueness if changing SKU
             const existing = await prisma.rawMaterial.findUnique({
-                where: { sku: updateData.sku }
+                where: { sku: updateData.sku, businessId: ctx.businessId }
             });
             if (existing && existing.id !== id) {
                 return { success: false, error: 'A material with this SKU already exists' };
@@ -144,6 +166,14 @@ export async function updateRawMaterial(id: string, data: UpdateRawMaterialInput
 
 export async function deleteRawMaterial(id: string) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'delete')) {
+            throw new Error('Unauthorized');
+        }
+
+        const rm = await prisma.rawMaterial.findUnique({ where: { id, businessId: ctx.businessId } });
+        if (!rm) throw new Error('Not found')
+
         await prisma.rawMaterial.update({
             where: { id },
             data: { deletedAt: new Date() }

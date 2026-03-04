@@ -1,11 +1,21 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
 
 export async function getInventoryOverview() {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const businessWhere = { businessId: ctx.businessId, deletedAt: null };
+
         const [rawMaterials, finishedProducts, recentMovements] = await Promise.all([
             prisma.rawMaterial.findMany({
+                where: businessWhere,
                 select: {
                     id: true, name: true, sku: true, category: true,
                     currentStock: true, unitCost: true,
@@ -13,6 +23,7 @@ export async function getInventoryOverview() {
                 },
             }),
             prisma.finishedProduct.findMany({
+                where: businessWhere,
                 select: {
                     id: true, sku: true, variant: true,
                     currentStock: true, reservedStock: true, unitCost: true, retailPrice: true,
@@ -21,6 +32,7 @@ export async function getInventoryOverview() {
                 },
             }),
             prisma.stockMovement.findMany({
+                where: { businessId: ctx.businessId },
                 take: 10,
                 orderBy: { createdAt: 'desc' },
                 select: {

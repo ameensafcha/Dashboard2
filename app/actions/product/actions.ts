@@ -3,6 +3,9 @@
 import { PrismaClient, Product, Category, Prisma, ProductStatus, SfdaStatus } from '@prisma/client';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 const prisma = new PrismaClient();
 
@@ -58,9 +61,14 @@ function serializeProduct(product: Product & { category?: Category | null }): Se
 
 export async function getProducts(params: GetProductsParams = {}): Promise<ProductsResponse> {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'products', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
     const { page = 1, limit = 5, search = '', status = '' } = params;
 
-    const where: Prisma.ProductWhereInput = { deletedAt: null };
+    const where: Prisma.ProductWhereInput = { deletedAt: null, businessId: ctx.businessId };
 
     if (search) {
       where.OR = [
@@ -104,8 +112,11 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
 }
 
 export async function getProduct(id: string) {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'view')) return null;
+
   const product = await prisma.product.findFirst({
-    where: { id, deletedAt: null },
+    where: { id, deletedAt: null, businessId: ctx.businessId },
     include: {
       category: true,
     },
@@ -113,9 +124,10 @@ export async function getProduct(id: string) {
   return product ? serializeProduct(product) : null;
 }
 
-async function generateSKU(): Promise<string> {
+async function generateSKU(businessId: string): Promise<string> {
   try {
     const lastProduct = await prisma.product.findFirst({
+      where: { businessId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -136,16 +148,22 @@ async function generateSKU(): Promise<string> {
 }
 
 export async function createProduct(data: Partial<Product> & { categoryId?: string | null }) {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'create')) {
+    throw new Error('Unauthorized');
+  }
+
   const parsedData = productSchema.safeParse(data);
   if (!parsedData.success) {
     throw new Error(parsedData.error.issues[0].message);
   }
   const validData = parsedData.data;
 
-  const skuPrefix = validData.skuPrefix || await generateSKU();
+  const skuPrefix = validData.skuPrefix || await generateSKU(ctx.businessId);
 
   const product = await prisma.product.create({
     data: {
+      businessId: ctx.businessId,
       name: validData.name || 'Unnamed Product',
       skuPrefix: skuPrefix,
       categoryId: validData.categoryId || null,
@@ -163,6 +181,16 @@ export async function createProduct(data: Partial<Product> & { categoryId?: stri
       launchDate: validData.launchDate,
     },
   });
+
+  await logAudit({
+    action: 'CREATE',
+    entity: 'Product',
+    entityId: product.skuPrefix || product.id,
+    module: 'products',
+    entityName: 'Finished Product',
+    details: validData
+  })
+
   revalidatePath('/products');
   revalidatePath('/products/catalog');
   revalidatePath('/');
@@ -171,6 +199,11 @@ export async function createProduct(data: Partial<Product> & { categoryId?: stri
 }
 
 export async function updateProduct(id: string, data: Partial<Product> & { categoryId?: string | null }) {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'edit')) {
+    throw new Error('Unauthorized');
+  }
+
   const parsedData = productSchema.safeParse(data);
   if (!parsedData.success) {
     throw new Error(parsedData.error.issues[0].message);
@@ -178,7 +211,7 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
   const validData = parsedData.data;
 
   const product = await prisma.product.update({
-    where: { id },
+    where: { id, businessId: ctx.businessId },
     data: {
       name: validData.name,
       skuPrefix: validData.skuPrefix,
@@ -198,6 +231,15 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
     },
   });
 
+  await logAudit({
+    action: 'UPDATE',
+    entity: 'Product',
+    entityId: product.skuPrefix || product.id,
+    module: 'products',
+    entityName: 'Finished Product',
+    details: validData
+  })
+
   revalidatePath('/products');
   revalidatePath('/products/catalog');
   revalidatePath('/');
@@ -206,17 +248,39 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
 }
 
 export async function deleteProduct(id: string) {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'delete')) {
+    throw new Error('Unauthorized');
+  }
+
+  const prod = await prisma.product.findFirst({ where: { id, deletedAt: null, businessId: ctx.businessId } });
+  if (!prod) throw new Error('Not found')
+
   await prisma.product.update({
     where: { id },
     data: { deletedAt: new Date() }
   });
+
+  await logAudit({
+    action: 'SOFT_DELETE',
+    entity: 'Product',
+    entityId: prod.skuPrefix || prod.id,
+    module: 'products',
+    entityName: 'Finished Product',
+  })
+
   revalidatePath('/products');
   revalidatePath('/products/catalog');
   revalidatePath('/');
 }
 
 export async function getCategories(search?: string) {
-  const whereClause: any = { deletedAt: null };
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'view')) {
+    return [];
+  }
+
+  const whereClause: any = { deletedAt: null, businessId: ctx.businessId };
   if (search) {
     whereClause.name = { contains: search, mode: 'insensitive' as const };
   }
@@ -228,8 +292,14 @@ export async function getCategories(search?: string) {
 }
 
 export async function createCategory(data: { name: string; description?: string | null }) {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'create')) { // We don't have separate module for category
+    throw new Error('Unauthorized');
+  }
+
   const category = await prisma.category.create({
     data: {
+      businessId: ctx.businessId,
       name: data.name,
       description: data.description,
     },
@@ -243,8 +313,13 @@ export async function createCategory(data: { name: string; description?: string 
 }
 
 export async function updateCategory(id: string, data: { name?: string; description?: string | null }) {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'edit')) {
+    throw new Error('Unauthorized');
+  }
+
   const category = await prisma.category.update({
-    where: { id },
+    where: { id, businessId: ctx.businessId },
     data,
   });
 
@@ -256,6 +331,14 @@ export async function updateCategory(id: string, data: { name?: string; descript
 }
 
 export async function deleteCategory(id: string) {
+  const ctx = await getBusinessContext();
+  if (!hasPermission(ctx, 'products', 'delete')) {
+    throw new Error('Unauthorized');
+  }
+
+  const cat = await prisma.category.findUnique({ where: { id, businessId: ctx.businessId } });
+  if (!cat) throw new Error('Category not found');
+
   await prisma.category.update({
     where: { id },
     data: { deletedAt: new Date() }

@@ -1,0 +1,349 @@
+# RBAC & Auth System Overhaul — Implementation Plan
+
+Safcha Dashboard ka auth, permissions, aur RBAC system fix karna hai. Deep analysis ke baad yeh major issues milein:
+
+## Discovered Issues Summary
+
+| # | Issue | Location | Impact |
+|---|-------|----------|--------|
+| 1 | `UserPermissionOverride` table → 100 users = 400+ rows, unnecessary complexity | [schema.prisma](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/prisma/schema.prisma) L810-826 | DB bloat, slow queries |
+| 2 | OWNER role concept instead of ADMIN | [seed.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/prisma/seed.ts), [usePermissions.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/hooks/usePermissions.ts) | Confusing hierarchy |
+| 3 | Sidebar shows ALL items, permission checks not working properly | [Sidebar.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/components/layout/Sidebar.tsx) L147 checks `user?.role?.isSystem` | Security hole |
+| 4 | [usePermissions](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/hooks/usePermissions.ts#5-34) only bypasses for role name `'OWNER'` not `isSystem` generically | [usePermissions.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/hooks/usePermissions.ts) L12 | Non-OWNER admins blocked |
+| 5 | Admin panel `redirect('/dashboard')` instead of correct slug path | [admin/layout.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/%5BbusinessSlug%5D/admin/layout.tsx) L17 | Broken redirect |
+| 6 | Root [page.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/page.tsx) + [select-business/page.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/select-business/page.tsx) duplicated | [app/page.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/page.tsx), [select-business/page.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/select-business/page.tsx) | Code duplication |
+| 7 | Server actions don't check permissions (only [getBusinessContext](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/getBusinessContext.ts#5-50)) | All action files | Security hole |
+| 8 | Session loads overrides unnecessarily | [session.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/auth/session.ts), [appStore.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/stores/appStore.ts) | Extra data, slower load |
+
+---
+
+## Phase 1: DB Schema — Remove `UserPermissionOverride`, Fix Role Naming
+
+> **Goal**: Simplify the permission model. Remove per-user overrides. Roles carry all permissions.
+
+### Why?
+Current approach: Role has permissions + each user can have override exceptions. For 100 users × 4 overrides = 400 rows in `user_permission_overrides`. This is overkill. Better approach: Admin creates roles with exact permissions. No overrides needed.
+
+### Changes
+
+#### [MODIFY] [schema.prisma](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/prisma/schema.prisma)
+- **DELETE** the entire `UserPermissionOverride` model (L810-826)
+- **REMOVE** `overrides UserPermissionOverride[]` from `BusinessUser` model (L802)
+- Keep [Role](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts#13-36), `RolePermission`, `BusinessUser` as-is
+
+#### [MODIFY] [seed.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/prisma/seed.ts)
+- Rename OWNER role → `ADMIN` (name field only, keep `isSystem: true`)
+- This is the system-level admin role that bypasses all checks
+
+### ✅ Checkpoint
+Run `npx prisma migrate dev --name remove_overrides` and verify no errors. Check DB has no `user_permission_overrides` table.
+
+---
+
+## Phase 2: Fix Auth Flow — Login → Select Business → Dashboard
+
+> **Goal**: Login ke baad user `/select-business` jaye, waha business select kare, phir dashboard dikhe.
+
+### Current Flow
+```
+Login → / (root page shows business selector AGAIN)  
+     → /select-business (ALSO shows business selector — duplicate)
+     → /api/auth/select-business?id=xxx (sets cookie, redirects to /safcha)
+```
+
+### Desired Flow
+```
+Login → /select-business (single business selector page)
+     → /api/auth/select-business?id=xxx (sets cookie)
+     → /b/dashboard (clean, no slug in URL)
+```
+
+> [!IMPORTANT]
+> Slug-based routing (`/safcha/products`) makes URLs longer and adds complexity. But **changing it now would require modifying 50+ files** (every page, every action). The simpler fix is to keep the slug routing but fix the flow. We can migrate slug → ID-based routing in a separate future phase.
+
+### Changes
+
+#### [MODIFY] [page.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/page.tsx)
+- Replace entire page with simple redirect:
+```tsx
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function RootPage() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) redirect('/login')
+    redirect('/select-business')
+}
+```
+
+#### [MODIFY] [middleware.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/middleware.ts)
+- When user is logged in and visits `/login` → redirect to `/select-business` (not `/`)
+- Line 49: change `url.pathname = '/'` to `url.pathname = '/select-business'`
+
+### ✅ Checkpoint
+Login karo → verify redirect to `/select-business`. Business select karo → verify redirect to `/{slug}` dashboard.
+
+---
+
+## Phase 3: Fix Permission Engine — Remove Overrides, Fix `isSystem` Check
+
+> **Goal**: Permission system ko clean karo. `isSystem` role = full access (ADMIN). No per-user overrides.
+
+### Changes
+
+#### [MODIFY] [permissions.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/permissions.ts)
+- Remove `UserPermissionOverride` import
+- Remove `overrides` from [PermissionContext](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/permissions.ts#3-7) type
+- Remove override check logic (L19-25)
+- Keep `isSystem` bypass (L14-16) — ye sahi hai
+
+```diff
+-import { Role, RolePermission, UserPermissionOverride } from '@prisma/client'
++import { Role, RolePermission } from '@prisma/client'
+ 
+ type PermissionContext = {
+     role: Role & { permissions: RolePermission[] }
+-    overrides: UserPermissionOverride[]
+ }
+ 
+ export function hasPermission(
+     ctx: PermissionContext,
+     module: string,
+     action: string
+ ): boolean {
+     if (ctx.role.isSystem) {
+         return true
+     }
+ 
+-    const override = ctx.overrides.find(
+-        (o) => o.module === module && o.action === action
+-    )
+-    if (override) {
+-        return override.granted
+-    }
+-
+     const rolePerm = ctx.role.permissions.find(
+         (p) => p.module === module && p.action === action
+     )
+     return !!rolePerm
+ }
+```
+
+#### [MODIFY] [usePermissions.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/hooks/usePermissions.ts)
+- Replace `user.role.isSystem && user.role.name === 'OWNER'` with just `user.role.isSystem`
+- Remove overrides check entirely
+
+```diff
+ const can = (module: string, action: string): boolean => {
+     if (!user) return false
+ 
+-    if (user.role.isSystem && user.role.name === 'OWNER') {
++    if (user.role.isSystem) {
+         return true
+     }
+ 
+-    const override = user.overrides.find(...)
+-    if (override) { return override.granted }
+-
+     const rolePerm = user.role.permissions.find(
+         (p: any) => p.module === module && p.action === action
+     )
+     return !!rolePerm
+ }
+```
+
+#### [MODIFY] [getBusinessContext.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/getBusinessContext.ts)
+- Remove `overrides: true` from include (L32)
+- Remove `overrides` from return object (L47)
+
+#### [MODIFY] [session.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/auth/session.ts)
+- Remove `overrides: true` from include (L21)
+- Remove `overrides:` mapping from return object (L41-45)
+
+#### [MODIFY] [appStore.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/stores/appStore.ts)
+- Remove `overrides: any[]` from User interface (L13)
+
+### ✅ Checkpoint
+App ko chalao. Login karo. Dashboard load hona chahiye bina error ke. Console me koi `overrides` related error nahi hona chahiye.
+
+---
+
+## Phase 4: Fix Sidebar — Permission-Based Item Filtering
+
+> **Goal**: Sidebar me sirf woh items dikhen jo user ki role permissions me hain. Admin Panel sirf `isSystem` roles ko dikhe.
+
+### Current Problem
+[Sidebar.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/components/layout/Sidebar.tsx) line 147: `if ((item as any).adminOnly && !user?.role?.isSystem) return null;`
+This checks `adminOnly` flag AND `isSystem` — but line 149 also checks [can()](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/hooks/usePermissions.ts#8-31). The issue is if `user` is null (loading state), everything gets hidden.
+
+### Changes
+
+#### [MODIFY] [Sidebar.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/components/layout/Sidebar.tsx)
+- Ensure `adminOnly` check uses `user?.role?.isSystem` correctly
+- Show loading state if user is null instead of empty sidebar
+- Remove `overrides` dependency (already removed from store in Phase 3)
+
+```diff
+ {navigation.map((item: any) => {
++  // Don't render anything until user is loaded
++  if (!user) return null;
++  
+   // Hide admin-only items from non-system roles
+-  if ((item as any).adminOnly && !user?.role?.isSystem) return null;
++  if (item.adminOnly && !user.role.isSystem) return null;
+   // Hide item if user doesn't have permission
+   if (!can(item.permission.module, item.permission.action)) return null;
+```
+
+Add a loading skeleton at the top of the sidebar when user is null:
+
+```tsx
+{!user && (
+  <div className="px-3 space-y-2">
+    {[...Array(6)].map((_, i) => (
+      <div key={i} className="h-10 rounded-lg bg-white/5 animate-pulse" />
+    ))}
+  </div>
+)}
+```
+
+### ✅ Checkpoint
+Non-admin user se login karo. Sidebar me sirf allowed modules dikhen. Admin Panel link na dikhe. Admin se login karo → sab dikhe.
+
+---
+
+## Phase 5: Fix Admin Panel — Proper Access Control
+
+> **Goal**: Admin panel sirf `isSystem` role wale users access kar saken. Redirect sahi path pe ho.
+
+### Changes
+
+#### [MODIFY] [admin/layout.tsx](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/[businessSlug]/admin/layout.tsx)
+- Fix redirect from `/dashboard` to correct path
+- Pass slug to [getBusinessContext()](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/getBusinessContext.ts#5-50)
+
+```diff
+ export default async function AdminLayout({
+   children,
++  params,
+ }: {
+   children: React.ReactNode;
++  params: Promise<{ businessSlug: string }>;
+ }) {
+-    const ctx = await getBusinessContext();
++    const { businessSlug } = await params;
++    const ctx = await getBusinessContext(businessSlug);
+ 
+     if (!hasPermission(ctx, 'admin', 'view')) {
+-        redirect('/dashboard');
++        redirect(`/${businessSlug}`);
+     }
+```
+
+#### [MODIFY] [adminActions.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts)
+- Ensure all admin functions check [hasPermission(ctx, 'admin', 'view')](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/permissions.ts#8-34) 
+- Remove any `overrides` references
+
+### ✅ Checkpoint
+Non-admin user se URL me `/admin` type karo. Dashboard pe redirect hona chahiye. Admin se admin panel accessible ho.
+
+---
+
+## Phase 6: Add Permission Guards to Critical Server Actions
+
+> **Goal**: Server actions me bhi permission check ho, sirf client-side filtering kaafi nahi.
+
+### Current State
+Most server actions call [getBusinessContext()](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/getBusinessContext.ts#5-50) (which verifies auth + business membership) but DON'T check specific module permissions. For example `getOrders()` doesn't check [hasPermission(ctx, 'orders', 'view')](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/permissions.ts#8-34).
+
+### Changes
+
+#### Strategy (1-2 files at a time)
+Add [hasPermission](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/lib/permissions.ts#8-34) check to the top of each action function. Pattern:
+
+```typescript
+const ctx = await getBusinessContext();
+if (!hasPermission(ctx, 'orders', 'view')) {
+    throw new Error('UNAUTHORIZED');
+}
+```
+
+**Priority actions to guard:**
+1. [app/actions/adminActions.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts) — [getRoles](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts#13-36), [createRole](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts#37-73), [deleteRole](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts#74-105), [getTeamMembers](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts#110-131), [addTeamMember](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/adminActions.ts#132-246)
+2. [app/actions/dashboard.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/dashboard.ts) — `getDashboardData`
+3. [app/actions/sales/orders.ts](file:///c:/Users/User/Desktop/safcha%20dash%202/safcha-dashboard/app/actions/sales/orders.ts) — all CRUD
+4. `app/actions/finance/` — all CRUD
+5. Other actions — follow same pattern
+
+> [!NOTE]  
+> This is a larger phase. Each action file can be done independently. We add permission checks action-by-action. No need to do all at once.
+
+### ✅ Checkpoint
+Non-admin user se directly server action call karo (via browser console or URL). `UNAUTHORIZED` error aana chahiye.
+
+---
+
+## Phase 7: Verification & Testing
+
+> **Goal**: Verify everything works end-to-end.
+
+### Manual Test Plan
+
+#### Test 1: Login Flow
+1. Open browser → Go to `http://localhost:3000`
+2. Should redirect to `/login`
+3. Enter admin credentials → Submit
+4. Should redirect to `/select-business`
+5. Select a business card
+6. Should redirect to `/{slug}` (dashboard)
+
+#### Test 2: Sidebar Permission Filtering
+1. Login as admin user → sidebar should show ALL items including "Admin Panel"
+2. Create a new role via Admin Panel with ONLY `products.view` and `orders.view` permissions
+3. Create a new user with that role (via Admin → Team)
+4. Login as the new user
+5. Sidebar should ONLY show: Products, Sales/Orders
+6. Other items (Finance, CRM, Admin Panel, etc.) should NOT appear
+
+#### Test 3: Admin Panel Access Block
+1. Login as the non-admin user from Test 2
+2. Manually type `/{slug}/admin` in the browser URL
+3. Should redirect to `/{slug}` (main dashboard)
+4. Admin Panel link should NOT be visible in sidebar
+
+#### Test 4: Permission Guard on Server Actions
+1. Login as non-admin user  
+2. Open browser DevTools → Console
+3. Attempt to access a restricted module's page (e.g., `/finance`)
+4. Should see an error or redirect, not the finance data
+
+#### Test 5: Role Management
+1. Login as admin
+2. Go to Admin Panel → Roles
+3. Create a new role "Sales Rep" with:
+   - `orders.view`, `orders.create`
+   - `crm.view`
+4. Go to Admin Panel → Team
+5. Add a new team member with the "Sales Rep" role
+6. Login as that new user
+7. Verify: sidebar shows only Orders + CRM
+8. Verify: user can view orders and create new ones
+9. Verify: user CANNOT access products, finance, inventory
+
+---
+
+## Verification Plan
+
+### Automated Tests
+No existing test suite found in the project. Manual testing is the primary verification method.
+
+### Manual Verification  
+Each phase has a **✅ Checkpoint** section. After completing each phase:
+1. Run `npm run dev` 
+2. Follow the checkpoint steps
+3. Confirm working before moving to next phase
+4. Tell me "Phase X done, checkpoint passed" to proceed
+
+> [!IMPORTANT]
+> Har phase ke baad app test karo. Next phase tab start hogi jab aap confirm karo ke current phase ka checkpoint pass hua. Ye isliye ke agar koi issue aaye to use turant fix kar saken, baad me debug karna mushkil hota.

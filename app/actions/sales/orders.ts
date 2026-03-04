@@ -5,7 +5,9 @@ import { OrderChannel, OrderStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { toSafeNumber } from '@/lib/decimal';
-import { createAuditLog } from '@/lib/audit';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 // ===================== Validation Schemas =====================
 
@@ -35,7 +37,12 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 export async function getOrders(search?: string, channel?: OrderChannel, status?: OrderStatus) {
     try {
-        const whereClause: any = { deletedAt: null };
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'orders', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const whereClause: any = { deletedAt: null, businessId: ctx.businessId };
 
         if (channel && channel !== 'all' as any) {
             whereClause.channel = channel;
@@ -110,6 +117,10 @@ export async function getOrders(search?: string, channel?: OrderChannel, status?
 
 export async function createOrder(data: CreateOrderInput) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'orders', 'create')) {
+            throw new Error('Unauthorized');
+        }
         // Zod validation
         const parsed = createOrderSchema.safeParse(data);
         if (!parsed.success) {
@@ -124,12 +135,14 @@ export async function createOrder(data: CreateOrderInput) {
         // Calculate item totals
         const itemsWithTotals = validated.items.map(item => ({
             ...item,
+            businessId: ctx.businessId,
             total: toSafeNumber((item.quantity * item.unitPrice) - item.discount)
         }));
 
         const order = await prisma.$transaction(async (tx) => {
             const newOrder = await tx.order.create({
                 data: {
+                    businessId: ctx.businessId,
                     orderNumber,
                     clientId: validated.clientId,
                     companyId: validated.companyId || null,
@@ -156,14 +169,18 @@ export async function createOrder(data: CreateOrderInput) {
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'CREATE',
                 entity: 'Order',
                 entityId: newOrder.orderNumber,
-                details: { after: validated }
+                details: { after: validated },
+                module: 'orders',
+                entityName: 'Sales Order'
             });
 
             return newOrder;
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/sales/orders');
@@ -177,6 +194,17 @@ export async function createOrder(data: CreateOrderInput) {
 
 export async function deleteOrder(id: string) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'orders', 'delete')) {
+            throw new Error('Unauthorized');
+        }
+
+        // Verify order belongs to business
+        const existingOrder = await prisma.order.findUnique({
+            where: { id, businessId: ctx.businessId }
+        });
+        if (!existingOrder) throw new Error('Order not found');
+
         await prisma.$transaction(async (tx) => {
             // Soft delete linked transactions
             await tx.transaction.updateMany({
@@ -190,15 +218,20 @@ export async function deleteOrder(id: string) {
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'SOFT_DELETE',
                 entity: 'Order',
                 entityId: deletedOrder.orderNumber,
                 details: {
                     reason: 'User deleted order',
                     deletedAt: new Date()
-                }
+                },
+                module: 'orders',
+                entityName: 'Sales Order',
+                description: 'Deleted sales order'
             });
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/sales/orders');
@@ -212,6 +245,10 @@ export async function deleteOrder(id: string) {
 
 export async function updateOrder(id: string, data: CreateOrderInput) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'orders', 'edit')) {
+            throw new Error('Unauthorized');
+        }
         // Zod validation
         const parsed = createOrderSchema.safeParse(data);
         if (!parsed.success) {
@@ -220,9 +257,9 @@ export async function updateOrder(id: string, data: CreateOrderInput) {
         }
         const validated = parsed.data;
 
-        // Verify it's a draft
+        // Verify it's a draft and belongs to business
         const existingOrder = await prisma.order.findUnique({
-            where: { id },
+            where: { id, businessId: ctx.businessId },
             select: { status: true, orderNumber: true }
         });
 
@@ -232,6 +269,7 @@ export async function updateOrder(id: string, data: CreateOrderInput) {
         // Calculate item totals
         const itemsWithTotals = validated.items.map(item => ({
             ...item,
+            businessId: ctx.businessId,
             total: toSafeNumber((item.quantity * item.unitPrice) - item.discount)
         }));
 
@@ -262,14 +300,18 @@ export async function updateOrder(id: string, data: CreateOrderInput) {
             });
 
             // 3. Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'UPDATE',
                 entity: 'Order',
                 entityId: existingOrder.orderNumber,
-                details: { after: validated }
+                details: { after: validated },
+                module: 'orders',
+                entityName: 'Sales Order'
             });
 
             return updatedOrder;
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/sales/orders');

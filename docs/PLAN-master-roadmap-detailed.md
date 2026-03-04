@@ -62,7 +62,7 @@ This document is the **Comprehensive Master Plan** for the entire Safcha Dashboa
 
 ---
 
-## ⏳ Phase 4: Sales & Orders
+## complete Phase 4: Sales & Orders
 **Goal:** Build the system to process sales and generate invoices.
 *Dependency: Relies on Phase 3 CRM to exist.*
 ### Section 4.1: Database Foundation
@@ -95,7 +95,7 @@ This document is the **Comprehensive Master Plan** for the entire Safcha Dashboa
 
 ---
 
-## ⏳ Phase 5: Inventory Core
+## Complete Phase 5: Inventory Core
 **Goal:** Build the tables and UI to track raw materials and finished goods.
 ### Section 5.1: Database Foundation
 - [x] Add `RawMaterial` model to Prisma (Name, SKU, Category, CurrentStock, UnitCost, ReorderThreshold).

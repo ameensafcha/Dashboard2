@@ -3,10 +3,18 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { toSafeNumber } from '@/lib/decimal';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 export async function getFinishedProducts(search?: string, location?: string) {
     try {
-        const where: any = { deletedAt: null };
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const where: any = { deletedAt: null, businessId: ctx.businessId };
         if (search) {
             where.OR = [
                 { sku: { contains: search, mode: 'insensitive' } },
@@ -68,16 +76,22 @@ export async function createFinishedProduct(data: {
     expiryDate?: string;
 }) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'create')) {
+            throw new Error('Unauthorized');
+        }
+
         if (!data.productId || !data.variant || !data.skuNumber) {
             return { success: false, error: 'Product, Variant, and SKU are required.' };
         }
 
         const sku = `fp-${data.skuNumber}`;
-        const existing = await prisma.finishedProduct.findUnique({ where: { sku } });
+        const existing = await prisma.finishedProduct.findUnique({ where: { sku, businessId: ctx.businessId } });
         if (existing) return { success: false, error: `SKU "${sku}" already exists.` };
 
         await prisma.finishedProduct.create({
             data: {
+                businessId: ctx.businessId,
                 productId: data.productId,
                 variant: data.variant,
                 sku,
@@ -91,6 +105,15 @@ export async function createFinishedProduct(data: {
             },
         });
 
+        await logAudit({
+            action: 'CREATE',
+            entity: 'FinishedProduct',
+            entityId: sku,
+            module: 'inventory',
+            entityName: 'Finished Product',
+            details: data,
+        })
+
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
         revalidatePath('/');
@@ -103,10 +126,27 @@ export async function createFinishedProduct(data: {
 
 export async function deleteFinishedProduct(id: string) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'delete')) {
+            throw new Error('Unauthorized');
+        }
+
+        // verify ownership
+        const fp = await prisma.finishedProduct.findUnique({ where: { id, businessId: ctx.businessId } });
+        if (!fp) throw new Error('Not found')
+
         await prisma.finishedProduct.update({
             where: { id },
             data: { deletedAt: new Date() }
         });
+
+        await logAudit({
+            action: 'SOFT_DELETE',
+            entity: 'FinishedProduct',
+            entityId: fp.sku,
+            module: 'inventory',
+            entityName: 'Finished Product',
+        })
 
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
@@ -130,6 +170,14 @@ export async function updateFinishedProduct(id: string, data: {
     expiryDate?: string | null;
 }) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'edit')) {
+            throw new Error('Unauthorized');
+        }
+
+        const fp = await prisma.finishedProduct.findUnique({ where: { id, businessId: ctx.businessId } });
+        if (!fp) throw new Error('Not found')
+
         const updateData: any = { ...data };
 
         if (data.expiryDate !== undefined) {
@@ -140,6 +188,15 @@ export async function updateFinishedProduct(id: string, data: {
             where: { id },
             data: updateData
         });
+
+        await logAudit({
+            action: 'UPDATE',
+            entity: 'FinishedProduct',
+            entityId: fp.sku,
+            module: 'inventory',
+            entityName: 'Finished Product',
+            details: data
+        })
 
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');

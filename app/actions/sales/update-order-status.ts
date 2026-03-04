@@ -4,7 +4,9 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { OrderStatus } from '@prisma/client';
 import { z } from 'zod';
-import { createAuditLog } from '@/lib/audit';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -33,9 +35,14 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     }
 
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'orders', 'edit')) {
+            throw new Error('Unauthorized');
+        }
+
         // 1. Fetch order with items and their linked finished products
         const order = await prisma.order.findFirst({
-            where: { id: orderId, deletedAt: null },
+            where: { id: orderId, deletedAt: null, businessId: ctx.businessId },
             include: {
                 orderItems: {
                     include: {
@@ -88,7 +95,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                 const year = new Date().getFullYear();
                 const prefix = `SM-${year}`;
                 const lastMovement = await tx.stockMovement.findFirst({
-                    where: { movementId: { startsWith: prefix } },
+                    where: { movementId: { startsWith: prefix }, businessId: ctx.businessId },
                     orderBy: { movementId: 'desc' },
                     select: { movementId: true },
                 });
@@ -117,6 +124,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
                         await tx.stockMovement.create({
                             data: {
+                                businessId: ctx.businessId,
                                 movementId,
                                 type: 'STOCK_OUT',
                                 reason: 'ORDER_FULFILLMENT',
@@ -158,7 +166,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                 const year = new Date().getFullYear();
                 const txnPrefix = `TXN-${year}`;
                 const lastTxn = await tx.transaction.findFirst({
-                    where: { transactionId: { startsWith: txnPrefix } },
+                    where: { transactionId: { startsWith: txnPrefix }, businessId: ctx.businessId },
                     orderBy: { transactionId: 'desc' },
                     select: { transactionId: true },
                 });
@@ -172,6 +180,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
                 await tx.transaction.create({
                     data: {
+                        businessId: ctx.businessId,
                         transactionId: txnId,
                         type: 'revenue',
                         amount: order.grandTotal,
@@ -194,10 +203,12 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'UPDATE_STATUS',
                 entity: 'Order',
                 entityId: order.orderNumber,
+                module: 'orders',
+                entityName: 'Sales Order',
                 details: {
                     before: currentStatus,
                     after: newStatus

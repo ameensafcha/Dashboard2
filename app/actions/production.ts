@@ -4,7 +4,9 @@ import prisma from '@/lib/prisma';
 import { Prisma, BatchStatus, RndStatus, StockMovementType, StockMovementReason } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { createAuditLog } from '@/lib/audit';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 const createBatchSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
@@ -64,7 +66,7 @@ async function generateBatchNumber(date: Date = new Date()): Promise<string> {
     }
 
     const lastBatch = await prisma.productionBatch.findFirst({
-      where: { batchNumber: { startsWith: `BATCH-${datePrefix}` } },
+      where: { batchNumber: { startsWith: `BATCH-${datePrefix}` }, businessId: (await getBusinessContext()).businessId },
       orderBy: { batchNumber: 'desc' },
     });
 
@@ -93,8 +95,13 @@ async function generateBatchNumber(date: Date = new Date()): Promise<string> {
 
 export async function getProductionBatches(): Promise<ProductionBatchWithProduct[]> {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
     const batches = await prisma.productionBatch.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, businessId: ctx.businessId },
       include: {
         product: { select: { id: true, name: true, size: true, unit: true } },
         batchItems: true,
@@ -130,8 +137,13 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
 
 export async function getProductionBatchById(id: string) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
     const batch = await prisma.productionBatch.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, businessId: ctx.businessId },
       include: {
         product: true,
         batchItems: true,
@@ -176,6 +188,11 @@ export async function createProductionBatch(data: {
   batchItems?: { rawMaterialId: string; materialName: string; quantityUsed: number }[];
 }) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'create')) {
+      throw new Error('Unauthorized');
+    }
+
     const parsedData = createBatchSchema.safeParse(data);
     if (!parsedData.success) {
       return { success: false, error: parsedData.error.issues[0].message };
@@ -187,6 +204,7 @@ export async function createProductionBatch(data: {
     const batch = await prisma.$transaction(async (tx) => {
       const newBatch = await tx.productionBatch.create({
         data: {
+          businessId: ctx.businessId,
           batchNumber,
           productId: validData.productId,
           targetQty: validData.targetQty,
@@ -196,6 +214,7 @@ export async function createProductionBatch(data: {
           notes: validData.notes,
           batchItems: data.batchItems && data.batchItems.length > 0 ? {
             create: data.batchItems.map(item => ({
+              businessId: ctx.businessId,
               rawMaterialId: item.rawMaterialId || null,
               materialName: item.materialName,
               quantityUsed: item.quantityUsed,
@@ -205,14 +224,18 @@ export async function createProductionBatch(data: {
       });
 
       // Create audit log
-      await createAuditLog(tx, {
+      await logAudit({
         action: 'CREATE',
         entity: 'ProductionBatch',
         entityId: newBatch.batchNumber,
-        details: { after: validData }
+        module: 'production',
+        entityName: 'Production Batch',
+        details: validData
       });
 
       return newBatch;
+    }, {
+      timeout: 15000
     });
 
     const serializedBatch = {
@@ -245,6 +268,11 @@ export async function updateProductionBatch(id: string, data: {
   notes?: string;
 }) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'edit')) {
+      throw new Error('Unauthorized');
+    }
+
     const parsedData = updateBatchSchema.safeParse(data);
     if (!parsedData.success) {
       return { success: false, error: parsedData.error.issues[0].message };
@@ -257,21 +285,25 @@ export async function updateProductionBatch(id: string, data: {
 
     const batch = await prisma.$transaction(async (tx) => {
       const updatedBatch = await tx.productionBatch.update({
-        where: { id },
+        where: { id, businessId: ctx.businessId },
         data: {
           ...validData,
         },
       });
 
       // Create audit log
-      await createAuditLog(tx, {
+      await logAudit({
         action: 'UPDATE',
         entity: 'ProductionBatch',
         entityId: updatedBatch.batchNumber,
-        details: { after: validData }
+        module: 'production',
+        entityName: 'Production Batch',
+        details: validData
       });
 
       return updatedBatch;
+    }, {
+      timeout: 15000
     });
 
     const serializedBatch = {
@@ -293,19 +325,28 @@ export async function updateProductionBatch(id: string, data: {
 
 export async function deleteProductionBatch(id: string) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'delete')) {
+      throw new Error('Unauthorized');
+    }
+
     await prisma.$transaction(async (tx) => {
       const deletedBatch = await tx.productionBatch.update({
-        where: { id },
+        where: { id, businessId: ctx.businessId },
         data: { deletedAt: new Date() }
       });
 
       // Create audit log
-      await createAuditLog(tx, {
+      await logAudit({
         action: 'SOFT_DELETE',
         entity: 'ProductionBatch',
         entityId: deletedBatch.batchNumber,
+        module: 'production',
+        entityName: 'Production Batch',
         details: { reason: 'User deleted batch' }
       });
+    }, {
+      timeout: 15000
     });
     revalidatePath('/production/batches');
     revalidatePath('/');
@@ -318,7 +359,13 @@ export async function deleteProductionBatch(id: string) {
 
 export async function getQualityChecks() {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
     const checks = await prisma.qualityCheck.findMany({
+      where: { batch: { businessId: ctx.businessId } },
       include: {
         batch: {
           include: {
@@ -361,6 +408,11 @@ export async function createQualityCheck(data: {
   notes?: string;
 }) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'edit')) { // Assume QC is part of production edit
+      throw new Error('Unauthorized');
+    }
+
     // Phase 7.3: Use transaction for QC + inventory automation
     console.log('[QC] Starting quality check transaction for batch:', data.batchId);
 
@@ -369,19 +421,21 @@ export async function createQualityCheck(data: {
       const roundedQty = Math.round(data.actualQty * 1000) / 1000;
       const { actualQty, ...qcData } = data;
       console.log('[QC] Creating QualityCheck record...');
-      await tx.qualityCheck.create({ data: qcData });
+      await tx.qualityCheck.create({ data: { ...qcData, businessId: ctx.businessId } });
 
       // Create audit log for QC
       console.log('[QC] Creating audit log...');
       const batchRef = await tx.productionBatch.findUnique({
-        where: { id: data.batchId },
+        where: { id: data.batchId, businessId: ctx.businessId },
         select: { batchNumber: true, targetQty: true }
       });
 
-      await createAuditLog(tx, {
+      await logAudit({
         action: 'CREATE_QC',
         entity: 'ProductionBatch',
         entityId: batchRef?.batchNumber || data.batchId,
+        module: 'production',
+        entityName: 'Quality Check',
         details: { passed: data.passed, score: data.overallScore }
       });
 
@@ -393,7 +447,7 @@ export async function createQualityCheck(data: {
 
       console.log('[QC] Updating batch status to:', newStatus, 'actualQty:', roundedQty, 'yield:', yieldPercent);
       await tx.productionBatch.update({
-        where: { id: data.batchId },
+        where: { id: data.batchId, businessId: ctx.businessId },
         data: {
           qualityScore: data.overallScore,
           status: newStatus,
@@ -407,7 +461,7 @@ export async function createQualityCheck(data: {
       if (data.passed) {
         console.log('[QC] Passed: Starting inventory synchronization...');
         const batch = await tx.productionBatch.findUnique({
-          where: { id: data.batchId },
+          where: { id: data.batchId, businessId: ctx.businessId },
           include: {
             product: { include: { finishedProduct: true } },
             batchItems: true,
@@ -429,6 +483,7 @@ export async function createQualityCheck(data: {
             console.log('[QC] Creating new FinishedProduct for SKU prefix:', batch.product?.skuPrefix);
             fp = await tx.finishedProduct.create({
               data: {
+                businessId: ctx.businessId,
                 productId: batch.productId,
                 variant: 'Standard',
                 sku: `FP-${batch.product?.skuPrefix || 'GEN'}-${Date.now().toString().slice(-4)}`,
@@ -452,6 +507,7 @@ export async function createQualityCheck(data: {
           console.log('[QC] Creating stock movement (IN):', movementId);
           await tx.stockMovement.create({
             data: {
+              businessId: ctx.businessId,
               movementId: movementId,
               type: 'STOCK_IN',
               reason: 'PURCHASE', // Closest enum for now
@@ -478,6 +534,7 @@ export async function createQualityCheck(data: {
             console.log('[QC] Creating stock movement (OUT):', matMovementId);
             await tx.stockMovement.create({
               data: {
+                businessId: ctx.businessId,
                 movementId: matMovementId,
                 type: 'STOCK_OUT',
                 reason: 'PRODUCTION_INPUT',
@@ -530,7 +587,12 @@ export async function updateQualityCheck(id: string, data: {
   notes?: string;
 }) {
   try {
-    const existing = await prisma.qualityCheck.findUnique({ where: { id } });
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'edit')) {
+      throw new Error('Unauthorized');
+    }
+
+    const existing = await prisma.qualityCheck.findUnique({ where: { id, batch: { businessId: ctx.businessId } } as any });
     if (!existing) return { success: false, error: 'QC record not found.' };
 
     return await prisma.$transaction(async (tx) => {
@@ -568,10 +630,12 @@ export async function updateQualityCheck(id: string, data: {
       });
 
       // Create audit log for QC update
-      await createAuditLog(tx, {
+      await logAudit({
         action: 'UPDATE_QC',
         entity: 'ProductionBatch',
         entityId: batch.batchNumber,
+        module: 'production',
+        entityName: 'Quality Check',
         details: { passed: data.passed, score: data.overallScore }
       });
 
@@ -598,6 +662,7 @@ export async function updateQualityCheck(id: string, data: {
           if (!fp) {
             fp = await tx.finishedProduct.create({
               data: {
+                businessId: ctx.businessId,
                 productId: batch.productId,
                 variant: 'Standard',
                 sku: `fp-${batch.product.skuPrefix}-${Date.now().toString().slice(-4)}`,
@@ -618,6 +683,7 @@ export async function updateQualityCheck(id: string, data: {
           counter++;
           await tx.stockMovement.create({
             data: {
+              businessId: ctx.businessId,
               movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
               type: 'STOCK_IN',
               reason: 'PURCHASE',
@@ -638,6 +704,7 @@ export async function updateQualityCheck(id: string, data: {
               counter++;
               await tx.stockMovement.create({
                 data: {
+                  businessId: ctx.businessId,
                   movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
                   type: 'STOCK_OUT',
                   reason: 'PRODUCTION_INPUT',
@@ -660,6 +727,7 @@ export async function updateQualityCheck(id: string, data: {
             counter++;
             await tx.stockMovement.create({
               data: {
+                businessId: ctx.businessId,
                 movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
                 type: StockMovementType.STOCK_OUT,
                 reason: StockMovementReason.DAMAGE, // Closest reversal/adjustment
@@ -681,6 +749,7 @@ export async function updateQualityCheck(id: string, data: {
               counter++;
               await tx.stockMovement.create({
                 data: {
+                  businessId: ctx.businessId,
                   movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
                   type: StockMovementType.STOCK_IN,
                   reason: StockMovementReason.PRODUCTION_INPUT, // Reversing consumption
@@ -717,7 +786,12 @@ export async function updateQualityCheck(id: string, data: {
 
 export async function deleteQualityCheck(id: string) {
   try {
-    const existing = await prisma.qualityCheck.findUnique({ where: { id } });
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'delete')) {
+      throw new Error('Unauthorized');
+    }
+
+    const existing = await prisma.qualityCheck.findUnique({ where: { id, batch: { businessId: ctx.businessId } } as any });
     if (!existing) return { success: false, error: 'QC record not found.' };
 
     return await prisma.$transaction(async (tx) => {
@@ -766,6 +840,7 @@ export async function deleteQualityCheck(id: string) {
           counter++;
           await tx.stockMovement.create({
             data: {
+              businessId: ctx.businessId,
               movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
               type: StockMovementType.STOCK_OUT,
               reason: StockMovementReason.DAMAGE,
@@ -787,6 +862,7 @@ export async function deleteQualityCheck(id: string) {
             counter++;
             await tx.stockMovement.create({
               data: {
+                businessId: ctx.businessId,
                 movementId: `SM-${year}-${String(counter).padStart(4, '0')}`,
                 type: StockMovementType.STOCK_IN,
                 reason: StockMovementReason.PRODUCTION_INPUT, // Reversing consumption
@@ -839,14 +915,20 @@ export type RndProjectType = {
 
 export async function getRnDProjects(search?: string): Promise<RndProjectType[]> {
   try {
-    const whereClause = search
-      ? {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
+    const whereClause: any = {
+      businessId: ctx.businessId,
+      ...(search ? {
         OR: [
           { name: { contains: search, mode: 'insensitive' as const } },
           { category: { contains: search, mode: 'insensitive' as const } }
         ]
-      }
-      : {};
+      } : {})
+    };
 
     const projects = await prisma.rndProject.findMany({
       where: whereClause,
@@ -879,8 +961,14 @@ export async function createRnDProject(data: {
   notes?: string;
 }) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'create')) {
+      throw new Error('Unauthorized');
+    }
+
     const project = await prisma.rndProject.create({
       data: {
+        businessId: ctx.businessId,
         name: data.name,
         category: data.category,
         status: (data.status as RndStatus) || 'ideation',
@@ -917,8 +1005,13 @@ export async function updateRnDProject(id: string, data: {
   notes?: string;
 }) {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'edit')) {
+      throw new Error('Unauthorized');
+    }
+
     const project = await prisma.rndProject.update({
-      where: { id },
+      where: { id, businessId: ctx.businessId },
       data: {
         ...data,
         status: data.status,
@@ -935,7 +1028,12 @@ export async function updateRnDProject(id: string, data: {
 
 export async function deleteRnDProject(id: string) {
   try {
-    await prisma.rndProject.delete({ where: { id } });
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'production', 'delete')) {
+      throw new Error('Unauthorized');
+    }
+
+    await prisma.rndProject.delete({ where: { id, businessId: ctx.businessId } });
     revalidatePath('/production/rnd');
     revalidatePath('/');
     return { success: true };
@@ -947,10 +1045,18 @@ export async function deleteRnDProject(id: string) {
 
 export async function getSystemSettings() {
   try {
-    let settings = await prisma.systemSettings.findFirst();
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'settings', 'view') && !hasPermission(ctx, 'admin', 'view')) {
+      return { productionCapacityKg: 3000 };
+    }
+
+    let settings = await prisma.systemSettings.findFirst({
+      where: { businessId: ctx.businessId }
+    });
+
     if (!settings) {
       settings = await prisma.systemSettings.create({
-        data: { productionCapacityKg: 3000 },
+        data: { businessId: ctx.businessId, productionCapacityKg: 3000 },
       });
     }
     return settings;
@@ -962,15 +1068,22 @@ export async function getSystemSettings() {
 
 export async function updateSystemCapacity(capacityKg: number) {
   try {
-    const settings = await prisma.systemSettings.findFirst();
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'settings', 'edit') && !hasPermission(ctx, 'admin', 'edit')) {
+      throw new Error('Unauthorized');
+    }
+
+    const settings = await prisma.systemSettings.findFirst({
+      where: { businessId: ctx.businessId }
+    });
     if (settings) {
       await prisma.systemSettings.update({
-        where: { id: settings.id },
+        where: { id: settings.id, businessId: ctx.businessId },
         data: { productionCapacityKg: capacityKg },
       });
     } else {
       await prisma.systemSettings.create({
-        data: { productionCapacityKg: capacityKg },
+        data: { businessId: ctx.businessId, productionCapacityKg: capacityKg },
       });
     }
     revalidatePath('/production');

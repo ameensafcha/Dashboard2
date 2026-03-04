@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAppStore } from '@/stores/appStore';
+import { usePermissions } from '@/lib/hooks/usePermissions';
 import { useTranslation } from '@/lib/i18n';
 import {
   LayoutDashboard,
@@ -19,7 +20,9 @@ import {
   Target,
   Settings,
   ChevronDown,
-  X
+  X,
+  LogOut,
+  Building2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -27,27 +30,31 @@ import { cn } from '@/lib/utils';
 export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAppStore();
+  const { can } = usePermissions();
   const { t, isRTL } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
 
-  const navigation = [
-    { name: t.overview, href: '/', icon: LayoutDashboard },
+  // Extract businessSlug from the URL using usePathname() — works during SSR + CSR
+  const businessSlug = pathname.split('/')[1] || 'safcha';
+
+  const baseNavigation = [
+    { name: t.overview || 'Home', href: '', icon: LayoutDashboard }, // No permission required for home
     {
-      name: t.salesOrders, href: '/sales', icon: ShoppingCart, children: [
+      name: t.salesOrders, href: '/sales', icon: ShoppingCart, permission: { module: 'orders', action: 'view' }, children: [
         { name: t.overview, href: '/sales' },
         { name: t.orders, href: '/sales/orders' },
       ]
     },
     {
-      name: t.inventory, href: '/inventory', icon: Package, children: [
+      name: t.inventory, href: '/inventory', icon: Package, permission: { module: 'inventory', action: 'view' }, children: [
         { name: t.overview, href: '/inventory' },
         { name: t.rawMaterials, href: '/inventory/raw-materials' },
         { name: t.finishedProducts, href: '/inventory/finished' },
       ]
     },
     {
-      name: t.production, href: '/production', icon: Factory, children: [
+      name: t.production, href: '/production', icon: Factory, permission: { module: 'production', action: 'view' }, children: [
         { name: t.overview, href: '/production' },
         { name: t.batches, href: '/production/batches' },
         { name: t.qualityControl, href: '/production/quality' },
@@ -55,36 +62,48 @@ export default function Sidebar() {
       ]
     },
     {
-      name: t.productsDashboard || 'Products', href: '/products', icon: Coffee, children: [
+      name: t.productsDashboard || 'Products', href: '/products', icon: Coffee, permission: { module: 'products', action: 'view' }, children: [
         { name: t.overview, href: '/products' },
         { name: t.productCatalog, href: '/products/catalog' },
         { name: t.categories, href: '/products/categories' },
-        { name: t.pricing, href: '/products/pricing' },
-        { name: t.suppliers, href: '/products/suppliers' },
+        { name: t.pricing, href: '/products/pricing', permission: { module: 'pricing', action: 'view' } },
+        { name: t.suppliers, href: '/products/suppliers', permission: { module: 'suppliers', action: 'view' } },
       ]
     },
     {
-      name: t.finance, href: '/finance', icon: DollarSign, children: [
+      name: t.finance, href: '/finance', icon: DollarSign, permission: { module: 'finance', action: 'view' }, children: [
         { name: t.overview, href: '/finance' },
         { name: t.expenses, href: '/finance/expenses' },
         { name: t.transactions, href: '/finance/transactions' },
       ]
     },
     {
-      name: t.crm, href: '/crm', icon: Users, children: [
+      name: t.crm, href: '/crm', icon: Users, permission: { module: 'crm', action: 'view' }, children: [
         { name: t.overview, href: '/crm' },
         { name: t.companies, href: '/crm/companies' },
         { name: t.contacts, href: '/crm/contacts' },
         { name: t.pipeline, href: '/crm/pipeline' },
       ]
     },
-    { name: t.marketing, href: '/marketing', icon: Megaphone },
-    { name: t.events, href: '/events', icon: Calendar },
-    { name: t.teamTasks, href: '/tasks', icon: CheckSquare },
-    { name: t.documents, href: '/documents', icon: FileText },
-    { name: t.strategy, href: '/strategy', icon: Target },
-    { name: t.settings, href: '/settings', icon: Settings },
+    { name: t.marketing, href: '/marketing', icon: Megaphone, permission: { module: 'marketing', action: 'view' } },
+    { name: t.events, href: '/events', icon: Calendar, permission: { module: 'events', action: 'view' } },
+    { name: t.teamTasks, href: '/tasks', icon: CheckSquare, permission: { module: 'tasks', action: 'view' } },
+    { name: t.documents, href: '/documents', icon: FileText, permission: { module: 'documents', action: 'view' } },
+    { name: t.strategy, href: '/strategy', icon: Target, permission: { module: 'strategy', action: 'view' } },
+    { name: t.settings, href: '/settings', icon: Settings, permission: { module: 'settings', action: 'view' } },
+    { name: 'Admin Panel', href: '/admin', icon: Settings, permission: { module: 'admin', action: 'view' }, adminOnly: true },
+    { name: 'Switch Business', href: '/select-business', icon: Building2, isStatic: true }, // Static link (no businessSlug prefix)
   ];
+
+  // Map the navigation array to prefix the current business slug
+  const navigation = baseNavigation.map(item => ({
+    ...item,
+    href: item.isStatic ? item.href : `/${businessSlug}${item.href}`,
+    children: item.children?.map(child => ({
+      ...child,
+      href: `/${businessSlug}${child.href}`
+    }))
+  }));
 
   useEffect(() => {
     const handleToggle = () => setMobileOpen(prev => !prev);
@@ -125,10 +144,36 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-5 scrollbar-hide">
+          {!user && (
+            <div className="px-3 space-y-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-2">
+                  <div className="w-5 h-5 rounded bg-white/5 animate-pulse" />
+                  <div className="h-4 w-24 rounded bg-white/5 animate-pulse" />
+                </div>
+              ))}
+            </div>
+          )}
           <ul className="space-y-1 px-3">
-            {navigation.map((item) => {
+            {navigation.map((item: any) => {
+              if (!user) return null;
+
+              // Hide admin-only items from non-system roles
+              if (item.adminOnly && !user.role?.isSystem) return null;
+
+              // Hide item if user doesn't have permission
+              if (item.permission && !can(item.permission.module, item.permission.action)) {
+                // Special case: if they don't have dashboard:view, but this is the home link, we let it through
+                // but we will handle the "empty" state on the home page itself.
+                if (item.name === (t.overview || 'Home')) {
+                  // allow
+                } else {
+                  return null;
+                }
+              }
+
               const isActive = pathname === item.href ||
-                (item.children && item.children.some(child => pathname.startsWith(child.href)));
+                (item.children && item.children.some((child: any) => pathname.startsWith(child.href)));
 
               const isMenuOpen = openMenus[item.name] || isActive;
 
@@ -195,7 +240,9 @@ export default function Sidebar() {
                       )}
                     >
                       <ul className="space-y-0.5 py-1" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: 28 }}>
-                        {item.children.map((child) => {
+                        {item.children.map((child: any) => {
+                          if (child.permission && !can(child.permission.module, child.permission.action)) return null;
+
                           const isChildActive = pathname === child.href;
                           return (
                             <li key={child.name}>
@@ -232,11 +279,11 @@ export default function Sidebar() {
         <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="flex items-center hover:bg-white/10 p-2 rounded-xl cursor-pointer transition-all duration-200 ease-in-out border border-transparent hover:border-white/10 group">
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-bold flex-shrink-0 shadow-md group-hover:scale-105 transition-transform" style={{ background: 'var(--accent-gold)' }}>
-              {user?.name?.[0] || 'A'}
+              {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
             </div>
             <div className={cn("truncate", isRTL ? "mr-3" : "ml-3")}>
-              <p className="text-sm font-semibold truncate text-white">{user?.name || 'Ameen Safcha'}</p>
-              <p className="text-xs text-gray-400 capitalize truncate mt-0.5">{user?.role || 'Admin User'}</p>
+              <p className="text-sm font-semibold truncate text-white">{user?.name || (user?.email?.split('@')[0]) || 'User'}</p>
+              <p className="text-xs text-gray-400 capitalize truncate mt-0.5">{user?.role?.name || 'Authorized User'}</p>
             </div>
           </div>
         </div>

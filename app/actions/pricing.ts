@@ -3,6 +3,8 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { PricingTier as PrismaPricingTier, Category } from '@prisma/client';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
 
 export type PricingTierWithCategory = Omit<PrismaPricingTier, 'minOrderKg' | 'maxOrderKg' | 'pricePerKg' | 'discountPercent' | 'marginPercent'> & {
   minOrderKg: number;
@@ -16,9 +18,15 @@ export type PricingTierWithCategory = Omit<PrismaPricingTier, 'minOrderKg' | 'ma
 // Fetch all pricing tiers with their associated category
 export async function getPricingTiers(): Promise<PricingTierWithCategory[]> {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'pricing', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
     const tiers = await prisma.pricingTier.findMany({
       where: {
         deletedAt: null,
+        businessId: ctx.businessId
       },
       include: {
         category: true,
@@ -43,6 +51,7 @@ export async function getPricingTiers(): Promise<PricingTierWithCategory[]> {
       categoryId: tier.categoryId,
       category: tier.category,
       deletedAt: tier.deletedAt,
+      businessId: tier.businessId,
     }));
   } catch (error) {
     console.error('Error fetching pricing tiers:', error);
@@ -63,8 +72,14 @@ export async function createPricingTier(data: {
   isGlobal?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'pricing', 'create')) {
+      throw new Error('Unauthorized');
+    }
+
     await prisma.pricingTier.create({
       data: {
+        businessId: ctx.businessId,
         categoryId: data.categoryId,
         tierName: data.tierName,
         minOrderKg: data.minOrderKg,
@@ -97,8 +112,13 @@ export async function updatePricingTier(id: string, data: {
   isGlobal?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'pricing', 'edit')) {
+      throw new Error('Unauthorized');
+    }
+
     await prisma.pricingTier.update({
-      where: { id },
+      where: { id, businessId: ctx.businessId },
       data: {
         categoryId: data.categoryId,
         tierName: data.tierName,
@@ -123,8 +143,13 @@ export async function updatePricingTier(id: string, data: {
 
 export async function deletePricingTier(id: string): Promise<boolean> {
   try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'pricing', 'delete')) {
+      throw new Error('Unauthorized');
+    }
+
     await prisma.pricingTier.update({
-      where: { id },
+      where: { id, businessId: ctx.businessId },
       data: { deletedAt: new Date() },
     });
     revalidatePath('/products/pricing');
@@ -146,8 +171,13 @@ export async function getCategoriesForPricing(): Promise<Category[]> {
     // But since schema has relation, we can filter in JS or query
 
     // For now, return all, UI can disable used ones if needed
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'pricing', 'view')) {
+      return [];
+    }
+
     const categories = await prisma.category.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, businessId: ctx.businessId },
       orderBy: { name: 'asc' },
     });
     return categories;

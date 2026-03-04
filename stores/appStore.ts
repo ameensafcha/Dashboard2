@@ -5,7 +5,13 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ceo' | 'admin' | 'operations' | 'factory' | 'marketing' | 'viewer';
+  role: {
+    name: string;
+    isSystem: boolean;
+    permissions: any[];
+  };
+
+  businessName?: string;
   avatar?: string;
 }
 
@@ -22,21 +28,22 @@ interface AppState {
   // User
   user: User | null;
   setUser: (user: User | null) => void;
-  
+  loadUserFromAuth: (user: User) => void;
+
   // Theme (Light/Dark)
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
-  
+
   // Sidebar
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
-  
+
   // Language (English/Arabic)
   language: 'en' | 'ar';
   setLanguage: (lang: 'en' | 'ar') => void;
   isRTL: boolean;
-  
+
   // Notifications
   notifications: Notification[];
   unreadCount: number;
@@ -44,7 +51,7 @@ interface AppState {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   clearNotifications: () => void;
-  
+
   // Global Loading
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
@@ -53,16 +60,11 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // User - Default CEO for demo
-      user: {
-        id: '1',
-        name: 'Hardcoded',
-        email: 'test@safcha.com',
-        role: 'ceo',
-        avatar: undefined,
-      },
+      // User - will be loaded from DB on auth
+      user: null,
       setUser: (user) => set({ user }),
-      
+      loadUserFromAuth: (user) => set({ user }),
+
       // Theme
       theme: 'light',
       setTheme: (theme) => {
@@ -74,19 +76,19 @@ export const useAppStore = create<AppState>()(
         document.documentElement.setAttribute('data-theme', newTheme);
         set({ theme: newTheme });
       },
-      
+
       // Sidebar
       sidebarCollapsed: false,
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-      
+
       // Language
       language: 'en',
-      setLanguage: (language) => set({ 
+      setLanguage: (language) => set({
         language,
         isRTL: language === 'ar'
       }),
       isRTL: false,
-      
+
       // Notifications
       notifications: [
         {
@@ -133,15 +135,15 @@ export const useAppStore = create<AppState>()(
         unreadCount: 0,
       })),
       clearNotifications: () => set({ notifications: [], unreadCount: 0 }),
-      
+
       // Loading
       isLoading: false,
       setLoading: (isLoading) => set({ isLoading }),
     }),
     {
       name: 'safcha-storage',
-      partialize: (state) => ({ 
-        theme: state.theme, 
+      partialize: (state) => ({
+        theme: state.theme,
         language: state.language,
         isRTL: state.isRTL,
       }),

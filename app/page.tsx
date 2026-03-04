@@ -1,15 +1,14 @@
-import { PageHeader } from '@/components/ui/PageHeader';
-import { getDashboardData } from '@/app/actions/dashboard';
-import DashboardClient from './DashboardClient';
-export const dynamic = 'force-dynamic';
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 
-export default async function Home() {
-  const data = await getDashboardData();
+export default async function RootPage() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-  return (
-    <div className="p-4 sm:p-6">
-      <PageHeader title="CEO Dashboard" />
-      <DashboardClient data={data} />
-    </div>
-  );
+    if (!user) {
+        redirect('/login')
+    }
+
+    // Redirect to business selector
+    redirect('/select-business')
 }

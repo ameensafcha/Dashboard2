@@ -4,7 +4,9 @@ import prisma from '@/lib/prisma';
 import { ExpenseCategory, PaymentMethod } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { createAuditLog } from '@/lib/audit';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 // ==========================================
 // Validation Schemas
@@ -27,11 +29,11 @@ export type CreateExpenseInput = z.infer<typeof expenseSchema>;
 // Helper Functions
 // ==========================================
 
-async function generateExpenseId(tx: any): Promise<string> {
+async function generateExpenseId(tx: any, businessId: string): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `EXP-${year}`;
     const last = await tx.expense.findFirst({
-        where: { expenseId: { startsWith: prefix } },
+        where: { expenseId: { startsWith: prefix }, businessId },
         orderBy: { expenseId: 'desc' },
         select: { expenseId: true },
     });
@@ -44,11 +46,11 @@ async function generateExpenseId(tx: any): Promise<string> {
     return `${prefix}-${String(nextNum).padStart(4, '0')}`;
 }
 
-async function generateTransactionId(tx: any): Promise<string> {
+async function generateTransactionId(tx: any, businessId: string): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `TXN-${year}`;
     const last = await tx.transaction.findFirst({
-        where: { transactionId: { startsWith: prefix } },
+        where: { transactionId: { startsWith: prefix }, businessId },
         orderBy: { transactionId: 'desc' },
         select: { transactionId: true },
     });
@@ -67,7 +69,12 @@ async function generateTransactionId(tx: any): Promise<string> {
 
 export async function getExpenses(category?: ExpenseCategory | 'all') {
     try {
-        const where: any = { deletedAt: null };
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'finance', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const where: any = { deletedAt: null, businessId: ctx.businessId };
         if (category && category !== 'all') where.category = category;
 
         const expenses = await prisma.expense.findMany({
@@ -93,6 +100,11 @@ export async function getExpenses(category?: ExpenseCategory | 'all') {
 
 export async function createExpense(data: CreateExpenseInput) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'finance', 'create')) {
+            throw new Error('Unauthorized');
+        }
+
         // Validate
         const parsed = expenseSchema.safeParse(data);
         if (!parsed.success) {
@@ -103,13 +115,14 @@ export async function createExpense(data: CreateExpenseInput) {
         await prisma.$transaction(async (tx) => {
             // Generate IDs inside transaction to prevent race conditions
             const [expenseId, transactionId] = await Promise.all([
-                generateExpenseId(tx),
-                generateTransactionId(tx),
+                generateExpenseId(tx, ctx.businessId),
+                generateTransactionId(tx, ctx.businessId),
             ]);
 
             // Create expense
             await tx.expense.create({
                 data: {
+                    businessId: ctx.businessId,
                     expenseId,
                     category: validated.category,
                     amount: validated.amount,
@@ -125,6 +138,7 @@ export async function createExpense(data: CreateExpenseInput) {
             // Create matching transaction
             await tx.transaction.create({
                 data: {
+                    businessId: ctx.businessId,
                     transactionId,
                     type: 'expense',
                     amount: validated.amount,
@@ -135,12 +149,16 @@ export async function createExpense(data: CreateExpenseInput) {
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'CREATE',
                 entity: 'Expense',
                 entityId: expenseId,
-                details: { after: validated }
+                module: 'finance',
+                entityName: 'Expense',
+                details: validated
             });
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/finance');
@@ -155,6 +173,11 @@ export async function createExpense(data: CreateExpenseInput) {
 
 export async function updateExpense(id: string, data: CreateExpenseInput) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'finance', 'edit')) {
+            throw new Error('Unauthorized');
+        }
+
         // Validate
         const parsed = expenseSchema.safeParse(data);
         if (!parsed.success) {
@@ -162,7 +185,7 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
         }
         const validated = parsed.data;
 
-        const existing = await prisma.expense.findFirst({ where: { id, deletedAt: null } });
+        const existing = await prisma.expense.findFirst({ where: { id, deletedAt: null, businessId: ctx.businessId } });
         if (!existing) return { success: false, error: 'Expense not found.' };
 
         await prisma.$transaction(async (tx) => {
@@ -196,10 +219,12 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
             }
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'UPDATE',
                 entity: 'Expense',
                 entityId: existing.expenseId,
+                module: 'finance',
+                entityName: 'Expense',
                 details: {
                     before: {
                         category: existing.category,
@@ -210,6 +235,8 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
                     after: validated
                 }
             });
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/finance');
@@ -224,7 +251,12 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
 
 export async function deleteExpense(id: string) {
     try {
-        const existing = await prisma.expense.findFirst({ where: { id, deletedAt: null } });
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'finance', 'delete')) {
+            throw new Error('Unauthorized');
+        }
+
+        const existing = await prisma.expense.findFirst({ where: { id, deletedAt: null, businessId: ctx.businessId } });
         if (!existing) return { success: false, error: 'Expense not found.' };
 
         await prisma.$transaction(async (tx) => {
@@ -240,15 +272,19 @@ export async function deleteExpense(id: string) {
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'SOFT_DELETE',
                 entity: 'Expense',
                 entityId: existing.expenseId,
+                module: 'finance',
+                entityName: 'Expense',
                 details: {
                     reason: 'User deleted expense',
                     deletedAt: new Date()
                 }
             });
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/finance');
@@ -267,19 +303,24 @@ export async function deleteExpense(id: string) {
 
 export async function getFinanceSummary() {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'finance', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
         const [revenueAgg, expenseAgg, transactions] = await Promise.all([
             prisma.transaction.aggregate({
-                where: { type: 'revenue', deletedAt: null },
+                where: { type: 'revenue', deletedAt: null, businessId: ctx.businessId },
                 _sum: { amount: true },
                 _count: true,
             }),
             prisma.transaction.aggregate({
-                where: { type: 'expense', deletedAt: null },
+                where: { type: 'expense', deletedAt: null, businessId: ctx.businessId },
                 _sum: { amount: true },
                 _count: true,
             }),
             prisma.transaction.findMany({
-                where: { deletedAt: null },
+                where: { deletedAt: null, businessId: ctx.businessId },
                 orderBy: { date: 'desc' },
                 take: 20,
             }),
@@ -318,15 +359,20 @@ export async function getFinanceSummary() {
 
 export async function getTransactions(page = 1, limit = 50) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'finance', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
         const transactions = await prisma.transaction.findMany({
-            where: { deletedAt: null },
+            where: { deletedAt: null, businessId: ctx.businessId },
             orderBy: { date: 'desc' },
             skip: (page - 1) * limit,
             take: limit,
         });
 
         const total = await prisma.transaction.count({
-            where: { deletedAt: null }
+            where: { deletedAt: null, businessId: ctx.businessId }
         });
 
         return {

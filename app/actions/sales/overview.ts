@@ -1,9 +1,16 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
 
 export async function getSalesOverview() {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'orders', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
         const now = new Date();
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -17,18 +24,19 @@ export async function getSalesOverview() {
             recentOrders,
             channelOrders,
         ] = await Promise.all([
-            prisma.order.count({ where: { date: { gte: firstOfMonth } } }),
-            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth } } }),
+            prisma.order.count({ where: { date: { gte: firstOfMonth }, businessId: ctx.businessId, deletedAt: null } }),
+            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId, deletedAt: null } }),
             prisma.order.aggregate({
-                where: { date: { gte: firstOfMonth }, status: 'delivered' },
+                where: { date: { gte: firstOfMonth }, status: 'delivered', businessId: ctx.businessId, deletedAt: null },
                 _sum: { grandTotal: true },
             }),
             prisma.order.aggregate({
-                where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, status: 'delivered' },
+                where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, status: 'delivered', businessId: ctx.businessId, deletedAt: null },
                 _sum: { grandTotal: true },
             }),
-            prisma.order.count({ where: { status: { in: ['confirmed', 'processing'] } } }),
+            prisma.order.count({ where: { status: { in: ['confirmed', 'processing'] }, businessId: ctx.businessId, deletedAt: null } }),
             prisma.order.findMany({
+                where: { businessId: ctx.businessId, deletedAt: null },
                 take: 10,
                 orderBy: { createdAt: 'desc' },
                 select: {
@@ -38,7 +46,7 @@ export async function getSalesOverview() {
                 },
             }),
             prisma.order.findMany({
-                where: { date: { gte: firstOfMonth } },
+                where: { date: { gte: firstOfMonth }, businessId: ctx.businessId, deletedAt: null },
                 select: { channel: true, grandTotal: true },
             }),
         ]);

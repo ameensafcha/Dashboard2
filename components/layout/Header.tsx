@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, Globe, Moon, Sun, Menu, ArrowRight, Loader2, Info } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Search, Globe, Moon, Sun, Menu, ArrowRight, Loader2, Info, LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useTranslation } from '@/lib/i18n';
 import { performGlobalSearch, SearchResult } from '@/app/actions/globalSearch';
 import { SoftwareFlowDialog } from './SoftwareFlowDialog';
+import { logoutUser } from '@/app/actions/auth/session';
 
 export default function Header() {
   const {
@@ -19,13 +20,17 @@ export default function Header() {
   const { t, isRTL } = useTranslation();
 
   const router = useRouter();
+  const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [dbResults, setDbResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const searchModules = [
-    { name: t.dashboard, href: '/' },
+  // Extract businessSlug using usePathname() — works during SSR + CSR
+  const businessSlug = pathname.split('/')[1] || 'safcha';
+
+  const baseSearchModules = [
+    { name: t.dashboard, href: '' },
     { name: t.salesOrders, href: '/sales' },
     { name: t.inventory, href: '/inventory' },
     { name: t.productionOverview, href: '/production' },
@@ -39,6 +44,11 @@ export default function Header() {
     { name: t.crm, href: '/crm' },
     { name: t.settings, href: '/settings' },
   ];
+
+  const searchModules = baseSearchModules.map(m => ({
+    ...m,
+    href: `/${businessSlug}${m.href}`
+  }));
 
   const filteredModules = searchModules.filter(m =>
     m.name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -215,18 +225,91 @@ export default function Header() {
           <span className="hidden sm:inline">{language === 'en' ? 'عربي' : 'EN'}</span>
         </button>
 
-        {/* User Menu */}
-        <button
-          className="flex items-center"
-        >
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center font-medium"
-            style={{ background: 'var(--accent-gold)', color: 'var(--accent-gold-foreground)' }}
-          >
-            A
-          </div>
-        </button>
+        {/* User Menu with Logout */}
+        <UserMenuDropdown />
       </div>
     </header>
+  );
+}
+
+function UserMenuDropdown() {
+  const { user, setUser } = useAppStore();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setUser(null);
+    router.push('/login');
+  };
+
+  const initial = user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?';
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+      >
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
+          style={{ background: 'var(--accent-gold)', color: 'var(--accent-gold-foreground)' }}
+        >
+          {initial}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: 'var(--text-secondary)' }} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-2 w-56 rounded-xl border shadow-xl overflow-hidden z-50"
+          style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+        >
+          {/* User Info */}
+          <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+            <p className="text-sm font-semibold truncate" style={{ color: 'var(--foreground)' }}>
+              {user?.name || 'User'}
+            </p>
+            <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {user?.email || ''}
+            </p>
+            <p className="text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded-md inline-block" style={{ background: 'var(--accent-gold)', color: 'black' }}>
+              {user?.role?.name || 'No Role'}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="py-1">
+            <button
+              onClick={() => { setOpen(false); router.push('/select-business'); }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors"
+              style={{ color: 'var(--foreground)' }}
+            >
+              <UserIcon className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+              Switch Business
+            </button>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-500/10 transition-colors text-red-500"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

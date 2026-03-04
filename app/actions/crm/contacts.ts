@@ -4,7 +4,9 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { ClientType, LeadSource } from '@prisma/client';
-import { createAuditLog } from '@/lib/audit';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 const contactSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -21,7 +23,12 @@ const contactSchema = z.object({
 
 export async function getContacts(search?: string, companyId?: string) {
     try {
-        const whereClause: any = { deletedAt: null };
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const whereClause: any = { deletedAt: null, businessId: ctx.businessId };
 
         if (search) {
             whereClause.OR = [
@@ -71,6 +78,11 @@ export async function getContacts(search?: string, companyId?: string) {
 
 export async function createContact(data: z.infer<typeof contactSchema>) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'create')) {
+            throw new Error('Unauthorized');
+        }
+
         const parsed = contactSchema.safeParse(data);
         if (!parsed.success) {
             return { success: false, error: parsed.error.issues[0].message };
@@ -81,6 +93,7 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
         const contact = await prisma.$transaction(async (tx) => {
             const newContact = await tx.client.create({
                 data: {
+                    businessId: ctx.businessId,
                     name: validData.name,
                     email: validData.email || null,
                     phone: validData.phone || null,
@@ -98,14 +111,18 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'CREATE',
-                entity: 'Contact',
-                entityId: newContact.id,
-                details: { after: validData }
+                entity: 'Client',
+                entityId: newContact.name,
+                module: 'crm',
+                entityName: 'Contact',
+                details: validData
             });
 
             return newContact;
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/crm/contacts');
@@ -120,6 +137,11 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
 
 export async function updateContact(id: string, data: z.infer<typeof contactSchema>) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'edit')) {
+            throw new Error('Unauthorized');
+        }
+
         const parsed = contactSchema.safeParse(data);
         if (!parsed.success) {
             return { success: false, error: parsed.error.issues[0].message };
@@ -129,7 +151,7 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
 
         const contact = await prisma.$transaction(async (tx) => {
             const updatedContact = await tx.client.update({
-                where: { id },
+                where: { id, businessId: ctx.businessId },
                 data: {
                     name: validData.name,
                     email: validData.email || null,
@@ -148,14 +170,18 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'UPDATE',
-                entity: 'Contact',
-                entityId: id,
-                details: { after: validData }
+                entity: 'Client',
+                entityId: updatedContact.name,
+                module: 'crm',
+                entityName: 'Contact',
+                details: validData
             });
 
             return updatedContact;
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/crm/contacts');
@@ -171,20 +197,29 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
 
 export async function deleteContact(id: string) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'crm', 'delete')) {
+            throw new Error('Unauthorized');
+        }
+
         // Wrap in transaction for audit logging
         await prisma.$transaction(async (tx) => {
-            await tx.client.update({
-                where: { id },
+            const contact = await tx.client.update({
+                where: { id, businessId: ctx.businessId },
                 data: { deletedAt: new Date() }
             });
 
             // Create audit log
-            await createAuditLog(tx, {
+            await logAudit({
                 action: 'SOFT_DELETE',
-                entity: 'Contact',
-                entityId: id,
+                entity: 'Client',
+                entityId: contact.name,
+                module: 'crm',
+                entityName: 'Contact',
                 details: { reason: 'User deleted contact' }
             });
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/crm/contacts');

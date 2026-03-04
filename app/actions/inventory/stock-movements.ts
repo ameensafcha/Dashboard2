@@ -5,6 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { StockMovementType, StockMovementReason } from '@prisma/client';
 import { toSafeNumber } from '@/lib/decimal';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
+import { logAudit } from '@/lib/logAudit';
 
 // ==========================================
 // Validation Schemas
@@ -36,7 +39,12 @@ export async function getStockMovements(filters?: {
     limit?: number;
 }) {
     try {
-        const where: any = {};
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'view')) {
+            throw new Error('Unauthorized');
+        }
+
+        const where: any = { businessId: ctx.businessId };
         if (filters?.rawMaterialId) where.rawMaterialId = filters.rawMaterialId;
         if (filters?.finishedProductId) where.finishedProductId = filters.finishedProductId;
         if (filters?.type && filters.type !== 'ALL') where.type = filters.type;
@@ -91,6 +99,11 @@ async function generateMovementId(tx: any): Promise<string> {
 
 export async function logMovement(data: LogMovementInput) {
     try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'inventory', 'log_movement')) {
+            throw new Error('Unauthorized');
+        }
+
         // Validate
         const parsed = logMovementSchema.safeParse(data);
         if (!parsed.success) {
@@ -111,6 +124,7 @@ export async function logMovement(data: LogMovementInput) {
             // 1. Create the movement log
             await tx.stockMovement.create({
                 data: {
+                    businessId: ctx.businessId,
                     movementId,
                     type: validated.type,
                     quantity: validated.quantity,
@@ -135,6 +149,18 @@ export async function logMovement(data: LogMovementInput) {
                     data: { currentStock: { increment: stockDelta } },
                 });
             }
+
+            // Create audit log
+            await logAudit({
+                action: 'CREATE',
+                entity: 'StockMovement',
+                entityId: movementId,
+                module: 'inventory',
+                entityName: 'Stock Movement',
+                details: validated
+            })
+        }, {
+            timeout: 15000
         });
 
         revalidatePath('/inventory/raw-materials');

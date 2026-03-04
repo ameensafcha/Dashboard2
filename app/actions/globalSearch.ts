@@ -1,6 +1,8 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { getBusinessContext } from '@/lib/getBusinessContext';
+import { hasPermission } from '@/lib/permissions';
 
 export interface SearchResult {
     id: string;
@@ -18,10 +20,16 @@ export async function performGlobalSearch(query: string): Promise<SearchResult[]
     const searchTerm = query.trim();
 
     try {
-        const [products, categories, batches, rndProjects, suppliers] = await Promise.all([
-            // Search Products
-            prisma.product.findMany({
+        const ctx = await getBusinessContext();
+
+        const searchPromises = [];
+
+        // Search Products (Check 'products.view')
+        if (hasPermission(ctx, 'products', 'view')) {
+            searchPromises.push(prisma.product.findMany({
                 where: {
+                    businessId: ctx.businessId,
+                    deletedAt: null,
                     OR: [
                         { name: { contains: searchTerm, mode: 'insensitive' } },
                         { skuPrefix: { contains: searchTerm, mode: 'insensitive' } },
@@ -29,32 +37,61 @@ export async function performGlobalSearch(query: string): Promise<SearchResult[]
                 },
                 take: 5,
                 select: { id: true, name: true, skuPrefix: true },
-            }),
-            // Search Categories
-            prisma.category.findMany({
-                where: { name: { contains: searchTerm, mode: 'insensitive' } },
+            }));
+        } else {
+            searchPromises.push(Promise.resolve([]));
+        }
+
+        // Search Categories (Check 'products.view')
+        if (hasPermission(ctx, 'products', 'view')) {
+            searchPromises.push(prisma.category.findMany({
+                where: { name: { contains: searchTerm, mode: 'insensitive' }, businessId: ctx.businessId, deletedAt: null },
                 take: 5,
                 select: { id: true, name: true },
-            }),
-            // Search Production Batches
-            prisma.productionBatch.findMany({
-                where: { batchNumber: { contains: searchTerm, mode: 'insensitive' } },
+            }));
+        } else {
+            searchPromises.push(Promise.resolve([]));
+        }
+
+        // Search Production Batches (Check 'production.view')
+        if (hasPermission(ctx, 'production', 'view')) {
+            searchPromises.push(prisma.productionBatch.findMany({
+                where: { batchNumber: { contains: searchTerm, mode: 'insensitive' }, businessId: ctx.businessId, deletedAt: null },
                 take: 5,
                 select: { id: true, batchNumber: true, status: true },
-            }),
-            // Search R&D Projects
-            prisma.rndProject.findMany({
-                where: { name: { contains: searchTerm, mode: 'insensitive' } },
+            }));
+        } else {
+            searchPromises.push(Promise.resolve([]));
+        }
+
+        // Search R&D Projects (Check 'production.view')
+        if (hasPermission(ctx, 'production', 'view')) {
+            searchPromises.push(prisma.rndProject.findMany({
+                where: { name: { contains: searchTerm, mode: 'insensitive' }, businessId: ctx.businessId },
                 take: 5,
                 select: { id: true, name: true, status: true },
-            }),
-            // Search Suppliers
-            prisma.supplier.findMany({
-                where: { name: { contains: searchTerm, mode: 'insensitive' } },
+            }));
+        } else {
+            searchPromises.push(Promise.resolve([]));
+        }
+
+        // Search Suppliers (Check 'inventory.view')
+        if (hasPermission(ctx, 'inventory', 'view')) {
+            searchPromises.push(prisma.supplier.findMany({
+                where: { name: { contains: searchTerm, mode: 'insensitive' }, businessId: ctx.businessId, deletedAt: null },
                 take: 5,
                 select: { id: true, name: true },
-            }),
-        ]);
+            }));
+        } else {
+            searchPromises.push(Promise.resolve([]));
+        }
+
+        const searchResults = await Promise.all(searchPromises);
+        const products = searchResults[0] as any[];
+        const categories = searchResults[1] as any[];
+        const batches = searchResults[2] as any[];
+        const rndProjects = searchResults[3] as any[];
+        const suppliers = searchResults[4] as any[];
 
         const results: SearchResult[] = [];
 

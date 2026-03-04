@@ -1,12 +1,15 @@
 import prisma from '@/lib/prisma';
+import { getBusinessContext } from '@/lib/getBusinessContext';
 
 export async function generateOrderNumber(): Promise<string> {
+    const ctx = await getBusinessContext();
     const currentYear = new Date().getFullYear();
     const prefix = `ORD-${currentYear}-`;
 
     const lastOrder = await prisma.order.findFirst({
         where: {
-            orderNumber: { startsWith: prefix }
+            orderNumber: { startsWith: prefix },
+            businessId: ctx.businessId,
         },
         orderBy: {
             orderNumber: 'desc'
