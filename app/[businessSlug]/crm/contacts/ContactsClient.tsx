@@ -17,13 +17,15 @@ import NewContactModal from './NewContactModal';
 import ContactDetailDrawer from './ContactDetailDrawer';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { Contact } from '@/stores/crmStore';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 interface ContactsClientProps {
     initialContacts: any[];
     initialCompanies: any[];
+    businessId: string;
 }
 
-function ContactsClientContent({ initialContacts, initialCompanies }: ContactsClientProps) {
+function ContactsClientContent({ initialContacts, initialCompanies, businessId }: ContactsClientProps) {
     const { t, language, isRTL } = useTranslation();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -38,8 +40,19 @@ function ContactsClientContent({ initialContacts, initialCompanies }: ContactsCl
         setCompanies,
         setIsNewContactModalOpen,
         setSelectedContact,
-        setIsContactDrawerOpen
+        setIsContactDrawerOpen,
+        upsertContact,
+        removeContact
     } = useCrmStore();
+
+    // Activate Realtime Sync for Contacts (table is 'clients')
+    useRealtimeSync({
+        table: 'clients',
+        businessId,
+        onInsert: (payload) => upsertContact(payload),
+        onUpdate: (payload) => upsertContact(payload),
+        onDelete: (payload) => removeContact(payload.id)
+    });
 
     const loadData = async (search = '', compId = filterCompanyId || undefined) => {
         setIsLoading(true);
@@ -307,7 +320,7 @@ function ContactsClientContent({ initialContacts, initialCompanies }: ContactsCl
     );
 }
 
-export default function ContactsClient({ initialContacts, initialCompanies }: ContactsClientProps) {
+export default function ContactsClient({ initialContacts, initialCompanies, businessId }: ContactsClientProps) {
     return (
         <Suspense fallback={
             <div className="p-4 sm:p-6 lg:p-10 flex items-center justify-center min-h-[500px]">
@@ -317,7 +330,7 @@ export default function ContactsClient({ initialContacts, initialCompanies }: Co
                 </div>
             </div>
         }>
-            <ContactsClientContent initialContacts={initialContacts} initialCompanies={initialCompanies} />
+            <ContactsClientContent initialContacts={initialContacts} initialCompanies={initialCompanies} businessId={businessId} />
         </Suspense>
     );
 }

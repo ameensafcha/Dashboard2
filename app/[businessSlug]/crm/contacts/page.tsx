@@ -7,7 +7,10 @@ export const metadata = {
     description: 'Manage individual clients, leads, and internal contacts.',
 };
 
+import { getBusinessContext } from '@/lib/getBusinessContext';
+
 export default async function ContactsPage() {
+    const ctx = await getBusinessContext();
     const [contacts, companies] = await Promise.all([
         getContacts(),
         getCompanies()
@@ -17,6 +20,7 @@ export default async function ContactsPage() {
         <ContactsClient
             initialContacts={contacts as any}
             initialCompanies={companies as any}
+            businessId={ctx.businessId}
         />
     );
 }

@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { toSafeNumber } from '@/lib/decimal';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
@@ -117,7 +117,7 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
         });
 
         revalidatePath('/crm/companies');
-        revalidatePath('/crm/companies');
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
         console.error('Error creating company:', error);
@@ -175,8 +175,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
         });
 
         revalidatePath('/crm/companies');
-        revalidatePath(`/crm/companies/${id}`);
-        revalidatePath('/crm/companies');
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
         console.error('Error updating company:', error);
@@ -214,7 +213,7 @@ export async function deleteCompany(id: string) {
         });
 
         revalidatePath('/crm/companies');
-        revalidatePath('/crm/companies');
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true };
     } catch (error) {
         console.error('Error deleting company:', error);

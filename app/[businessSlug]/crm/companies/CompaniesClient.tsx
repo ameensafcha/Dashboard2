@@ -17,14 +17,16 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { useRouter } from 'next/navigation';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 interface CompaniesClientProps {
     initialCompanies: any[];
     initialTiers: any[];
     initialCategories: any[];
+    businessId: string;
 }
 
-export default function CompaniesClient({ initialCompanies, initialTiers, initialCategories }: CompaniesClientProps) {
+export default function CompaniesClient({ initialCompanies, initialTiers, initialCategories, businessId }: CompaniesClientProps) {
     const { t, language, isRTL } = useTranslation();
     const router = useRouter();
     const {
@@ -34,8 +36,19 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
         setActiveCategories,
         setIsNewCompanyModalOpen,
         setSelectedCompany,
-        setIsCompanyDrawerOpen
+        setIsCompanyDrawerOpen,
+        upsertCompany,
+        removeCompany
     } = useCrmStore();
+
+    // Activate Realtime Sync for Companies
+    useRealtimeSync({
+        table: 'companies',
+        businessId,
+        onInsert: (payload) => upsertCompany(payload),
+        onUpdate: (payload) => upsertCompany(payload),
+        onDelete: (payload) => removeCompany(payload.id)
+    });
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);

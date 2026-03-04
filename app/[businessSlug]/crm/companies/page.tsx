@@ -8,7 +8,10 @@ export const metadata = {
     description: 'Manage B2B companies and wholesale accounts',
 };
 
+import { getBusinessContext } from '@/lib/getBusinessContext';
+
 export default async function CRMCompaniesPage() {
+    const ctx = await getBusinessContext();
     const [companies, tiers, categories] = await Promise.all([
         getCompanies(),
         getPricingTiers(),
@@ -20,6 +23,7 @@ export default async function CRMCompaniesPage() {
             initialCompanies={companies as any}
             initialTiers={tiers as any}
             initialCategories={categories as any}
+            businessId={ctx.businessId}
         />
     );
 }

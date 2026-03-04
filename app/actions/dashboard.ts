@@ -58,14 +58,28 @@ const getCachedKpis = (businessId: string) => unstable_cache(
         });
     },
     [`dashboard-kpis-${businessId}`],
-    { tags: [`dashboard-kpi`, `dashboard-kpi-${businessId}`] }
-)();
+    { tags: [`dashboard-kpi`, `dashboard-kpi-${businessId}`], revalidate: 3600 }
+);
+
+export async function revalidateDashboard() {
+    try {
+        const ctx = await getBusinessContext();
+        const { revalidateTag } = await import('next/cache');
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+        return { success: true };
+    } catch (e) {
+        return { success: false };
+    }
+}
 
 export async function getDashboardKpis() {
     try {
         const ctx = await getBusinessContext();
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
-        return await getCachedKpis(ctx.businessId);
+        return await getCachedKpis(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching KPIs:', error);
         return null;

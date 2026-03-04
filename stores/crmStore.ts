@@ -36,8 +36,8 @@ export type Company = {
     website: string | null;
     lifetimeValue: number;
     pricingTiers: CompanyPricingTier[];
-    createdAt: Date;
     updatedAt: Date;
+    deletedAt?: Date | string | null;
     _count?: {
         contacts: number;
         deals: number;
@@ -57,6 +57,7 @@ export type Contact = {
     city: string | null;
     notes: string | null;
     createdAt: Date;
+    deletedAt?: Date | string | null;
     company?: {
         id: string;
         name: string;
@@ -100,6 +101,8 @@ interface CrmStore {
     selectedCompany: Company | null;
 
     setCompanies: (companies: Company[]) => void;
+    upsertCompany: (company: Company) => void;
+    removeCompany: (companyId: string) => void;
     setActiveTiers: (tiers: PricingTier[]) => void;
     setActiveCategories: (categories: Category[]) => void;
     setIsNewCompanyModalOpen: (isOpen: boolean) => void;
@@ -113,6 +116,8 @@ interface CrmStore {
     selectedContact: Contact | null;
 
     setContacts: (contacts: Contact[]) => void;
+    upsertContact: (contact: Contact) => void;
+    removeContact: (contactId: string) => void;
     setIsNewContactModalOpen: (isOpen: boolean) => void;
     setIsContactDrawerOpen: (isOpen: boolean) => void;
     setSelectedContact: (contact: Contact | null) => void;
@@ -139,6 +144,21 @@ export const useCrmStore = create<CrmStore>((set) => ({
     selectedCompany: null,
 
     setCompanies: (companies) => set({ companies }),
+    upsertCompany: (company) => set((state) => {
+        if (company.deletedAt) {
+            return { companies: state.companies.filter(c => c.id !== company.id) };
+        }
+        const index = state.companies.findIndex(c => c.id === company.id);
+        if (index > -1) {
+            const newCompanies = [...state.companies];
+            newCompanies[index] = { ...newCompanies[index], ...company };
+            return { companies: newCompanies };
+        }
+        return { companies: [company, ...state.companies] };
+    }),
+    removeCompany: (companyId) => set((state) => ({
+        companies: state.companies.filter(c => c.id !== companyId)
+    })),
     setActiveTiers: (tiers) => set({ activeTiers: tiers }),
     setActiveCategories: (categories) => set({ activeCategories: categories }),
     setIsNewCompanyModalOpen: (isOpen) => set({ isNewCompanyModalOpen: isOpen }),
@@ -151,6 +171,21 @@ export const useCrmStore = create<CrmStore>((set) => ({
     selectedContact: null,
 
     setContacts: (contacts) => set({ contacts }),
+    upsertContact: (contact) => set((state) => {
+        if (contact.deletedAt) {
+            return { contacts: state.contacts.filter(c => c.id !== contact.id) };
+        }
+        const index = state.contacts.findIndex(c => c.id === contact.id);
+        if (index > -1) {
+            const newContacts = [...state.contacts];
+            newContacts[index] = { ...newContacts[index], ...contact };
+            return { contacts: newContacts };
+        }
+        return { contacts: [contact, ...state.contacts] };
+    }),
+    removeContact: (contactId) => set((state) => ({
+        contacts: state.contacts.filter(c => c.id !== contactId)
+    })),
     setIsNewContactModalOpen: (isOpen) => set({ isNewContactModalOpen: isOpen }),
     setIsContactDrawerOpen: (isOpen) => set({ isContactDrawerOpen: isOpen }),
     setSelectedContact: (contact) => set({ selectedContact: contact }),

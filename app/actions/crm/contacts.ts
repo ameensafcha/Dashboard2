@@ -189,7 +189,6 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
         revalidatePath('/crm/contacts');
         revalidatePath(`/crm/contacts/${id}`);
         revalidatePath('/crm/companies');
-        revalidatePath('/crm/contacts');
         revalidatePath('/');
 
         // Revalidate dashboard cache
