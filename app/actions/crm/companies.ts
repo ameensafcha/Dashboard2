@@ -7,6 +7,7 @@ import { toSafeNumber } from '@/lib/decimal';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
+import { serializeValues } from '@/lib/utils';
 
 const companySchema = z.object({
     name: z.string().min(1, 'Company name is required'),
@@ -61,30 +62,7 @@ export async function getCompanies(search?: string) {
             take: 200,
         });
 
-        // Safely transform Decimal to primitive numbers for client components
-        return companies.map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            industry: c.industry,
-            city: c.city,
-            website: c.website,
-            createdAt: c.createdAt,
-            updatedAt: c.updatedAt,
-            lifetimeValue: toSafeNumber(c.lifetimeValue, 2),
-            _count: c._count,
-            pricingTiers: c.companyPricingTiers.map((t: any) => ({
-                id: t.id,
-                categoryId: t.categoryId,
-                categoryName: t.category.name,
-                pricingTierId: t.pricingTierId,
-                tierName: t.pricingTier.tierName,
-                pricePerKg: toSafeNumber(t.pricingTier.pricePerKg, 2),
-                minOrderKg: toSafeNumber(t.pricingTier.minOrderKg, 3),
-                maxOrderKg: toSafeNumber(t.pricingTier.maxOrderKg, 3),
-                discountPercent: toSafeNumber(t.pricingTier.discountPercent, 2),
-                marginPercent: toSafeNumber(t.pricingTier.marginPercent, 2)
-            }))
-        }));
+        return serializeValues(companies);
     } catch (error) {
         console.error('Error fetching companies:', error);
         return [];
@@ -139,7 +117,7 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
         });
 
         revalidatePath('/crm/companies');
-        revalidatePath('/');
+        revalidatePath('/crm/companies');
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
         console.error('Error creating company:', error);
@@ -198,7 +176,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
 
         revalidatePath('/crm/companies');
         revalidatePath(`/crm/companies/${id}`);
-        revalidatePath('/');
+        revalidatePath('/crm/companies');
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
         console.error('Error updating company:', error);
@@ -236,7 +214,7 @@ export async function deleteCompany(id: string) {
         });
 
         revalidatePath('/crm/companies');
-        revalidatePath('/');
+        revalidatePath('/crm/companies');
         return { success: true };
     } catch (error) {
         console.error('Error deleting company:', error);

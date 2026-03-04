@@ -1,7 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { OrderStatus } from '@prisma/client';
 import { z } from 'zod';
 import { getBusinessContext } from '@/lib/getBusinessContext';
@@ -91,20 +91,8 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                     }
                 }
 
-                // P2: Generate movement IDs inside transaction using findFirst
+                // Generate movement prefix
                 const year = new Date().getFullYear();
-                const prefix = `SM-${year}`;
-                const lastMovement = await tx.stockMovement.findFirst({
-                    where: { movementId: { startsWith: prefix }, businessId: ctx.businessId },
-                    orderBy: { movementId: 'desc' },
-                    select: { movementId: true },
-                });
-                let counter = 0;
-                if (lastMovement) {
-                    const parts = lastMovement.movementId.split('-');
-                    const num = parseInt(parts[2]);
-                    if (!isNaN(num)) counter = num;
-                }
 
                 for (const item of order.orderItems) {
                     const fp = item.product.finishedProduct;
@@ -118,9 +106,10 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                             },
                         });
 
-                        // Create audit log
-                        counter++;
-                        const movementId = `${prefix}-${String(counter).padStart(4, '0')}`;
+                        // Create unique movement ID
+                        const timestamp = Date.now().toString(36).toUpperCase();
+                        const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+                        const movementId = `SM-${year}-${timestamp}-${random}`;
 
                         await tx.stockMovement.create({
                             data: {
@@ -162,21 +151,11 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 
             // --- DELIVERED: Auto-create revenue transaction ---
             if (newStatus === 'delivered') {
-                // P2: Generate TXN ID inside transaction using findFirst
+                // Generate unique transaction ID
                 const year = new Date().getFullYear();
-                const txnPrefix = `TXN-${year}`;
-                const lastTxn = await tx.transaction.findFirst({
-                    where: { transactionId: { startsWith: txnPrefix }, businessId: ctx.businessId },
-                    orderBy: { transactionId: 'desc' },
-                    select: { transactionId: true },
-                });
-                let txnNum = 1;
-                if (lastTxn) {
-                    const parts = lastTxn.transactionId.split('-');
-                    const num = parseInt(parts[2]);
-                    if (!isNaN(num)) txnNum = num + 1;
-                }
-                const txnId = `${txnPrefix}-${String(txnNum).padStart(4, '0')}`;
+                const timestamp = Date.now().toString(36).toUpperCase();
+                const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+                const txnId = `TXN-${year}-${timestamp}-${random}`;
 
                 await tx.transaction.create({
                     data: {
@@ -188,11 +167,6 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                         referenceId: order.orderNumber,
                         orderId: order.id,
                     },
-                });
-
-                await tx.order.update({
-                    where: { id: orderId },
-                    data: { fulfillmentStatus: 'fulfilled' },
                 });
             }
 
@@ -214,12 +188,20 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
                     after: newStatus
                 }
             });
-        });
+        }, { timeout: 15000 });
+
 
         revalidatePath('/sales/orders');
         revalidatePath('/inventory/finished');
         revalidatePath('/finance');
         revalidatePath('/');
+
+        // Revalidate granular dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+
         return { success: true };
     } catch (error) {
         console.error('Error updating order status:', error);

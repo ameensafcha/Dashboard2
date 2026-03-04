@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getProducts, ProductsResponse } from '@/app/actions/product/actions';
-import { getProductionBatches, createProductionBatch, ProductionBatchWithProduct, updateProductionBatch, deleteProductionBatch } from '@/app/actions/production';
+import { getProductionBatches, createProductionBatch, ProductionBatchWithProduct, updateProductionBatch, deleteProductionBatch, getCapacityStatus } from '@/app/actions/production';
 import { getRawMaterials } from '@/app/actions/inventory/raw-materials';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,7 @@ const statusColors: Record<string, string> = {
     failed: 'bg-red-500',
 };
 
-export default function BatchesClient() {
+export default function BatchesClient({ initialData }: { initialData?: any }) {
     const { t, isRTL } = useTranslation();
     const {
         batches,
@@ -64,24 +64,35 @@ export default function BatchesClient() {
     type MaterialRow = { rawMaterialId: string; materialName: string; quantityUsed: number };
     const [materialRows, setMaterialRows] = useState<MaterialRow[]>([]);
     const [rawMaterials, setRawMaterials] = useState<{ id: string; name: string; currentStock: number }[]>([]);
+    const [capacityStatus, setCapacityStatus] = useState<{ usedKg: number; maxKg: number; remainingKg: number; utilizationPercent: number } | null>(null);
+    const isFirstRender = useRef(true);
 
     const loadData = async () => {
-        const [batchesData, productsData, rmData] = await Promise.all([
+        const [batchesData, productsData, rmData, capData] = await Promise.all([
             getProductionBatches(),
             getProducts({ page: 1, limit: 100, search: '', status: '' }) as Promise<ProductsResponse>,
             getRawMaterials(),
+            getCapacityStatus(),
         ]);
         setBatches(batchesData);
         setProducts(productsData.products || []);
-        if (rmData.success && rmData.materials) {
+        if (rmData.success && 'materials' in rmData) {
             setRawMaterials(rmData.materials.map((m: any) => ({ id: m.id, name: m.name, currentStock: m.currentStock })));
         }
+        setCapacityStatus(capData);
     };
 
     useEffect(() => {
-        loadData();
+        if (initialData) {
+            setBatches(initialData.batches);
+            setProducts(initialData.products);
+            setRawMaterials(initialData.rawMaterials);
+            setCapacityStatus(initialData.capacity);
+        } else {
+            loadData();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [initialData]);
 
     const handleSubmit = async () => {
         if (!formData.productId || formData.targetQty <= 0) {
@@ -265,6 +276,44 @@ export default function BatchesClient() {
                     </div>
 
                     <div className="p-6 grid gap-6 overflow-y-auto max-h-[65vh]">
+
+                        {/* Capacity Warning Banner */}
+                        {capacityStatus && (() => {
+                            const willExceed = formData.targetQty > 0 && formData.targetQty > capacityStatus.remainingKg;
+                            const willBeClose = formData.targetQty > 0 && !willExceed && (capacityStatus.usedKg + formData.targetQty) / capacityStatus.maxKg >= 0.9;
+                            const color = willExceed ? 'border-red-500/60 bg-red-500/10 text-red-400' : willBeClose ? 'border-amber-500/60 bg-amber-500/10 text-amber-400' : 'border-emerald-500/40 bg-emerald-500/5 text-emerald-400';
+                            return (
+                                <div className={`flex items-start gap-3 p-3 rounded-xl border text-xs font-semibold ${color}`}>
+                                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                                    <div>
+                                        {willExceed ? (
+                                            <>
+                                                <span className="font-black uppercase tracking-wide">⚠ Capacity Limit Exceeded</span>
+                                                <p className="font-normal opacity-90 mt-0.5">
+                                                    This batch ({formData.targetQty} kg) exceeds the remaining capacity of {capacityStatus.remainingKg.toFixed(1)} kg this month.
+                                                    Monthly limit: {capacityStatus.maxKg} kg | Used: {capacityStatus.usedKg.toFixed(1)} kg
+                                                </p>
+                                            </>
+                                        ) : willBeClose ? (
+                                            <>
+                                                <span className="font-black uppercase tracking-wide">📊 Near Capacity</span>
+                                                <p className="font-normal opacity-90 mt-0.5">
+                                                    After this batch, utilization will reach {Math.round(((capacityStatus.usedKg + formData.targetQty) / capacityStatus.maxKg) * 100)}% of {capacityStatus.maxKg} kg monthly limit.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="font-black uppercase tracking-wide">✓ Capacity Available</span>
+                                                <p className="font-normal opacity-90 mt-0.5">
+                                                    {capacityStatus.remainingKg.toFixed(1)} kg remaining this month ({capacityStatus.utilizationPercent}% used)
+                                                </p>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-2">
                                 <Label className={cn("text-xs font-bold uppercase text-[var(--text-secondary)] block", isRTL ? "text-right" : "")}>{t.product} <span className="text-red-500">*</span></Label>

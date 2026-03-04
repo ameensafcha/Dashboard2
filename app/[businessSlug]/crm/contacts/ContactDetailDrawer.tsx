@@ -136,7 +136,7 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
                             <div className="flex gap-2">
                                 {!isEditing && (
                                     <>
-                                        <PermissionGuard requiredPermission="crm:edit" showLock>
+                                        <PermissionGuard module="crm" action="edit" mode="lock">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -147,7 +147,7 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
                                                 {t.edit}
                                             </Button>
                                         </PermissionGuard>
-                                        <PermissionGuard requiredPermission="crm:delete" showLock>
+                                        <PermissionGuard module="crm" action="delete" mode="lock">
                                             <Button
                                                 variant="outline"
                                                 size="sm"

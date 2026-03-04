@@ -105,7 +105,7 @@ export default function ProductionDashboardClient({
                         className="p-6 border-[var(--border)] bg-[var(--card)] rounded-2xl hover:border-[var(--primary)]/40 transition-all border-b-4 border-b-transparent hover:border-b-[var(--primary)] shadow-sm"
                     >
                         <div className="flex justify-between items-start">
-                            <div className="space-y-2">
+                            <div className="space-y-2 flex-1 min-w-0">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-disabled)]">{stat.title}</p>
                                 <h3 className={cn("text-2xl font-black tracking-tight", stat.color)}>
                                     {stat.value}
@@ -113,8 +113,23 @@ export default function ProductionDashboardClient({
                                 <p className="text-[10px] font-bold text-[var(--text-muted)] tracking-tight opacity-70">
                                     {stat.sub}
                                 </p>
+                                {/* Progress bar for Capacity Utilization card only */}
+                                {i === 1 && (
+                                    <div className="pt-2 pr-2">
+                                        <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                            <div
+                                                className={cn(
+                                                    "h-full rounded-full transition-all duration-700",
+                                                    utilizationPercent >= 90 ? "bg-red-500" :
+                                                        utilizationPercent >= 70 ? "bg-amber-400" : "bg-blue-400"
+                                                )}
+                                                style={{ width: `${Math.min(utilizationPercent, 100)}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border", stat.bg, stat.border)}>
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border shrink-0 ml-2", stat.bg, stat.border)}>
                                 {stat.icon}
                             </div>
                         </div>

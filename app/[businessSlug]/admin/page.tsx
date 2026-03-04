@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Users, Shield, History, ArrowRight } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
 
 export default async function AdminPage({
     params,

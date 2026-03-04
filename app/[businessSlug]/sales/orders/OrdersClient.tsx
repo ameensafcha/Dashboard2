@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,9 +30,11 @@ import {
 import OrderDetailDrawer from '@/components/sales/OrderDetailDrawer';
 import { cn } from '@/lib/utils';
 
-function OrdersClientContent() {
+function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
     const { orders, setOrders, isLoading, setIsLoading, openOrderDrawer } = useSalesStore();
     const { t, isRTL, language } = useTranslation();
+
+    const isFirstRender = useRef(true);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [channelFilter, setChannelFilter] = useState('all');
@@ -45,13 +47,20 @@ function OrdersClientContent() {
             channelFilter as any,
             statusFilter as any
         );
-        if (result.success && result.orders) {
-            setOrders(result.orders);
+        if (result.success && 'orders' in result) {
+            setOrders(result.orders as any);
         }
         setIsLoading(false);
     };
 
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            if (initialOrders && initialOrders.length > 0) {
+                setOrders(initialOrders);
+                return;
+            }
+        }
         fetchOrders();
     }, [searchQuery, channelFilter, statusFilter]);
 
@@ -302,7 +311,7 @@ function OrdersClientContent() {
     );
 }
 
-export default function OrdersClient() {
+export default function OrdersClient({ initialOrders = [] }: { initialOrders?: any[] }) {
     return (
         <Suspense fallback={
             <div className="p-4 sm:p-6 lg:p-10 flex items-center justify-center min-h-[500px]">
@@ -312,7 +321,7 @@ export default function OrdersClient() {
                 </div>
             </div>
         }>
-            <OrdersClientContent />
+            <OrdersClientContent initialOrders={initialOrders} />
         </Suspense>
     );
 }

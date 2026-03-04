@@ -54,7 +54,7 @@ export async function createSupplier(data: Omit<Supplier, 'id' | 'createdAt'>): 
   });
   revalidatePath('/products/suppliers');
   revalidatePath('/inventory/raw-materials');
-  revalidatePath('/');
+  revalidatePath('/suppliers');
   return result;
 }
 
@@ -71,7 +71,7 @@ export async function updateSupplier(id: string, data: Partial<Omit<Supplier, 'i
     });
     revalidatePath('/products/suppliers');
     revalidatePath('/inventory/raw-materials');
-    revalidatePath('/');
+    revalidatePath('/suppliers');
     return { success: true };
   } catch (error) {
     console.error('Error updating supplier:', error);
@@ -92,7 +92,7 @@ export async function deleteSupplier(id: string) {
     });
     revalidatePath('/products/suppliers');
     revalidatePath('/inventory/raw-materials');
-    revalidatePath('/');
+    revalidatePath('/suppliers');
     return { success: true };
   } catch (error) {
     console.error('Error deleting supplier:', error);

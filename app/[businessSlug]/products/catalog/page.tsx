@@ -8,7 +8,6 @@ export const metadata = {
   description: 'Manage your product catalog',
 };
 
-export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage({
   searchParams,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/card';
@@ -43,7 +43,13 @@ import DealDetailDrawer from './DealDetailDrawer';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 
-export default function PipelineClient() {
+interface PipelineClientProps {
+    initialDeals: any[];
+    initialCompanies: any[];
+    initialContacts: any[];
+}
+
+export default function PipelineClient({ initialDeals, initialCompanies, initialContacts }: PipelineClientProps) {
     const { t, isRTL } = useTranslation();
     const {
         deals,
@@ -58,7 +64,8 @@ export default function PipelineClient() {
 
     const { can } = usePermissions();
     const router = useRouter();
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const isInitialized = useRef(false);
     const [isConverting, setIsConverting] = useState(false);
     const [dealToConvert, setDealToConvert] = useState<Deal | null>(null);
 
@@ -91,6 +98,13 @@ export default function PipelineClient() {
     };
 
     useEffect(() => {
+        if (!isInitialized.current) {
+            setDeals(initialDeals as any);
+            setCompanies(initialCompanies as any);
+            setContacts(initialContacts as any);
+            isInitialized.current = true;
+            return;
+        }
         loadData();
     }, []);
 

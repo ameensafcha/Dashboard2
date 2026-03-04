@@ -7,6 +7,7 @@ import { DealStage } from '@prisma/client';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
+import { serializeValues } from '@/lib/utils';
 
 const dealSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -58,10 +59,7 @@ export async function getDeals(search?: string) {
             take: 200,
         });
 
-        return deals.map(deal => ({
-            ...deal,
-            value: Number(deal.value),
-        }));
+        return serializeValues(deals);
     } catch (error) {
         console.error('Error fetching deals:', error);
         return [];
@@ -107,7 +105,7 @@ export async function createDeal(data: z.infer<typeof dealSchema>) {
         });
 
         revalidatePath('/crm/pipeline');
-        revalidatePath('/');
+        revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
     } catch (error: any) {
         console.error('Error creating deal:', error);
@@ -152,7 +150,7 @@ export async function updateDeal(id: string, data: Partial<z.infer<typeof dealSc
         });
 
         revalidatePath('/crm/pipeline');
-        revalidatePath('/');
+        revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
     } catch (error) {
         console.error('Error updating deal:', error);
@@ -194,7 +192,7 @@ export async function updateDealStage(id: string, stage: DealStage) {
         });
 
         revalidatePath('/crm/pipeline');
-        revalidatePath('/');
+        revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
     } catch (error) {
         console.error('Error updating deal stage:', error);
@@ -230,7 +228,7 @@ export async function deleteDeal(id: string) {
         });
 
         revalidatePath('/crm/pipeline');
-        revalidatePath('/');
+        revalidatePath('/crm/deals');
         return { success: true };
     } catch (error) {
         console.error('Error deleting deal:', error);
@@ -289,7 +287,7 @@ export async function convertDealToOrder(dealId: string) {
 
         revalidatePath('/sales/orders');
         revalidatePath('/crm/pipeline');
-        revalidatePath('/');
+        revalidatePath('/crm/deals');
 
         return { success: true, orderId: order.id };
     } catch (error) {

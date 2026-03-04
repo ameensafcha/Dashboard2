@@ -6,7 +6,6 @@ import { Users, Shield, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { AddRoleForm } from './AddRoleForm';
 
-export const dynamic = 'force-dynamic';
 
 export default async function RolesPage({ params }: { params: Promise<{ businessSlug: string }> }) {
     const { businessSlug } = await params;

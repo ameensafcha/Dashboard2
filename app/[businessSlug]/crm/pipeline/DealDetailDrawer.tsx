@@ -145,12 +145,12 @@ export default function DealDetailDrawer({ onDealUpdated }: { onDealUpdated: () 
 
                             {!isEditing && (
                                 <div className="flex gap-2">
-                                    <PermissionGuard requiredPermission="crm:edit" showLock>
+                                    <PermissionGuard module="crm" action="edit" mode="lock">
                                         <Button variant="outline" size="icon" onClick={() => setIsEditing(true)} className="h-10 w-10 rounded-xl border-[var(--border)] bg-[var(--card)] hover:bg-[var(--primary)] hover:text-white transition-all">
                                             <Edit className="h-4 w-4" />
                                         </Button>
                                     </PermissionGuard>
-                                    <PermissionGuard requiredPermission="crm:delete" showLock>
+                                    <PermissionGuard module="crm" action="delete" mode="lock">
                                         <Button variant="outline" size="icon" onClick={() => setIsDeleteDialogOpen(true)} className="h-10 w-10 rounded-xl border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all">
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

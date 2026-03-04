@@ -19,4 +19,3 @@ export default async function InventoryLayout({
     return <>{children}</>;
 }
 
-export const dynamic = 'force-dynamic';

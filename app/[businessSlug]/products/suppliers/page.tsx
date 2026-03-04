@@ -2,7 +2,6 @@ import { Metadata } from 'next';
 import SuppliersClient from './SuppliersClient';
 import { getSuppliers } from '@/app/actions/suppliers';
 
-export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Suppliers - Safcha Dashboard',

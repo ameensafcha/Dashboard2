@@ -3,13 +3,15 @@
 import Image from 'next/image';
 import { useAppStore } from '@/stores/appStore';
 import { productStatuses, sfdaStatuses } from '@/app/actions/product/types';
-import { Edit, Package, Trash2, Calendar, Coffee, FileCheck, DollarSign, Scale, Hash, LayoutGrid, Tag, FileText } from 'lucide-react';
+import { Edit, Package, Trash2, Calendar, Coffee, FileCheck, DollarSign, Scale, Hash, LayoutGrid, Tag, FileText, BookOpen } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProductsResponse } from '@/app/actions/product/actions';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
+import ProductRecipeModal from './ProductRecipeModal';
+import { useState } from 'react';
 
 type ProductType = ProductsResponse['products'][0];
 
@@ -36,8 +38,15 @@ export default function ProductViewModal({
 }: ProductViewModalProps) {
     const { isRTL } = useAppStore();
     const { t } = useTranslation();
+    const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
 
     if (!product) return null;
+
+    const laborCost = Number(product.laborCost || 0);
+    const packagingCost = Number(product.packagingCost || 0);
+    const overheadCost = Number(product.overheadCost || 0);
+    const totalCOGS = Number(product.totalCOGS || 0);
+    const materialCost = Math.max(0, totalCOGS - laborCost - packagingCost - overheadCost);
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -104,19 +113,56 @@ export default function ProductViewModal({
 
                             {/* Pricing Card */}
                             <div className="bg-[var(--card)] p-6 rounded-xl border border-[var(--border)] shadow-sm space-y-6">
-                                <h4 className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.2em] flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                                    <DollarSign className="w-3.5 h-3.5 text-[var(--primary)]" />
-                                    {isRTL ? 'التسعير' : 'Pricing'}
-                                </h4>
+                                <div className={cn("flex justify-between items-center group", isRTL ? "flex-row-reverse" : "")}>
+                                    <h4 className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-[0.2em] flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                                        <DollarSign className="w-3.5 h-3.5 text-[var(--primary)]" />
+                                        {isRTL ? 'بيانات التكلفة والتسعير' : 'Pricing & Costs'}
+                                    </h4>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setIsRecipeModalOpen(true)}
+                                        className="h-7 text-[10px] uppercase font-bold tracking-wider px-3 border-[#E8A838] text-[#E8A838] hover:bg-[#E8A838]/10"
+                                    >
+                                        <BookOpen className="w-3.5 h-3.5 mr-1" />
+                                        {isRTL ? 'إدارة الوصفة' : 'BOM / Recipe'}
+                                    </Button>
+                                </div>
 
                                 <div className="space-y-4">
-                                    <div className={cn("flex justify-between items-center group", isRTL ? "flex-row-reverse" : "")}>
-                                        <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'التكلفة' : 'Cost'}</span>
-                                        <span className="text-sm font-bold text-[var(--text-primary)]">SAR {Number(product.baseCost).toFixed(2)}</span>
+                                    <div className="space-y-2.5 bg-[var(--muted)]/30 p-4 rounded-lg border border-[var(--border)]">
+                                        <div className={cn("flex justify-between items-center", isRTL ? "flex-row-reverse" : "")}>
+                                            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{isRTL ? 'تكلفة المواد' : 'Material Cost'}</span>
+                                            <span className="text-xs font-semibold text-[var(--text-primary)]">SAR {materialCost.toFixed(2)}</span>
+                                        </div>
+                                        <div className={cn("flex justify-between items-center", isRTL ? "flex-row-reverse" : "")}>
+                                            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{isRTL ? 'تكلفة العمل' : 'Labor Cost'}</span>
+                                            <span className="text-xs font-semibold text-[var(--text-primary)]">SAR {laborCost.toFixed(2)}</span>
+                                        </div>
+                                        <div className={cn("flex justify-between items-center", isRTL ? "flex-row-reverse" : "")}>
+                                            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{isRTL ? 'التغليف' : 'Packaging'}</span>
+                                            <span className="text-xs font-semibold text-[var(--text-primary)]">SAR {packagingCost.toFixed(2)}</span>
+                                        </div>
+                                        <div className={cn("flex justify-between items-center", isRTL ? "flex-row-reverse" : "")}>
+                                            <span className="text-[11px] font-medium text-[var(--text-secondary)]">{isRTL ? 'نفقات عامة' : 'Overhead'}</span>
+                                            <span className="text-xs font-semibold text-[var(--text-primary)]">SAR {overheadCost.toFixed(2)}</span>
+                                        </div>
+                                        <div className={cn("flex justify-between items-center pt-2.5 mt-2.5 border-t border-[var(--border)]", isRTL ? "flex-row-reverse" : "")}>
+                                            <span className="text-[11px] font-bold text-[var(--text-primary)] uppercase tracking-wider">{isRTL ? 'التكلفة الإجمالية (COGS)' : 'Total Cost (COGS)'}</span>
+                                            <span className="text-sm font-bold text-[var(--text-primary)]">SAR {totalCOGS.toFixed(2)}</span>
+                                        </div>
                                     </div>
-                                    <div className={cn("flex justify-between items-center pt-2 border-t border-[var(--border)]", isRTL ? "flex-row-reverse" : "")}>
-                                        <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'السعر' : 'Price'}</span>
+
+                                    <div className={cn("flex justify-between items-center group pt-3 border-t border-[var(--border)]/50", isRTL ? "flex-row-reverse" : "")}>
+                                        <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'السعر' : 'Selling Price'}</span>
                                         <span className="text-xl font-bold text-[var(--primary)]">SAR {Number(product.baseRetailPrice).toFixed(2)}</span>
+                                    </div>
+
+                                    <div className={cn("flex justify-between items-center group pt-3", isRTL ? "flex-row-reverse" : "")}>
+                                        <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{isRTL ? 'هامش الربح' : 'Margin %'}</span>
+                                        <Badge variant="outline" className={Number(product.marginPercent) > 0 ? "border-green-500 text-green-500 font-bold bg-green-50 text-xs px-2 py-0.5" : "border-red-500 text-red-500 font-bold bg-red-50 text-xs px-2 py-0.5"}>
+                                            {Number(product.marginPercent || 0).toFixed(1)}%
+                                        </Badge>
                                     </div>
                                 </div>
                             </div>
@@ -170,26 +216,26 @@ export default function ProductViewModal({
                                     </div>
                                     <DetailBox icon={Hash} label={isRTL ? 'المرجع FDA' : 'SFDA Reference'} value={product.sfdaReference || 'N/A'} />
                                 </div>
+                                {/* Key Ingredients */}
+                                {product.keyIngredients && (
+                                    <div className="space-y-4 pt-10 border-t border-[var(--border)]/10">
+                                        <h3 className={cn("text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                                            <Coffee className="w-4 h-4 text-[#E8A838]" />
+                                            {isRTL ? 'المكونات الأساسية' : 'Key Ingredients'}
+                                        </h3>
+                                        <div className="bg-[var(--muted)]/30 p-6 rounded-xl text-sm border border-[var(--border)] text-[var(--text-primary)] leading-relaxed italic shadow-sm">
+                                            &quot;{product.keyIngredients}&quot;
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Bottom Sections: Full Width */}
-                    <div className="space-y-10 pt-10 border-t border-[var(--border)]/10">
-                        {/* Ingredients */}
-                        {product.keyIngredients && (
-                            <div className="space-y-4">
-                                <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest", isRTL ? "text-right" : "")}>
-                                    {isRTL ? 'المكونات الأساسية' : 'Key Ingredients'}
-                                </p>
-                                <div className="bg-[var(--muted)]/30 p-6 rounded-xl text-sm border border-[var(--border)] text-[var(--text-primary)] leading-relaxed italic shadow-sm">
-                                    &quot;{product.keyIngredients}&quot;
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Description */}
-                        {product.description && (
+                    {product.description && (
+                        <div className="space-y-10 pt-10 border-t border-[var(--border)]/10">
+                            {/* Description */}
                             <div className="space-y-4">
                                 <p className={cn("text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest", isRTL ? "text-right" : "")}>
                                     {isRTL ? 'الوصف الكامل' : 'Full Description'}
@@ -198,10 +244,18 @@ export default function ProductViewModal({
                                     {product.description}
                                 </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </DialogContent>
+
+            {isRecipeModalOpen && (
+                <ProductRecipeModal
+                    isOpen={isRecipeModalOpen}
+                    onClose={() => setIsRecipeModalOpen(false)}
+                    product={product}
+                />
+            )}
         </Dialog>
     );
 }

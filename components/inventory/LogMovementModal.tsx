@@ -101,7 +101,7 @@ export default function LogMovementModal({ targetType, targetId, targetName, onS
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Quantity</Label>
+                            <Label>Quantity {targetType === 'raw' ? '(kg)' : ''}</Label>
                             <Input
                                 type="number"
                                 min="0.001"

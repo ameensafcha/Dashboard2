@@ -1,13 +1,22 @@
-import { getDashboardData } from '@/app/actions/dashboard';
-import DashboardClient from './DashboardClient';
+import { Suspense } from 'react';
 import { Clock, Sparkles } from 'lucide-react';
 import { redirect } from 'next/navigation';
-export const dynamic = 'force-dynamic';
+import KpiSection from '@/components/dashboard/KpiSection';
+import RevenueTrendSection from '@/components/dashboard/RevenueTrendSection';
+import SalesChannelSection from '@/components/dashboard/SalesChannelSection';
+import ActivityFeedSection from '@/components/dashboard/ActivityFeedSection';
+import LowStockAlertsSection from '@/components/dashboard/LowStockAlertsSection';
+import QuickActions from '@/components/dashboard/QuickActions';
+import DashboardWrapper from '@/components/dashboard/DashboardWrapper';
+
+
+function SectionSkeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-muted/20 rounded-2xl ${className}`} />;
+}
 
 export default async function BusinessHomePage({ params }: { params: Promise<{ businessSlug: string }> }) {
   const { businessSlug } = await params;
 
-  // Show Coming Soon screen for any non-Safcha business
   if (businessSlug !== 'safcha') {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center text-center space-y-6">
@@ -39,17 +48,42 @@ export default async function BusinessHomePage({ params }: { params: Promise<{ b
     );
   }
 
-  try {
-    const data = await getDashboardData();
-    return (
-      <div className="p-4 sm:p-6">
-        <DashboardClient data={data} />
-      </div>
-    );
-  } catch (err) {
-    if (err instanceof Error && err.message === 'Unauthorized') {
-      redirect(`/${businessSlug}/welcome`);
-    }
-    throw err;
-  }
+  return (
+    <div className="p-4 sm:p-6">
+      <DashboardWrapper>
+        <Suspense fallback={<SectionSkeleton className="h-40 w-full" />}>
+          <KpiSection />
+        </Suspense>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-3">
+            <Suspense fallback={<SectionSkeleton className="h-[300px] w-full" />}>
+              <RevenueTrendSection />
+            </Suspense>
+          </div>
+          <div className="lg:col-span-2">
+            <Suspense fallback={<SectionSkeleton className="h-[300px] w-full" />}>
+              <SalesChannelSection />
+            </Suspense>
+          </div>
+        </div>
+
+        <Suspense fallback={null}>
+          <LowStockAlertsSection />
+        </Suspense>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <QuickActions />
+          </div>
+          <div className="lg:col-span-2">
+            <Suspense fallback={<SectionSkeleton className="h-[400px] w-full" />}>
+              <ActivityFeedSection />
+            </Suspense>
+          </div>
+        </div>
+      </DashboardWrapper>
+    </div>
+  );
 }
+

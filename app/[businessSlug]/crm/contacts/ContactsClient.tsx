@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,12 @@ import ContactDetailDrawer from './ContactDetailDrawer';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { Contact } from '@/stores/crmStore';
 
-function ContactsClientContent() {
+interface ContactsClientProps {
+    initialContacts: any[];
+    initialCompanies: any[];
+}
+
+function ContactsClientContent({ initialContacts, initialCompanies }: ContactsClientProps) {
     const { t, language, isRTL } = useTranslation();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -36,9 +41,6 @@ function ContactsClientContent() {
         setIsContactDrawerOpen
     } = useCrmStore();
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-
     const loadData = async (search = '', compId = filterCompanyId || undefined) => {
         setIsLoading(true);
         try {
@@ -55,10 +57,21 @@ function ContactsClientContent() {
         }
     };
 
+    const isInitialized = useRef(false);
+
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
     useEffect(() => {
+        if (!isInitialized.current) {
+            setContacts(initialContacts as any);
+            setCompanies(initialCompanies as any);
+            isInitialized.current = true;
+            return;
+        }
         loadData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [filterCompanyId]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -294,7 +307,7 @@ function ContactsClientContent() {
     );
 }
 
-export default function ContactsClient() {
+export default function ContactsClient({ initialContacts, initialCompanies }: ContactsClientProps) {
     return (
         <Suspense fallback={
             <div className="p-4 sm:p-6 lg:p-10 flex items-center justify-center min-h-[500px]">
@@ -304,7 +317,7 @@ export default function ContactsClient() {
                 </div>
             </div>
         }>
-            <ContactsClientContent />
+            <ContactsClientContent initialContacts={initialContacts} initialCompanies={initialCompanies} />
         </Suspense>
     );
 }

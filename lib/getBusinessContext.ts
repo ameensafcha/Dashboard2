@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import prisma from '@/lib/prisma'
+import { cache } from 'react'
 
-export async function getBusinessContext(slug?: string) {
+async function getBusinessContextInternal(slug?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('UNAUTHORIZED')
@@ -45,3 +46,6 @@ export async function getBusinessContext(slug?: string) {
         role: businessUser.role,
     }
 }
+
+export const getBusinessContext = cache(getBusinessContextInternal)
+

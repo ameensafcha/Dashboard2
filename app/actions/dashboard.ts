@@ -3,89 +3,41 @@
 import prisma from '@/lib/prisma';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
+import { serializeValues } from '@/lib/utils';
+import { unstable_cache } from 'next/cache';
 
-export async function getDashboardData() {
-    try {
-        const ctx = await getBusinessContext();
-        if (!hasPermission(ctx, 'dashboard', 'view')) {
-            throw new Error('Unauthorized');
-        }
-
+/**
+ * KPI DATA (Revenue, Profit, Inventory Value, etc.)
+ */
+const getCachedKpis = (businessId: string) => unstable_cache(
+    async () => {
         const now = new Date();
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
-        // ===================== ALL QUERIES IN ONE PARALLEL BATCH =====================
-        const [
-            revMTD_res, revLast_res, expMTD_res, expLast_res, ordMTD_res, ordLast_res, clientRes,
-            rawInvRes, finInvRes, lowRawRes, lowFinRes, revTrendRes, salesChanRes, activityFeed
-        ] = await Promise.all([
-            // --- KPIs ---
-            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
-            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
-            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
-            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId }, _sum: { amount: true } }),
-            prisma.order.count({ where: { date: { gte: firstOfMonth }, businessId: ctx.businessId } }),
-            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId } }),
-            prisma.client.count({ where: { deletedAt: null, businessId: ctx.businessId } }),
-            // --- Inventory ---
-            prisma.$queryRaw<[{ total: number }]>`SELECT COALESCE(SUM(current_stock * unit_cost), 0)::float AS total FROM raw_materials`,
-            prisma.$queryRaw<[{ total: number }]>`SELECT COALESCE(SUM(current_stock * retail_price), 0)::float AS total FROM finished_products`,
-            // --- Low Stock ---
-            prisma.rawMaterial.findMany({
-                where: { reorderThreshold: { not: null }, deletedAt: null, businessId: ctx.businessId },
-                select: { name: true, sku: true, currentStock: true, reorderThreshold: true }
-            }),
+        const [revMTD_res, revLast_res, expMTD_res, expLast_res, ordMTD_res, ordLast_res, clientRes, rawInvRes, products_for_cost] = await Promise.all([
+            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfMonth }, businessId }, _sum: { amount: true } }),
+            prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId }, _sum: { amount: true } }),
+            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfMonth }, businessId }, _sum: { amount: true } }),
+            prisma.transaction.aggregate({ where: { type: 'expense', date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId }, _sum: { amount: true } }),
+            prisma.order.count({ where: { date: { gte: firstOfMonth }, businessId } }),
+            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId } }),
+            prisma.client.count({ where: { deletedAt: null, businessId } }),
+            prisma.$queryRaw<[{ total: number }]>`SELECT COALESCE(SUM(current_stock * unit_cost), 0)::float AS total FROM raw_materials WHERE business_id = ${businessId} AND deleted_at IS NULL`,
             prisma.finishedProduct.findMany({
-                select: { currentStock: true, reservedStock: true, reorderThreshold: true, sku: true, variant: true, product: { select: { name: true } } },
-                where: { reorderThreshold: { not: null, gt: 0 }, businessId: ctx.businessId, product: { deletedAt: null } },
-            }),
-            // --- Trend ---
-            prisma.$queryRaw<{ month: Date; revenue: number; expenses: number }[]>`
-                SELECT DATE_TRUNC('month', date) AS month,
-                COALESCE(SUM(CASE WHEN type = 'revenue' THEN amount ELSE 0 END), 0)::float AS revenue,
-                COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)::float AS expenses
-                FROM transactions WHERE date >= ${sixMonthsAgo} AND business_id = ${ctx.businessId} GROUP BY DATE_TRUNC('month', date) ORDER BY month ASC
-            `,
-            // --- Channels ---
-            prisma.order.groupBy({ by: ['channel'], where: { date: { gte: firstOfMonth }, businessId: ctx.businessId }, _sum: { grandTotal: true } }),
-            // --- Activity Feed (Optimized UNION) ---
-            prisma.$queryRaw<any[]>`
-                (SELECT 'order' as type, created_at as time, 
-                    json_build_object('number', order_number, 'status', status, 'amount', grand_total::float) as data
-                FROM orders WHERE business_id = ${ctx.businessId} ORDER BY created_at DESC LIMIT 10)
-                UNION ALL
-                (SELECT 'stock' as type, created_at as time, 
-                    json_build_object('id', movement_id, 'type', type, 'qty', quantity::float) as data
-                FROM stock_movements WHERE business_id = ${ctx.businessId} ORDER BY created_at DESC LIMIT 10)
-                UNION ALL
-                (SELECT 'production' as type, created_at as time, 
-                    json_build_object('number', batch_number, 'status', status) as data
-                FROM production_batches WHERE business_id = ${ctx.businessId} ORDER BY created_at DESC LIMIT 10)
-                ORDER BY time DESC LIMIT 20
-            `,
+                where: { businessId, product: { deletedAt: null } },
+                select: { currentStock: true, unitCost: true, retailPrice: true }
+            })
         ]);
 
-        // ===================== PROCESS RESULTS =====================
+        const revMTD = Number(revMTD_res._sum.amount || 0);
+        const revLast = Number(revLast_res._sum.amount || 0);
+        const expMTD = Number(expMTD_res._sum.amount || 0);
+        const expLast = Number(expLast_res._sum.amount || 0);
 
-        const revMTD = revMTD_res._sum.amount ? Number(revMTD_res._sum.amount) : 0;
-        const revLast = revLast_res._sum.amount ? Number(revLast_res._sum.amount) : 0;
-        const expMTD = expMTD_res._sum.amount ? Number(expMTD_res._sum.amount) : 0;
-        const expLast = expLast_res._sum.amount ? Number(expLast_res._sum.amount) : 0;
-        const netProfit = revMTD - expMTD;
-
-        // Inventory Value Processing
-        const rawInventoryValue = rawInvRes[0]?.total || 0;
-        const finishedInventoryRetail = finInvRes[0]?.total || 0;
-
-        // Calculate Finished Inventory at Cost (Standard Accounting)
-        const products_for_cost = await prisma.finishedProduct.findMany({
-            where: { businessId: ctx.businessId, product: { deletedAt: null } },
-            select: { currentStock: true, unitCost: true }
-        });
         const finishedInventoryCost = products_for_cost.reduce((sum, p) => sum + (Number(p.currentStock) * Number(p.unitCost)), 0);
-
+        const finishedInventoryRetail = products_for_cost.reduce((sum, p) => sum + (Number(p.currentStock) * Number(p.retailPrice)), 0);
+        const rawInventoryValue = rawInvRes[0]?.total || 0;
         const totalInventoryValue = rawInventoryValue + finishedInventoryCost;
 
         const pctChange = (current: number, previous: number) => {
@@ -93,7 +45,51 @@ export async function getDashboardData() {
             return Math.round(((current - previous) / previous) * 1000) / 10;
         };
 
+        return serializeValues({
+            revenue: { value: revMTD, change: pctChange(revMTD, revLast) },
+            expenses: { value: expMTD, change: pctChange(expMTD, expLast) },
+            netProfit: { value: revMTD - expMTD, change: pctChange(revMTD - expMTD, revLast - expLast) },
+            orders: { value: ordMTD_res, change: pctChange(ordMTD_res, ordLast_res) },
+            inventoryValue: { value: Math.round(totalInventoryValue * 100) / 100, change: 0 },
+            rawInventoryValue: { value: Math.round(Number(rawInventoryValue) * 100) / 100, change: 0 },
+            finishedInventoryCost: { value: Math.round(Number(finishedInventoryCost) * 100) / 100, change: 0 },
+            finishedInventoryRetail: { value: Math.round(Number(finishedInventoryRetail) * 100) / 100, change: 0 },
+            activeClients: { value: clientRes, change: 0 },
+        });
+    },
+    [`dashboard-kpis-${businessId}`],
+    { tags: [`dashboard-kpi`, `dashboard-kpi-${businessId}`] }
+)();
+
+export async function getDashboardKpis() {
+    try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
+        return await getCachedKpis(ctx.businessId);
+    } catch (error) {
+        console.error('Error fetching KPIs:', error);
+        return null;
+    }
+}
+
+/**
+ * REVENUE TREND DATA
+ */
+const getCachedRevenueTrend = (businessId: string) => unstable_cache(
+    async () => {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+        sixMonthsAgo.setDate(1);
+
+        const revTrendRes = await prisma.$queryRaw<{ month: Date; revenue: number; expenses: number }[]>`
+            SELECT DATE_TRUNC('month', date) AS month,
+            COALESCE(SUM(CASE WHEN type = 'revenue' THEN amount ELSE 0 END), 0)::float AS revenue,
+            COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)::float AS expenses
+            FROM transactions WHERE date >= ${sixMonthsAgo} AND business_id = ${businessId} GROUP BY DATE_TRUNC('month', date) ORDER BY month ASC
+        `;
+
         const revenueTrend: any[] = [];
+        const now = new Date();
         for (let i = 5; i >= 0; i--) {
             const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const dbRow = revTrendRes.find(r => {
@@ -106,13 +102,110 @@ export async function getDashboardData() {
                 expenses: dbRow?.expenses || 0,
             });
         }
+        return serializeValues(revenueTrend);
+    },
+    [`dashboard-trend-${businessId}`],
+    { tags: [`dashboard-charts`, `dashboard-charts-${businessId}`] }
+)();
 
-        const salesByChannel = salesChanRes.map(g => ({
+export async function getDashboardRevenueTrend() {
+    try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
+        return await getCachedRevenueTrend(ctx.businessId);
+    } catch (error) {
+        console.error('Error fetching revenue trend:', error);
+        return [];
+    }
+}
+
+/**
+ * SALES BY CHANNEL DATA
+ */
+const getCachedSalesByChannel = (businessId: string) => unstable_cache(
+    async () => {
+        const firstOfMonth = new Date();
+        firstOfMonth.setDate(1);
+
+        const salesChanRes = await prisma.order.groupBy({
+            by: ['channel'],
+            where: { date: { gte: firstOfMonth }, businessId },
+            _sum: { grandTotal: true }
+        });
+
+        return serializeValues(salesChanRes.map(g => ({
             name: g.channel || 'other',
             value: Math.round(Number(g._sum.grandTotal || 0) * 100) / 100,
-        }));
+        })));
+    },
+    [`dashboard-channel-${businessId}`],
+    { tags: [`dashboard-charts`, `dashboard-charts-${businessId}`] }
+)();
 
-        const lowStockAlerts = [
+export async function getDashboardSalesByChannel() {
+    try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
+        return await getCachedSalesByChannel(ctx.businessId);
+    } catch (error) {
+        console.error('Error fetching sales by channel:', error);
+        return [];
+    }
+}
+
+/**
+ * ACTIVITY FEED DATA
+ */
+const getCachedActivityFeed = (businessId: string) => unstable_cache(
+    async () => {
+        const activityFeed = await prisma.$queryRaw<any[]>`
+            (SELECT 'order' as type, created_at as time, 
+                json_build_object('number', order_number, 'status', status, 'amount', grand_total::float) as data
+            FROM orders WHERE business_id = ${businessId} ORDER BY created_at DESC LIMIT 10)
+            UNION ALL
+            (SELECT 'stock' as type, created_at as time, 
+                json_build_object('id', movement_id, 'type', type, 'qty', quantity::float) as data
+            FROM stock_movements WHERE business_id = ${businessId} ORDER BY created_at DESC LIMIT 10)
+            UNION ALL
+            (SELECT 'production' as type, created_at as time, 
+                json_build_object('number', batch_number, 'status', status) as data
+            FROM production_batches WHERE business_id = ${businessId} ORDER BY created_at DESC LIMIT 10)
+            ORDER BY time DESC LIMIT 20
+        `;
+        return serializeValues(activityFeed);
+    },
+    [`dashboard-feed-${businessId}`],
+    { tags: [`dashboard-feed`, `dashboard-feed-${businessId}`] }
+)();
+
+export async function getDashboardActivityFeed() {
+    try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
+        return await getCachedActivityFeed(ctx.businessId);
+    } catch (error) {
+        console.error('Error fetching activity feed:', error);
+        return [];
+    }
+}
+
+/**
+ * LOW STOCK ALERTS DATA
+ */
+const getCachedLowStockAlerts = (businessId: string) => unstable_cache(
+    async () => {
+        const [lowRawRes, lowFinRes] = await Promise.all([
+            prisma.rawMaterial.findMany({
+                where: { reorderThreshold: { not: null }, deletedAt: null, businessId },
+                select: { name: true, sku: true, currentStock: true, reorderThreshold: true }
+            }),
+            prisma.finishedProduct.findMany({
+                select: { currentStock: true, reservedStock: true, reorderThreshold: true, sku: true, variant: true, product: { select: { name: true } } },
+                where: { reorderThreshold: { not: null, gt: 0 }, businessId, product: { deletedAt: null } },
+            }),
+        ]);
+
+        const alerts = [
             ...lowRawRes.filter(m => m.reorderThreshold && Number(m.currentStock) <= Number(m.reorderThreshold)).map(m => ({
                 name: m.name, sku: m.sku, type: 'Raw Material' as const, currentStock: Number(m.currentStock), threshold: Number(m.reorderThreshold)
             })),
@@ -120,45 +213,19 @@ export async function getDashboardData() {
                 name: `${p.product.name} - ${p.variant}`, sku: p.sku, type: 'Finished' as const, currentStock: Number(p.currentStock) - Number(p.reservedStock), threshold: Number(p.reorderThreshold)
             })),
         ];
+        return serializeValues(alerts);
+    },
+    [`dashboard-lowstock-${businessId}`],
+    { tags: [`dashboard-inventory`, `dashboard-inventory-${businessId}`] }
+)();
 
-        return {
-            kpis: {
-                revenue: { value: revMTD, change: pctChange(revMTD, revLast) },
-                expenses: { value: expMTD, change: pctChange(expMTD, expLast) },
-                netProfit: { value: netProfit, change: pctChange(netProfit, revLast - expLast) },
-                orders: { value: ordMTD_res, change: pctChange(ordMTD_res, ordLast_res) },
-                inventoryValue: { value: Math.round(totalInventoryValue * 100) / 100, change: 0 },
-                rawInventoryValue: { value: Math.round(Number(rawInventoryValue) * 100) / 100, change: 0 },
-                finishedInventoryCost: { value: Math.round(Number(finishedInventoryCost) * 100) / 100, change: 0 },
-                finishedInventoryRetail: { value: Math.round(Number(finishedInventoryRetail) * 100) / 100, change: 0 },
-                activeClients: { value: clientRes, change: 0 },
-            },
-            revenueTrend,
-            salesByChannel,
-            activityFeed,
-            lowStockAlerts,
-        };
-    } catch (error: any) {
-        if (error.message === 'Unauthorized') {
-            throw error;
-        }
-        console.error('Error fetching dashboard data:', error);
-        return {
-            kpis: {
-                revenue: { value: 0, change: 0 },
-                expenses: { value: 0, change: 0 },
-                netProfit: { value: 0, change: 0 },
-                orders: { value: 0, change: 0 },
-                inventoryValue: { value: 0, change: 0 },
-                rawInventoryValue: { value: 0, change: 0 },
-                finishedInventoryCost: { value: 0, change: 0 },
-                finishedInventoryRetail: { value: 0, change: 0 },
-                activeClients: { value: 0, change: 0 },
-            },
-            revenueTrend: [],
-            salesByChannel: [],
-            activityFeed: [],
-            lowStockAlerts: [],
-        };
+export async function getDashboardLowStockAlerts() {
+    try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
+        return await getCachedLowStockAlerts(ctx.businessId);
+    } catch (error) {
+        console.error('Error fetching low stock alerts:', error);
+        return [];
     }
 }

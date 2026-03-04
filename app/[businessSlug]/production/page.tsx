@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   description: 'Production overview and KPIs',
 };
 
-export const dynamic = 'force-dynamic';
 
 export default async function ProductionPage() {
   const batches = await getProductionBatches();
@@ -23,7 +22,7 @@ export default async function ProductionPage() {
 
   const thisMonthBatches = batches.filter(b => {
     const d = new Date(b.startDate);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear && b.status !== 'planned' && b.status !== 'failed';
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear && b.status !== 'failed';
   });
 
   const monthlyProductionKg = thisMonthBatches.reduce((sum, b) => sum + (Number(b.actualQty) || Number(b.targetQty) || 0), 0);

@@ -29,7 +29,7 @@ export default function CompanyDetailDrawer() {
                             <div className="w-16 h-16 rounded-2xl bg-[var(--primary)]/10 border border-[var(--primary)]/20 flex items-center justify-center shadow-lg">
                                 <Building2 className="w-8 h-8 text-[var(--primary)]" />
                             </div>
-                            <PermissionGuard requiredPermission="crm:edit" showLock>
+                            <PermissionGuard module="crm" action="edit" mode="lock">
                                 <Button variant="outline" size="sm" className="h-9 px-4 rounded-xl border-[var(--border)] bg-[var(--card)] text-[var(--text-secondary)] font-bold uppercase tracking-widest text-[10px] hover:bg-[var(--muted)]">
                                     Edit Profile
                                 </Button>

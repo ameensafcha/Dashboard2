@@ -9,7 +9,6 @@ import { format } from 'date-fns';
 import { AddTeamMemberForm } from './AddTeamMemberForm';
 import { EditUserBusinessAccess } from './EditUserBusinessAccess';
 
-export const dynamic = 'force-dynamic';
 
 export default async function TeamPage({ params }: { params: Promise<{ businessSlug: string }> }) {
     const { businessSlug } = await params;

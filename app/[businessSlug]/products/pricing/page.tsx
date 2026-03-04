@@ -3,7 +3,6 @@ import { getPricingTiers, getCategoriesForPricing } from '@/app/actions/pricing'
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PricingPageContent } from './PricingPageContent';
 
-export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Pricing Tiers - Safcha Dashboard',

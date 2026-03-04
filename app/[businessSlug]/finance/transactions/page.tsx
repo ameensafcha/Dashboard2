@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getTransactions } from '@/app/actions/finance/expenses';
@@ -10,7 +9,7 @@ export default async function TransactionsPage() {
     return (
         <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto">
             <Suspense fallback={<div>Loading...</div>}>
-                <TransactionsClient initialData={data} />
+                <TransactionsClient initialData={data as any} />
             </Suspense>
         </div>
     );

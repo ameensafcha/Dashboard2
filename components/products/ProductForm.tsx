@@ -124,11 +124,11 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
       {/* 2. Pricing & Economics */}
       <FormSection
         icon={DollarSign}
-        title={isRTL ? 'التسعير' : 'Pricing'}
-        description={isRTL ? 'التكلفة وسعر السوق' : 'Marginal evaluation'}
+        title={isRTL ? 'التسعير' : 'Pricing & Costs'}
+        description={isRTL ? 'التكلفة وسعر السوق' : 'Cost structure and retail pricing'}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 bg-[var(--muted)]/30 p-6 rounded-2xl border border-[var(--border)]">
-          <FormItem icon={DollarSign} label={t.baseCost} required isRTL={isRTL}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 bg-[var(--muted)]/30 p-6 rounded-2xl border border-[var(--border)] mb-6">
+          <FormItem icon={DollarSign} label={t.baseCost || 'Material/Base Cost'} required isRTL={isRTL}>
             <Input
               type="number"
               step="0.01"
@@ -146,6 +146,40 @@ export default function ProductForm({ product, onChange }: ProductFormProps) {
               onChange={(e) => onChange('baseRetailPrice', parseFloat(e.target.value) || 0)}
               placeholder="0.00"
               className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--primary)] h-11 rounded-xl font-bold text-lg"
+            />
+          </FormItem>
+        </div>
+
+        {/* Additional Production Costs */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 bg-[var(--muted)]/30 p-6 rounded-2xl border border-[var(--border)]">
+          <FormItem icon={DollarSign} label="Labor Cost" isRTL={isRTL}>
+            <Input
+              type="number"
+              step="0.01"
+              value={(product as any).laborCost ? Number((product as any).laborCost) : ''}
+              onChange={(e) => onChange('laborCost', parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
+              className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl"
+            />
+          </FormItem>
+          <FormItem icon={DollarSign} label="Packaging Cost" isRTL={isRTL}>
+            <Input
+              type="number"
+              step="0.01"
+              value={(product as any).packagingCost ? Number((product as any).packagingCost) : ''}
+              onChange={(e) => onChange('packagingCost', parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
+              className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl"
+            />
+          </FormItem>
+          <FormItem icon={DollarSign} label="Overhead Cost" isRTL={isRTL}>
+            <Input
+              type="number"
+              step="0.01"
+              value={(product as any).overheadCost ? Number((product as any).overheadCost) : ''}
+              onChange={(e) => onChange('overheadCost', parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
+              className="bg-white dark:bg-[var(--card)] border-[var(--border)] text-[var(--text-primary)] h-11 rounded-xl"
             />
           </FormItem>
         </div>

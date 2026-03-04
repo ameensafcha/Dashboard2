@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
+import { serializeValues } from '@/lib/utils';
 
 export async function getProductsOverview() {
     try {
@@ -37,7 +38,7 @@ export async function getProductsOverview() {
         const activeCount = productsByStatus.find(p => p.status === 'active')?._count.status || 0;
         const sfdaApprovedCount = productsBySfda.find(p => p.sfdaStatus === 'approved')?._count.sfdaStatus || 0;
 
-        return {
+        const data = {
             totalProducts,
             totalCategories,
             activeCount,
@@ -50,13 +51,10 @@ export async function getProductsOverview() {
                 status: p.sfdaStatus,
                 count: p._count.sfdaStatus
             })),
-            recentProducts: recentProducts.map((p: any) => ({
-                ...p,
-                baseCost: Number(p.baseCost),
-                baseRetailPrice: Number(p.baseRetailPrice),
-                size: p.size ? Number(p.size) : null
-            }))
+            recentProducts
         };
+
+        return serializeValues(data);
     } catch (error) {
         console.error('Error fetching products overview:', error);
         return {

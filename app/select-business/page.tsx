@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
-import { Factory, ArrowRight, User as UserIcon, Lock } from 'lucide-react'
+import { Factory, ArrowRight, User as UserIcon, Lock, LogOut, RefreshCw } from 'lucide-react'
+import { logoutUser } from '@/app/actions/auth/session'
 
 export default async function SelectBusinessPage() {
     const supabase = await createClient()
@@ -23,6 +24,12 @@ export default async function SelectBusinessPage() {
 
     // If no businesses at all, show access denied
     if (memberships.length === 0) {
+        async function handleSignOut() {
+            'use server'
+            await logoutUser()
+            redirect('/login')
+        }
+
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#0F0F1A] p-4 text-white">
                 <div className="w-full max-w-md space-y-6 bg-[#1A1A2E] p-8 rounded-2xl border border-white/10 text-center">
@@ -32,9 +39,21 @@ export default async function SelectBusinessPage() {
                     <h2 className="text-2xl font-bold tracking-tight text-white">
                         Access Denied
                     </h2>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-400 mb-6">
                         You don't have access to any business yet. Please contact your system administrator to assign you a role.
                     </p>
+                    <div className="flex flex-col gap-3 mt-8">
+                        <a href="/select-business" className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white rounded-lg p-3 transition-colors border border-white/10">
+                            <RefreshCw className="w-4 h-4" />
+                            Refresh Status
+                        </a>
+                        <form action={handleSignOut}>
+                            <button type="submit" className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg p-3 transition-colors border border-red-500/20">
+                                <LogOut className="w-4 h-4" />
+                                Sign Out
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         )

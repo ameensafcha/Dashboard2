@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -50,15 +50,17 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<RawMaterialData | null>(null);
 
+    const isFirstRender = useRef(true);
+
     useEffect(() => {
         // Hydrate store on mount
-        if (initialMaterials.length > 0 && rawMaterials.length === 0) {
+        if (initialMaterials && initialMaterials.length > 0) {
             setRawMaterials(initialMaterials);
             setIsLoading(false);
-        } else if (rawMaterials.length === 0) {
+        } else {
             fetchMaterials();
         }
-    }, []);
+    }, [initialMaterials]); // Added dependency to allow hydration if props change
 
     const fetchMaterials = async () => {
         setIsLoading(true);
@@ -67,14 +69,20 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
             categoryFilter as any,
             locationFilter as any
         );
-        if (result.success && result.materials) {
-            setRawMaterials(result.materials);
+        if (result.success && 'materials' in result) {
+            setRawMaterials(result.materials as any);
         }
         setIsLoading(false);
     };
 
     // Refetch when filters change
     useEffect(() => {
+        // Skip fetch on first render if we have initial data
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            if (initialMaterials && initialMaterials.length > 0) return;
+        }
+
         // Debounce search slightly
         const timer = setTimeout(() => {
             fetchMaterials();
@@ -228,7 +236,7 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                                     onClick={() => handleSort('unitCost')}
                                 >
                                     <div className="flex items-center justify-end gap-1">
-                                        {t.price}
+                                        {t.price} <span className="text-[10px] opacity-70 normal-case">(per kg)</span>
                                         <ArrowUpDown className="h-3 w-3" />
                                     </div>
                                 </TableHead>
@@ -295,11 +303,11 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                                                 isLowStock ? 'text-red-500' : 'text-[var(--accent-gold)]'
                                             )}>
                                                 {material.currentStock} <span className="text-[10px] opacity-60 uppercase ml-0.5">
-                                                    {material.category === 'PACKAGING' ? t.units : t.kg}
+                                                    {t.kg}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right text-[var(--text-primary)] font-medium font-mono">
-                                                {formatCurrency(material.unitCost)}
+                                                {formatCurrency(material.unitCost)} <span className="text-[10px] text-[var(--text-secondary)] normal-case">/ kg</span>
                                             </TableCell>
                                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-2">
@@ -313,14 +321,15 @@ export default function RawMaterialsClient({ initialMaterials, suppliers = [] }:
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
                                                     </PermissionGuard>
-                                                    <PermissionGuard module="inventory" action="edit">
+                                                    {/* Hiding Log Movement as requested */}
+                                                    {/* <PermissionGuard module="inventory" action="edit">
                                                         <LogMovementModal
                                                             targetType="raw"
                                                             targetId={material.id}
                                                             targetName={material.name}
                                                             onSuccess={fetchMaterials}
                                                         />
-                                                    </PermissionGuard>
+                                                    </PermissionGuard> */}
                                                 </div>
                                             </TableCell>
                                         </TableRow>

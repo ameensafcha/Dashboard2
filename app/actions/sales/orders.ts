@@ -2,12 +2,13 @@
 
 import prisma from '@/lib/prisma';
 import { OrderChannel, OrderStatus } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
 import { toSafeNumber } from '@/lib/decimal';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
+import { serializeValues } from '@/lib/utils';
 
 // ===================== Validation Schemas =====================
 
@@ -42,71 +43,36 @@ export async function getOrders(search?: string, channel?: OrderChannel, status?
             throw new Error('Unauthorized');
         }
 
-        const whereClause: any = { deletedAt: null, businessId: ctx.businessId };
-
-        if (channel && channel !== 'all' as any) {
-            whereClause.channel = channel;
-        }
-
-        if (status && status !== 'all' as any) {
-            whereClause.status = status;
-        }
-
-        if (search) {
-            whereClause.OR = [
-                { orderNumber: { contains: search, mode: 'insensitive' } },
-                {
-                    client: {
-                        name: { contains: search, mode: 'insensitive' }
-                    }
-                },
-                {
-                    company: {
-                        name: { contains: search, mode: 'insensitive' }
-                    }
+        const getCachedOrdersList = unstable_cache(
+            async (bId: string, qSearch?: string, qChannel?: OrderChannel, qStatus?: OrderStatus) => {
+                const wc: any = { deletedAt: null, businessId: bId };
+                if (qChannel && qChannel !== 'all' as any) wc.channel = qChannel;
+                if (qStatus && qStatus !== 'all' as any) wc.status = qStatus;
+                if (qSearch) {
+                    wc.OR = [
+                        { orderNumber: { contains: qSearch, mode: 'insensitive' } },
+                        { client: { name: { contains: qSearch, mode: 'insensitive' } } },
+                        { company: { name: { contains: qSearch, mode: 'insensitive' } } }
+                    ];
                 }
-            ];
-        }
-
-        const orders = await prisma.order.findMany({
-            where: whereClause,
-            include: {
-                client: { select: { id: true, name: true } },
-                company: { select: { id: true, name: true } },
-                orderItems: {
+                return await prisma.order.findMany({
+                    where: wc,
                     include: {
-                        product: { select: { id: true, name: true } }
-                    }
-                },
-                invoice: true
+                        client: { select: { id: true, name: true } },
+                        company: { select: { id: true, name: true } },
+                        orderItems: { include: { product: { select: { id: true, name: true } } } },
+                        invoice: true
+                    },
+                    orderBy: { createdAt: 'desc' }
+                });
             },
-            orderBy: {
-                createdAt: 'desc'
-            }
-        });
+            [`orders-list-${ctx.businessId}-${search || ''}-${channel || ''}-${status || ''}`],
+            { tags: [`orders-${ctx.businessId}`], revalidate: 3600 }
+        );
 
-        // Convert Decimal to Number for frontend
-        const serializedOrders = orders.map(order => ({
-            ...order,
-            subTotal: toSafeNumber(order.subTotal),
-            discount: toSafeNumber(order.discount),
-            vat: toSafeNumber(order.vat),
-            shippingCost: toSafeNumber(order.shippingCost),
-            grandTotal: toSafeNumber(order.grandTotal),
-            orderItems: order.orderItems.map(item => ({
-                ...item,
-                unitPrice: toSafeNumber(item.unitPrice),
-                discount: toSafeNumber(item.discount),
-                total: toSafeNumber(item.total),
-                productName: item.product?.name || 'Unknown Product',
-            })),
-            invoice: order.invoice ? {
-                ...order.invoice,
-                totalAmount: toSafeNumber(order.invoice.totalAmount)
-            } : null
-        }));
+        const orders = await getCachedOrdersList(ctx.businessId, search, channel, status);
 
-        return { success: true, orders: serializedOrders };
+        return serializeValues({ success: true, orders });
     } catch (error) {
         console.error('Failed to get orders:', error);
         return { success: false, error: 'Failed to fetch orders' };
@@ -185,6 +151,12 @@ export async function createOrder(data: CreateOrderInput) {
 
         revalidatePath('/sales/orders');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+
         return { success: true, orderId: order.id };
     } catch (error: any) {
         console.error('Detailed Order Creation Error:', error);
@@ -199,32 +171,61 @@ export async function deleteOrder(id: string) {
             throw new Error('Unauthorized');
         }
 
-        // Verify order belongs to business
+        // 1. Fetch order with items and products to handle stock reversal
         const existingOrder = await prisma.order.findUnique({
-            where: { id, businessId: ctx.businessId }
+            where: { id, businessId: ctx.businessId },
+            include: {
+                orderItems: {
+                    include: {
+                        product: {
+                            include: {
+                                finishedProduct: true
+                            }
+                        }
+                    }
+                }
+            }
         });
+
         if (!existingOrder) throw new Error('Order not found');
 
         await prisma.$transaction(async (tx) => {
-            // Soft delete linked transactions
+            // 2. Release reserved stock if order was confirmed or processing
+            if (existingOrder.status === 'confirmed' || existingOrder.status === 'processing') {
+                for (const item of existingOrder.orderItems) {
+                    const fp = item.product.finishedProduct;
+                    if (fp) {
+                        await tx.finishedProduct.update({
+                            where: { id: fp.id },
+                            data: {
+                                reservedStock: { decrement: item.quantity }
+                            }
+                        });
+                    }
+                }
+            }
+
+            // 3. Soft delete linked transactions
             await tx.transaction.updateMany({
                 where: { orderId: id, type: 'revenue' },
                 data: { deletedAt: new Date() }
             });
-            // Soft delete order
+
+            // 4. Soft delete order
             const deletedOrder = await tx.order.update({
                 where: { id },
                 data: { deletedAt: new Date() }
             });
 
-            // Create audit log
+            // 5. Create audit log
             await logAudit({
                 action: 'SOFT_DELETE',
                 entity: 'Order',
                 entityId: deletedOrder.orderNumber,
                 details: {
                     reason: 'User deleted order',
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
+                    wasStatus: existingOrder.status
                 },
                 module: 'orders',
                 entityName: 'Sales Order',
@@ -235,13 +236,21 @@ export async function deleteOrder(id: string) {
         });
 
         revalidatePath('/sales/orders');
+        revalidatePath('/inventory/finished');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+
         return { success: true };
     } catch (error) {
         console.error('Error deleting order:', error);
         return { success: false, error: 'Failed to delete order' };
     }
 }
+
 
 export async function updateOrder(id: string, data: CreateOrderInput) {
     try {
@@ -317,6 +326,12 @@ export async function updateOrder(id: string, data: CreateOrderInput) {
         revalidatePath('/sales/orders');
         revalidatePath(`/sales/orders/${id}`);
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+
         return { success: true, orderId: order.id };
     } catch (error: any) {
         console.error('Order Update Error:', error);

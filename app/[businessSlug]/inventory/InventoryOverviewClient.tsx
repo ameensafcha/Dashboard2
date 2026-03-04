@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import InventorySopPanel from '@/components/inventory/InventorySopPanel';
 
 type InventoryOverviewData = {
     kpis: {
@@ -51,6 +52,9 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
                     </PermissionGuard>
                 </div>
             </div>
+
+            {/* SOP Panel */}
+            <InventorySopPanel />
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -104,10 +108,10 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
                                             <Badge className={item.type === 'Raw Material' ? 'bg-blue-500 text-white text-[10px]' : 'bg-green-500 text-white text-[10px]'}>{item.type}</Badge>
                                         </td>
                                         <td className="py-2.5 px-3 text-right font-semibold" style={{ color: 'var(--text-primary)' }}>
-                                            {item.stock}
+                                            {item.stock} {item.type === 'Raw Material' ? 'kg' : ''}
                                         </td>
                                         <td className={`py-2.5 px-3 text-right font-medium ${item.available <= 0 ? 'text-red-500' : 'text-[#E8A838]'}`}>
-                                            {item.available}
+                                            {item.available} {item.type === 'Raw Material' ? 'kg' : ''}
                                         </td>
                                         <td className="py-2.5 px-3 text-right font-black" style={{ color: 'var(--text-primary)' }}>
                                             SAR {item.value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -141,8 +145,8 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
                                         <span className="text-xs ml-2 font-mono" style={{ color: 'var(--text-muted)' }}>{item.sku}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm font-bold text-red-500">{item.currentStock}</span>
-                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>/ {item.threshold} min</span>
+                                        <span className="text-sm font-bold text-red-500">{item.currentStock} {item.type === 'Raw Material' ? 'kg' : ''}</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>/ {item.threshold} {item.type === 'Raw Material' ? 'kg' : ''} min</span>
                                     </div>
                                 </div>
                             ))}

@@ -19,4 +19,3 @@ export default async function MarketingLayout({
     return <>{children}</>;
 }
 
-export const dynamic = 'force-dynamic';

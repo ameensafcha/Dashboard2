@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,22 +48,52 @@ export default function FinishedProductsClient({ initialProducts, catalogProduct
     const [locationFilter, setLocationFilter] = useState('ALL');
     const [sortField, setSortField] = useState<'currentStock' | 'retailPrice'>('currentStock');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+    const [isLoading, setIsLoading] = useState(true);
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<FinishedProductData | null>(null);
 
+    const isFirstRender = useRef(true);
+
     const fetchProducts = async () => {
+        setIsLoading(true);
         const result = await getFinishedProducts(searchQuery || undefined, locationFilter);
         if (result.success) setProducts(result.products as any);
+        setIsLoading(false);
     };
 
-    useEffect(() => { fetchProducts(); }, [searchQuery, locationFilter]);
+    useEffect(() => {
+        // Hydrate store on mount
+        if (initialProducts && initialProducts.length > 0) {
+            setProducts(initialProducts);
+            setIsLoading(false);
+        } else {
+            fetchProducts();
+        }
+    }, [initialProducts]);
 
-    const sorted = [...products].sort((a, b) => {
-        const val = sortDir === 'asc' ? 1 : -1;
-        return ((a as any)[sortField] - (b as any)[sortField]) * val;
-    });
+    // Refetch when filters change
+    useEffect(() => {
+        // Skip fetch on first render if we have initial data
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            if (initialProducts && initialProducts.length > 0) return;
+        }
+
+        // Debounce search slightly
+        const timer = setTimeout(() => {
+            fetchProducts();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, locationFilter]);
+
+    const sorted = useMemo(() => {
+        return [...products].sort((a, b) => {
+            const val = sortDir === 'asc' ? 1 : -1;
+            return ((a as any)[sortField] - (b as any)[sortField]) * val;
+        });
+    }, [products, sortField, sortDir]);
 
     const toggleSort = (field: 'currentStock' | 'retailPrice') => {
         if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');

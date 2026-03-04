@@ -12,7 +12,7 @@ import { Product } from '@prisma/client';
 import { Edit, Plus, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
-type ProductFormState = Partial<Omit<Product, 'baseCost' | 'baseRetailPrice' | 'size'>> & {
+type ProductFormState = Partial<Omit<Product, 'baseCost' | 'baseRetailPrice' | 'size' | 'laborCost' | 'packagingCost' | 'overheadCost'>> & {
   baseCost: number;
   baseRetailPrice: number;
   size?: number | null;
@@ -22,6 +22,9 @@ type ProductFormState = Partial<Omit<Product, 'baseCost' | 'baseRetailPrice' | '
   status?: string;
   sfdaStatus?: string;
   caffeineFree?: boolean;
+  laborCost?: number;
+  packagingCost?: number;
+  overheadCost?: number;
 };
 
 export default function ProductModal() {
@@ -42,6 +45,9 @@ export default function ProductModal() {
     description: '',
     keyIngredients: '',
     caffeineFree: true,
+    laborCost: 0,
+    packagingCost: 0,
+    overheadCost: 0,
     image: null,
     launchDate: null,
   });
@@ -65,6 +71,9 @@ export default function ProductModal() {
         baseCost: typeof product.baseCost === 'string' ? parseFloat(product.baseCost) : product.baseCost,
         baseRetailPrice: typeof product.baseRetailPrice === 'string' ? parseFloat(product.baseRetailPrice) : product.baseRetailPrice,
         size: product.size ? (typeof product.size === 'string' ? parseFloat(product.size) : product.size) : null,
+        laborCost: typeof (product as any).laborCost === 'string' ? parseFloat((product as any).laborCost) : ((product as any).laborCost || 0),
+        packagingCost: typeof (product as any).packagingCost === 'string' ? parseFloat((product as any).packagingCost) : ((product as any).packagingCost || 0),
+        overheadCost: typeof (product as any).overheadCost === 'string' ? parseFloat((product as any).overheadCost) : ((product as any).overheadCost || 0),
         categoryId: product.categoryId || '',
         productId,
       };
@@ -87,6 +96,9 @@ export default function ProductModal() {
       description: '',
       keyIngredients: '',
       caffeineFree: true,
+      laborCost: 0,
+      packagingCost: 0,
+      overheadCost: 0,
       image: null,
       launchDate: null,
     });

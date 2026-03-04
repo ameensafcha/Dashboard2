@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-export const dynamic = 'force-dynamic';
 
 export default async function AuditLogPage({
     params,

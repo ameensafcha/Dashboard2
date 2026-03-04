@@ -22,7 +22,8 @@ import {
   ChevronDown,
   X,
   LogOut,
-  Building2
+  Building2,
+  Loader2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,12 @@ export default function Sidebar() {
   const { t, isRTL } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const [loadingHref, setLoadingHref] = useState<string | null>(null);
+
+  // Clear loading state when navigation completes
+  useEffect(() => {
+    setLoadingHref(null);
+  }, [pathname]);
 
   // Extract businessSlug from the URL using usePathname() — works during SSR + CSR
   const businessSlug = pathname.split('/')[1] || 'safcha';
@@ -216,18 +223,19 @@ export default function Sidebar() {
                   ) : (
                     <Link
                       href={item.href}
-                      onClick={() => setMobileOpen(false)}
+                      onClick={() => { setMobileOpen(false); if (pathname !== item.href) setLoadingHref(item.href); }}
                       className={cn(
                         "flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer group gap-3",
                         isActive
                           ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
-                          : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                          : 'text-gray-300 hover:bg-white/10 hover:text-white',
+                        loadingHref === item.href ? 'pointer-events-none opacity-70' : ''
                       )}
                     >
-                      <item.icon className={cn(
-                        "w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity",
-                        isActive ? 'text-black' : ''
-                      )} />
+                      {loadingHref === item.href
+                        ? <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin" />
+                        : <item.icon className={cn("w-5 h-5 flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity", isActive ? 'text-black' : '')} />
+                      }
                       <span className="truncate text-start flex-1 font-medium">{item.name}</span>
                     </Link>
                   )}
@@ -248,20 +256,24 @@ export default function Sidebar() {
                             <li key={child.name}>
                               <Link
                                 href={child.href}
-                                onClick={() => setMobileOpen(false)}
+                                onClick={() => { setMobileOpen(false); if (pathname !== child.href) setLoadingHref(child.href); }}
                                 className={cn(
                                   "flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 ease-in-out cursor-pointer gap-3",
                                   isChildActive
                                     ? 'text-[var(--accent-gold)] font-medium bg-white/10'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5',
+                                  loadingHref === child.href ? 'pointer-events-none opacity-70' : ''
                                 )}
                               >
-                                <div className={cn(
-                                  "w-1.5 h-1.5 rounded-full transition-all duration-300 flex-shrink-0",
-                                  isChildActive
-                                    ? "bg-[var(--accent-gold)] scale-110 shadow-[0_0_8px_var(--accent-gold)]"
-                                    : "bg-transparent border border-gray-600 group-hover:border-gray-400"
-                                )} />
+                                {loadingHref === child.href
+                                  ? <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin text-[var(--accent-gold)]" />
+                                  : <div className={cn(
+                                    "w-1.5 h-1.5 rounded-full transition-all duration-300 flex-shrink-0",
+                                    isChildActive
+                                      ? "bg-[var(--accent-gold)] scale-110 shadow-[0_0_8px_var(--accent-gold)]"
+                                      : "bg-transparent border border-gray-600 group-hover:border-gray-400"
+                                  )} />
+                                }
                                 <span className="truncate text-start">{child.name}</span>
                               </Link>
                             </li>

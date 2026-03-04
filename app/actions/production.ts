@@ -2,11 +2,12 @@
 
 import prisma from '@/lib/prisma';
 import { Prisma, BatchStatus, RndStatus, StockMovementType, StockMovementReason } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
+import { serializeValues } from '@/lib/utils';
 
 const createBatchSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
@@ -111,24 +112,7 @@ export async function getProductionBatches(): Promise<ProductionBatchWithProduct
       take: 200,
     });
 
-    if (!batches || batches.length === 0) {
-      return [];
-    }
-
-    return batches.map((b) => ({
-      ...b,
-      product: b.product ? {
-        ...b.product,
-        size: b.product.size ? Number(b.product.size) : null,
-      } : null,
-      targetQty: b.targetQty?.toNumber() || 0,
-      actualQty: b.actualQty?.toNumber() ?? null,
-      yieldPercent: b.yieldPercent?.toNumber() ?? null,
-      batchItems: b.batchItems?.map((item) => ({
-        ...item,
-        quantityUsed: item.quantityUsed?.toNumber() || 0,
-      })) || [],
-    }));
+    return serializeValues(batches) as any;
   } catch (error: unknown) {
     console.error('Error fetching production batches:', error instanceof Error ? error.message : String(error));
     return [];
@@ -151,27 +135,7 @@ export async function getProductionBatchById(id: string) {
       },
     });
 
-    if (!batch) return null;
-
-    return {
-      ...batch,
-      product: batch.product ? {
-        ...batch.product,
-        size: (batch.product as any).size ? Number((batch.product as any).size) : null,
-        unit: (batch.product as any).unit || null,
-      } : null,
-      targetQty: batch.targetQty?.toNumber() || 0,
-      actualQty: batch.actualQty?.toNumber() || null,
-      yieldPercent: batch.yieldPercent?.toNumber() || null,
-      batchItems: batch.batchItems?.map((item: any) => ({
-        ...item,
-        quantityUsed: item.quantityUsed?.toNumber() || 0,
-      })) || [],
-      qualityChecks: batch.qualityChecks?.map((qc) => ({
-        ...qc,
-        overallScore: qc.overallScore || 0,
-      })) || [],
-    };
+    return serializeValues(batch) as any;
   } catch (error: unknown) {
     console.error('Error fetching batch:', error instanceof Error ? error.message : String(error));
     return null;
@@ -247,6 +211,11 @@ export async function createProductionBatch(data: {
 
     revalidatePath('/production/batches');
     revalidatePath('/');
+
+    // Revalidate dashboard cache
+    revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+    revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+
     return { success: true, data: serializedBatch };
   } catch (error: unknown) {
     console.error('Error creating batch:', error instanceof Error ? error.message : String(error));
@@ -316,7 +285,12 @@ export async function updateProductionBatch(id: string, data: {
     revalidatePath('/production/batches');
     revalidatePath('/production/quality');
     revalidatePath('/');
-    return { success: true, data: serializedBatch };
+
+    // Revalidate dashboard cache
+    revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+    revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+
+    return { success: true, data: serializedBatch as any };
   } catch (error) {
     console.error('Error updating batch:', error);
     return { success: false, error: 'Failed to update batch' };
@@ -350,6 +324,10 @@ export async function deleteProductionBatch(id: string) {
     });
     revalidatePath('/production/batches');
     revalidatePath('/');
+
+    // Revalidate dashboard cache
+    revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+
     return { success: true };
   } catch (error) {
     console.error('Error deleting batch:', error);
@@ -375,16 +353,7 @@ export async function getQualityChecks() {
       },
       orderBy: { checkedAt: 'desc' },
     });
-    // Convert Decimal to Number for client serialization
-    return checks.map(c => ({
-      ...c,
-      batch: c.batch ? {
-        ...c.batch,
-        targetQty: c.batch.targetQty ? Number(c.batch.targetQty) : 0,
-        actualQty: c.batch.actualQty ? Number(c.batch.actualQty) : null,
-        yieldPercent: c.batch.yieldPercent ? Number(c.batch.yieldPercent) : null,
-      } : c.batch,
-    }));
+    return serializeValues(checks);
   } catch (error) {
     console.error('Error fetching quality checks:', error);
     return [];
@@ -1065,6 +1034,47 @@ export async function getSystemSettings() {
     return { productionCapacityKg: 3000 };
   }
 }
+
+/** Returns current month's production kg usage vs the capacity limit */
+export async function getCapacityStatus(): Promise<{
+  usedKg: number;
+  maxKg: number;
+  remainingKg: number;
+  utilizationPercent: number;
+}> {
+  try {
+    const ctx = await getBusinessContext();
+    const settings = await getSystemSettings();
+    const maxKg = Number(settings.productionCapacityKg) || 3000;
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const batches = await prisma.productionBatch.findMany({
+      where: {
+        businessId: ctx.businessId,
+        deletedAt: null,
+        startDate: { gte: startOfMonth, lte: endOfMonth },
+        status: { notIn: ['failed'] },
+      },
+      select: { targetQty: true, actualQty: true },
+    });
+
+    const usedKg = batches.reduce((sum, b) => {
+      return sum + (b.actualQty ? Number(b.actualQty) : Number(b.targetQty) || 0);
+    }, 0);
+
+    const remainingKg = Math.max(0, maxKg - usedKg);
+    const utilizationPercent = Math.round((usedKg / maxKg) * 100);
+
+    return { usedKg, maxKg, remainingKg, utilizationPercent };
+  } catch (error) {
+    console.error('Error fetching capacity status:', error);
+    return { usedKg: 0, maxKg: 3000, remainingKg: 3000, utilizationPercent: 0 };
+  }
+}
+
 
 export async function updateSystemCapacity(capacityKg: number) {
   try {

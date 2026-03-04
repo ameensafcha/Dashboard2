@@ -256,7 +256,7 @@ export default function EditRawMaterialModal({ material, onSuccess, open, onOpen
                     {/* Stock + Cost */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{(t as any).currentStockLevel || 'Current Stock'}</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{(t as any).currentStockLevel || 'Current Stock'} <span className="text-[10px] opacity-70 normal-case">(kg)</span></Label>
                             <Input
                                 type="number"
                                 min="0"
@@ -267,7 +267,7 @@ export default function EditRawMaterialModal({ material, onSuccess, open, onOpen
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.unitCostSar}</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.unitCostSar} <span className="text-[10px] opacity-70 normal-case">/ kg</span></Label>
                             <Input
                                 type="number"
                                 min="0"
@@ -282,7 +282,7 @@ export default function EditRawMaterialModal({ material, onSuccess, open, onOpen
                     {/* Reorder thresholds */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.reorderThreshold}</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.reorderThreshold} <span className="text-[10px] opacity-70 normal-case">(kg)</span></Label>
                             <Input
                                 type="number"
                                 min="0"
@@ -293,7 +293,7 @@ export default function EditRawMaterialModal({ material, onSuccess, open, onOpen
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.reorderQuantity}</Label>
+                            <Label className="text-sm font-semibold text-[var(--text-primary)]">{t.reorderQuantity} <span className="text-[10px] opacity-70 normal-case">(kg)</span></Label>
                             <Input
                                 type="number"
                                 min="0"

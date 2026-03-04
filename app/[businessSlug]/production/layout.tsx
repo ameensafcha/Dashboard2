@@ -19,4 +19,3 @@ export default async function ProductionLayout({
     return <>{children}</>;
 }
 
-export const dynamic = 'force-dynamic';

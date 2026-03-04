@@ -103,7 +103,9 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
               <TableHead className="font-semibold text-[var(--text-primary)] text-center hidden sm:table-cell">{t.size || 'Size'}</TableHead>
               <TableHead className="font-semibold text-[var(--text-primary)] hidden sm:table-cell">{t.status || 'Status'}</TableHead>
               <TableHead className="font-semibold text-[var(--text-primary)] hidden lg:table-cell">{t.sfdaStatus || 'SFDA Status'}</TableHead>
-              <TableHead className="font-semibold text-[var(--text-primary)] text-right">{t.price || 'Price'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">Cost (COGS)</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">Margin</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">{t.price || 'Selling Price'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -115,7 +117,9 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
                 <TableCell className="hidden sm:table-cell text-center"><Skeleton className="h-5 w-8 mx-auto" /></TableCell>
                 <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-24" /></TableCell>
                 <TableCell className="hidden lg:table-cell"><Skeleton className="h-6 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -155,7 +159,9 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
               <TableHead className="font-semibold text-[var(--text-primary)] text-center hidden sm:table-cell">{t.size || 'Size'}</TableHead>
               <TableHead className="font-semibold text-[var(--text-primary)] hidden sm:table-cell">{t.status || 'Status'}</TableHead>
               <TableHead className="font-semibold text-[var(--text-primary)] hidden lg:table-cell">{t.sfdaStatus || 'SFDA Status'}</TableHead>
-              <TableHead className="font-semibold text-[var(--text-primary)] text-right">{t.price || 'Price'}</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">Cost (COGS)</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">Margin</TableHead>
+              <TableHead className="font-semibold text-[var(--text-primary)] text-right">{t.price || 'Selling Price'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,6 +186,12 @@ export default function ProductTable({ products, isLoading }: ProductTableProps)
                 <TableCell className="hidden lg:table-cell">
                   <Badge className={sfdaStatusColors[product.sfdaStatus] || 'bg-gray-500'}>
                     {sfdaStatuses.find(s => s.value === product.sfdaStatus)?.label || product.sfdaStatus}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right font-medium" style={{ color: 'var(--text-primary)' }}>SAR {Number(product.totalCOGS || 0).toFixed(2)}</TableCell>
+                <TableCell className="text-right">
+                  <Badge variant="outline" className={Number(product.marginPercent) > 0 ? "border-green-500 text-green-500" : "border-red-500 text-red-500"}>
+                    {Number(product.marginPercent || 0).toFixed(1)}%
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right font-medium" style={{ color: 'var(--text-primary)' }}>SAR {Number(product.baseRetailPrice).toFixed(2)}</TableCell>

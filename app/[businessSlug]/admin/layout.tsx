@@ -34,4 +34,3 @@ export default async function AdminLayout({
 }
 
 // Ensure the page doesn't cache incorrectly across permission boundaries
-export const dynamic = 'force-dynamic';

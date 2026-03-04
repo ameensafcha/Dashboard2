@@ -19,4 +19,3 @@ export default async function EventsLayout({
     return <>{children}</>;
 }
 
-export const dynamic = 'force-dynamic';

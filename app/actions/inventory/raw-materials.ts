@@ -2,10 +2,11 @@
 
 import prisma from '@/lib/prisma';
 import { MaterialCategory, InventoryLocation } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
+import { serializeValues } from '@/lib/utils';
 
 export async function getRawMaterials(
     search?: string,
@@ -42,16 +43,7 @@ export async function getRawMaterials(
             }
         });
 
-        // Serialize Decimals
-        const serialized = materials.map(m => ({
-            ...m,
-            currentStock: m.currentStock ? Number(m.currentStock.toString()) : 0,
-            unitCost: m.unitCost ? Number(m.unitCost.toString()) : 0,
-            reorderThreshold: m.reorderThreshold ? Number(m.reorderThreshold.toString()) : null,
-            reorderQuantity: m.reorderQuantity ? Number(m.reorderQuantity.toString()) : null,
-        }));
-
-        return { success: true, materials: serialized };
+        return serializeValues({ success: true, materials });
     } catch (error) {
         console.error('Failed to get raw materials:', error);
         return { success: false, error: 'Failed to fetch raw materials' };
@@ -94,25 +86,44 @@ export async function createRawMaterial(data: CreateRawMaterialInput) {
             return { success: false, error: 'A material with this SKU already exists' };
         }
 
-        const material = await prisma.rawMaterial.create({
-            data: {
-                businessId: ctx.businessId,
-                name: data.name,
-                sku: generatedSku,
-                category: data.category,
-                currentStock: data.currentStock,
-                unitCost: data.unitCost,
-                reorderThreshold: data.reorderThreshold,
-                reorderQuantity: data.reorderQuantity,
-                location: data.location,
-                expiryDate: data.expiryDate,
-                supplierId: data.supplierId
-            }
-        });
+        const material = await prisma.$transaction(async (tx) => {
+            const newMaterial = await tx.rawMaterial.create({
+                data: {
+                    businessId: ctx.businessId,
+                    name: data.name,
+                    sku: generatedSku,
+                    category: data.category,
+                    currentStock: data.currentStock,
+                    unitCost: data.unitCost,
+                    reorderThreshold: data.reorderThreshold,
+                    reorderQuantity: data.reorderQuantity,
+                    location: data.location,
+                    expiryDate: data.expiryDate,
+                    supplierId: data.supplierId
+                }
+            });
+
+            await logAudit({
+                action: 'CREATE',
+                entity: 'RawMaterial',
+                entityId: generatedSku,
+                module: 'inventory',
+                entityName: 'Raw Material',
+                details: data
+            });
+
+            return newMaterial;
+        }, { timeout: 15000 });
 
         revalidatePath('/inventory/raw-materials');
         revalidatePath('/inventory');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+
         return { success: true, materialId: material.id };
     } catch (error) {
         console.error('Failed to create raw material:', error);
@@ -149,20 +160,36 @@ export async function updateRawMaterial(id: string, data: UpdateRawMaterialInput
             }
         }
 
-        await prisma.rawMaterial.update({
-            where: { id },
-            data: updateData
-        });
+        await prisma.$transaction(async (tx) => {
+            await tx.rawMaterial.update({
+                where: { id },
+                data: updateData
+            });
+
+            await logAudit({
+                action: 'UPDATE',
+                entity: 'RawMaterial',
+                entityId: updateData.sku || rm.sku,
+                module: 'inventory',
+                entityName: 'Raw Material',
+                details: data
+            });
+        }, { timeout: 15000 });
 
         revalidatePath('/inventory/raw-materials');
         revalidatePath('/inventory');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         return { success: true };
     } catch (error) {
         console.error('Failed to update raw material:', error);
         return { success: false, error: 'Failed to update material' };
     }
 }
+
 
 export async function deleteRawMaterial(id: string) {
     try {
@@ -174,17 +201,32 @@ export async function deleteRawMaterial(id: string) {
         const rm = await prisma.rawMaterial.findUnique({ where: { id, businessId: ctx.businessId } });
         if (!rm) throw new Error('Not found')
 
-        await prisma.rawMaterial.update({
-            where: { id },
-            data: { deletedAt: new Date() }
-        });
+        await prisma.$transaction(async (tx) => {
+            await tx.rawMaterial.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
+
+            await logAudit({
+                action: 'SOFT_DELETE',
+                entity: 'RawMaterial',
+                entityId: rm.sku,
+                module: 'inventory',
+                entityName: 'Raw Material',
+            });
+        }, { timeout: 15000 });
 
         revalidatePath('/inventory/raw-materials');
         revalidatePath('/inventory');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         return { success: true };
     } catch (error) {
         console.error('Failed to delete raw material:', error);
         return { success: false, error: 'Failed to delete material' };
     }
 }
+

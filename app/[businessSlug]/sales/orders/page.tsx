@@ -1,11 +1,14 @@
 import OrdersClient from './OrdersClient';
+import { getOrders } from '@/app/actions/sales/orders';
 
 export const metadata = {
   title: 'Orders | Safcha',
 };
 
-export const dynamic = 'force-dynamic';
 
-export default function OrdersPage() {
-  return <OrdersClient />;
+export default async function OrdersPage() {
+  const result = await getOrders();
+  const initialOrders = result.success && 'orders' in result ? result.orders : [];
+
+  return <OrdersClient initialOrders={(initialOrders || []) as any} />;
 }

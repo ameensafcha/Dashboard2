@@ -2,11 +2,12 @@
 
 import prisma from '@/lib/prisma';
 import { ExpenseCategory, PaymentMethod } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
+import { serializeValues } from '@/lib/utils';
 
 // ==========================================
 // Validation Schemas
@@ -83,11 +84,7 @@ export async function getExpenses(category?: ExpenseCategory | 'all') {
             take: 200,
         });
 
-        return expenses.map(e => ({
-            ...e,
-            amount: Number(e.amount),
-            vat: Number(e.vat),
-        }));
+        return serializeValues(expenses);
     } catch (error) {
         console.error('Error fetching expenses:', error);
         return [];
@@ -164,6 +161,11 @@ export async function createExpense(data: CreateExpenseInput) {
         revalidatePath('/finance');
         revalidatePath('/finance/expenses');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
+
         return { success: true };
     } catch (error) {
         console.error('Error creating expense:', error);
@@ -242,6 +244,11 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
         revalidatePath('/finance');
         revalidatePath('/finance/expenses');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
+
         return { success: true };
     } catch (error) {
         console.error('Error updating expense:', error);
@@ -290,6 +297,11 @@ export async function deleteExpense(id: string) {
         revalidatePath('/finance');
         revalidatePath('/finance/expenses');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
+
         return { success: true };
     } catch (error) {
         console.error('Error deleting expense:', error);
@@ -331,18 +343,15 @@ export async function getFinanceSummary() {
         const netProfit = totalRevenue - totalExpenses;
         const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100) : 0;
 
-        return {
+        return serializeValues({
             totalRevenue,
             totalExpenses,
             netProfit,
             profitMargin: Math.round(profitMargin * 10) / 10,
             revenueCount: revenueAgg._count,
             expenseCount: expenseAgg._count,
-            recentTransactions: transactions.map(t => ({
-                ...t,
-                amount: Number(t.amount),
-            })),
-        };
+            recentTransactions: transactions,
+        });
     } catch (error) {
         console.error('Error fetching finance summary:', error);
         return {
@@ -375,18 +384,15 @@ export async function getTransactions(page = 1, limit = 50) {
             where: { deletedAt: null, businessId: ctx.businessId }
         });
 
-        return {
-            transactions: transactions.map(t => ({
-                ...t,
-                amount: Number(t.amount),
-            })),
+        return serializeValues({
+            transactions,
             pagination: {
                 total,
                 page,
                 limit,
                 totalPages: Math.ceil(total / limit)
             }
-        };
+        });
     } catch (error) {
         console.error('Error fetching transactions:', error);
         return { transactions: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };

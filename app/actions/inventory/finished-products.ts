@@ -89,30 +89,32 @@ export async function createFinishedProduct(data: {
         const existing = await prisma.finishedProduct.findUnique({ where: { sku, businessId: ctx.businessId } });
         if (existing) return { success: false, error: `SKU "${sku}" already exists.` };
 
-        await prisma.finishedProduct.create({
-            data: {
-                businessId: ctx.businessId,
-                productId: data.productId,
-                variant: data.variant,
-                sku,
-                currentStock: data.currentStock,
-                reservedStock: data.reservedStock || 0,
-                unitCost: data.unitCost,
-                retailPrice: data.retailPrice,
-                location: data.location as any,
-                batchNumber: data.batchNumber || null,
-                expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
-            },
-        });
+        await prisma.$transaction(async (tx) => {
+            await tx.finishedProduct.create({
+                data: {
+                    businessId: ctx.businessId,
+                    productId: data.productId,
+                    variant: data.variant,
+                    sku,
+                    currentStock: data.currentStock,
+                    reservedStock: data.reservedStock || 0,
+                    unitCost: data.unitCost,
+                    retailPrice: data.retailPrice,
+                    location: data.location as any,
+                    batchNumber: data.batchNumber || null,
+                    expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+                },
+            });
 
-        await logAudit({
-            action: 'CREATE',
-            entity: 'FinishedProduct',
-            entityId: sku,
-            module: 'inventory',
-            entityName: 'Finished Product',
-            details: data,
-        })
+            await logAudit({
+                action: 'CREATE',
+                entity: 'FinishedProduct',
+                entityId: sku,
+                module: 'inventory',
+                entityName: 'Finished Product',
+                details: data,
+            });
+        }, { timeout: 15000 });
 
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
@@ -135,18 +137,20 @@ export async function deleteFinishedProduct(id: string) {
         const fp = await prisma.finishedProduct.findUnique({ where: { id, businessId: ctx.businessId } });
         if (!fp) throw new Error('Not found')
 
-        await prisma.finishedProduct.update({
-            where: { id },
-            data: { deletedAt: new Date() }
-        });
+        await prisma.$transaction(async (tx) => {
+            await tx.finishedProduct.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
 
-        await logAudit({
-            action: 'SOFT_DELETE',
-            entity: 'FinishedProduct',
-            entityId: fp.sku,
-            module: 'inventory',
-            entityName: 'Finished Product',
-        })
+            await logAudit({
+                action: 'SOFT_DELETE',
+                entity: 'FinishedProduct',
+                entityId: fp.sku,
+                module: 'inventory',
+                entityName: 'Finished Product',
+            });
+        }, { timeout: 15000 });
 
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
@@ -184,19 +188,21 @@ export async function updateFinishedProduct(id: string, data: {
             updateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
         }
 
-        await prisma.finishedProduct.update({
-            where: { id },
-            data: updateData
-        });
+        await prisma.$transaction(async (tx) => {
+            await tx.finishedProduct.update({
+                where: { id },
+                data: updateData
+            });
 
-        await logAudit({
-            action: 'UPDATE',
-            entity: 'FinishedProduct',
-            entityId: fp.sku,
-            module: 'inventory',
-            entityName: 'Finished Product',
-            details: data
-        })
+            await logAudit({
+                action: 'UPDATE',
+                entity: 'FinishedProduct',
+                entityId: fp.sku,
+                module: 'inventory',
+                entityName: 'Finished Product',
+                details: data
+            });
+        }, { timeout: 15000 });
 
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
@@ -208,3 +214,4 @@ export async function updateFinishedProduct(id: string, data: {
         return { success: false, error: 'Failed to update finished product.' };
     }
 }
+

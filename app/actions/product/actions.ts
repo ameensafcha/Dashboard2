@@ -22,6 +22,9 @@ const productSchema = z.object({
   baseRetailPrice: z.number().nonnegative('Price cannot be negative').nullable().optional(),
   size: z.number().positive('Size must be positive').nullable().optional(),
   unit: z.string().optional(),
+  laborCost: z.number().nonnegative().optional(),
+  packagingCost: z.number().nonnegative().optional(),
+  overheadCost: z.number().nonnegative().optional(),
   image: z.string().nullable().optional(),
   status: z.nativeEnum(ProductStatus).optional(),
   launchDate: z.coerce.date().nullable().optional(),
@@ -34,11 +37,16 @@ export interface GetProductsParams {
   status?: string;
 }
 
-type SerializedProduct = Omit<Product, 'baseCost' | 'baseRetailPrice' | 'size'> & {
+type SerializedProduct = Omit<Product, 'baseCost' | 'baseRetailPrice' | 'size' | 'laborCost' | 'packagingCost' | 'overheadCost'> & {
   baseCost: number;
   baseRetailPrice: number;
   size?: number | null;
   unit?: string | null;
+  laborCost: number;
+  packagingCost: number;
+  overheadCost: number;
+  totalCOGS: number;
+  marginPercent: number;
   category?: Category | null;
 };
 
@@ -49,13 +57,42 @@ export interface ProductsResponse {
   totalPages: number;
 }
 
-function serializeProduct(product: Product & { category?: Category | null }): SerializedProduct {
+function serializeProduct(product: any): SerializedProduct {
+  let materialCost = 0;
+  if (product.recipeItems) {
+    for (const item of product.recipeItems) {
+      materialCost += Number(item.quantity) * Number(item.rawMaterial?.unitCost || 0);
+    }
+  }
+
+  const laborCost = Number(product.laborCost || 0);
+  const packagingCost = Number(product.packagingCost || 0);
+  const overheadCost = Number(product.overheadCost || 0);
+  const totalCOGS = materialCost + laborCost + packagingCost + overheadCost;
+
+  const baseRetailPrice = Number(product.baseRetailPrice || 0);
+  let marginPercent = 0;
+  if (baseRetailPrice > 0) {
+    marginPercent = ((baseRetailPrice - totalCOGS) / baseRetailPrice) * 100;
+  } else if (totalCOGS === 0) {
+    marginPercent = 100;
+  }
+
+  // Remove recipeItems from the serialized payload to avoid clutter if not needed,
+  // but we can just pass the rest of the product object unchanged.
+  const { recipeItems, ...restProduct } = product;
+
   return {
-    ...product,
+    ...restProduct,
     baseCost: Number(product.baseCost),
-    baseRetailPrice: Number(product.baseRetailPrice),
-    size: (product as any).size ? Number((product as any).size) : null,
-    unit: (product as any).unit || null,
+    baseRetailPrice,
+    size: product.size ? Number(product.size) : null,
+    unit: product.unit || null,
+    laborCost,
+    packagingCost,
+    overheadCost,
+    totalCOGS,
+    marginPercent,
   };
 }
 
@@ -89,6 +126,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
         orderBy: { createdAt: 'desc' },
         include: {
           category: true,
+          recipeItems: { include: { rawMaterial: true } }
         },
       }),
       prisma.product.count({ where }),
@@ -119,6 +157,7 @@ export async function getProduct(id: string) {
     where: { id, deletedAt: null, businessId: ctx.businessId },
     include: {
       category: true,
+      recipeItems: { include: { rawMaterial: true } }
     },
   });
   return product ? serializeProduct(product) : null;
@@ -176,6 +215,9 @@ export async function createProduct(data: Partial<Product> & { categoryId?: stri
       baseRetailPrice: validData.baseRetailPrice || 0,
       size: validData.size || null,
       unit: validData.unit || 'gm',
+      laborCost: validData.laborCost || 0,
+      packagingCost: validData.packagingCost || 0,
+      overheadCost: validData.overheadCost || 0,
       image: validData.image,
       status: validData.status || 'active',
       launchDate: validData.launchDate,
@@ -193,7 +235,7 @@ export async function createProduct(data: Partial<Product> & { categoryId?: stri
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
-  revalidatePath('/');
+  revalidatePath('/inventory/finished'); // Products affect finished inventory lists
 
   return serializeProduct(product);
 }
@@ -225,6 +267,9 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
       baseRetailPrice: validData.baseRetailPrice ?? undefined,
       size: validData.size,
       unit: validData.unit,
+      laborCost: validData.laborCost ?? undefined,
+      packagingCost: validData.packagingCost ?? undefined,
+      overheadCost: validData.overheadCost ?? undefined,
       image: validData.image,
       status: validData.status,
       launchDate: validData.launchDate,
@@ -242,7 +287,7 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
-  revalidatePath('/');
+  revalidatePath('/inventory/finished');
 
   return serializeProduct(product);
 }
@@ -271,7 +316,7 @@ export async function deleteProduct(id: string) {
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
-  revalidatePath('/');
+  revalidatePath('/inventory/finished');
 }
 
 export async function getCategories(search?: string) {
@@ -307,7 +352,6 @@ export async function createCategory(data: { name: string; description?: string 
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
-  revalidatePath('/');
 
   return category;
 }
@@ -325,7 +369,6 @@ export async function updateCategory(id: string, data: { name?: string; descript
 
   revalidatePath('/products');
   revalidatePath('/products/catalog');
-  revalidatePath('/');
 
   return category;
 }
@@ -345,7 +388,136 @@ export async function deleteCategory(id: string) {
   });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
-  revalidatePath('/');
 }
 
 // Variants have been removed.
+
+// ==========================================
+// Phase 16: Production Costs (COGS) & Recipe
+// ==========================================
+
+export async function getProductRecipe(productId: string) {
+  try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'products', 'view')) {
+      throw new Error('Unauthorized');
+    }
+
+    const recipeItems = await prisma.productRecipeItem.findMany({
+      where: { productId, businessId: ctx.businessId },
+      include: {
+        rawMaterial: true
+      }
+    });
+
+    return recipeItems.map(item => ({
+      ...item,
+      quantity: Number(item.quantity),
+      rawMaterial: {
+        ...item.rawMaterial,
+        currentStock: Number(item.rawMaterial.currentStock),
+        unitCost: Number(item.rawMaterial.unitCost),
+        reorderThreshold: item.rawMaterial.reorderThreshold ? Number(item.rawMaterial.reorderThreshold) : null,
+        reorderQuantity: item.rawMaterial.reorderQuantity ? Number(item.rawMaterial.reorderQuantity) : null,
+      }
+    }));
+  } catch (error) {
+    console.error('Error fetching product recipe:', error);
+    return [];
+  }
+}
+
+export async function saveProductRecipe(productId: string, items: { rawMaterialId: string, quantity: number }[]) {
+  try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'products', 'edit')) {
+      throw new Error('Unauthorized');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Delete existing recipe items
+      await tx.productRecipeItem.deleteMany({
+        where: { productId, businessId: ctx.businessId }
+      });
+
+      // Insert new recipe items
+      for (const item of items) {
+        await tx.productRecipeItem.create({
+          data: {
+            businessId: ctx.businessId,
+            productId,
+            rawMaterialId: item.rawMaterialId,
+            quantity: item.quantity
+          }
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          action: 'UPDATE',
+          entity: 'ProductRecipe',
+          entityId: productId,
+          module: 'products',
+          entityName: 'Product BOM',
+          details: { itemCount: items.length },
+          userId: ctx.userId,
+          businessId: ctx.businessId,
+          userName: ctx.userName,
+          description: `Updated Recipe for Product`
+        }
+      });
+    });
+
+    revalidatePath('/products');
+    revalidatePath(`/products/${productId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error saving product recipe:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getProductCOGS(productId: string) {
+  try {
+    const ctx = await getBusinessContext();
+    if (!hasPermission(ctx, 'products', 'view')) {
+      return { totalCOGS: 0, materialCost: 0, laborCost: 0, packagingCost: 0, overheadCost: 0 };
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId, businessId: ctx.businessId },
+      include: {
+        recipeItems: {
+          include: { rawMaterial: true }
+        }
+      }
+    });
+
+    if (!product) {
+      return { totalCOGS: 0, materialCost: 0, laborCost: 0, packagingCost: 0, overheadCost: 0 };
+    }
+
+    // Calculate Raw Material Cost
+    let materialCost = 0;
+    for (const item of product.recipeItems) {
+      materialCost += Number(item.quantity) * Number(item.rawMaterial.unitCost);
+    }
+
+    const laborCost = Number(product.laborCost || 0);
+    const packagingCost = Number(product.packagingCost || 0);
+    const overheadCost = Number(product.overheadCost || 0);
+
+    const totalCOGS = materialCost + laborCost + packagingCost + overheadCost;
+
+    return {
+      totalCOGS,
+      materialCost,
+      laborCost,
+      packagingCost,
+      overheadCost
+    };
+  } catch (error) {
+    console.error('Error calculating Product COGS:', error);
+    return { totalCOGS: 0, materialCost: 0, laborCost: 0, packagingCost: 0, overheadCost: 0 };
+  }
+}

@@ -46,35 +46,61 @@ model Category {
 }
 
 model Product {
-  id              String        @id @default(uuid())
+  id              String     @id @default(uuid())
   name            String
-  categoryId      String?       @map("category_id")
-  skuPrefix       String        @map("sku_prefix")
-  description     String?       @db.Text
-  keyIngredients  String?       @map("key_ingredients") @db.Text
-  caffeineFree    Boolean       @default(true) @map("caffeine_free")
-  sfdaStatus      SfdaStatus    @default(not_submitted) @map("sfda_status")
-  sfdaReference   String?       @map("sfda_reference")
-  baseCost        Decimal       @map("base_cost") @db.Decimal(10, 2)
-  baseRetailPrice Decimal       @map("base_retail_price") @db.Decimal(10, 2)
-  size            Decimal?      @db.Decimal(10, 3)
-  unit            String?       @default("gm")
-  image           String?
-  status          ProductStatus @default(active)
-  launchDate      DateTime?     @map("launch_date")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  deletedAt       DateTime?     @map("deleted_at")
+  categoryId      String?    @map("category_id")
+  skuPrefix       String     @map("sku_prefix")
+  description     String?    @db.Text
+  keyIngredients  String?    @map("key_ingredients") @db.Text
+  caffeineFree    Boolean    @default(true) @map("caffeine_free")
+  sfdaStatus      SfdaStatus @default(not_submitted) @map("sfda_status")
+  sfdaReference   String?    @map("sfda_reference")
+  baseCost        Decimal    @map("base_cost") @db.Decimal(10, 2)
+  baseRetailPrice Decimal    @map("base_retail_price") @db.Decimal(10, 2)
+  size            Decimal?   @db.Decimal(10, 3)
+  unit            String?    @default("gm")
 
-  category          Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Production vs Selling Cost Fields (COGS)
+  laborCost     Decimal @default(0) @map("labor_cost") @db.Decimal(10, 2)
+  packagingCost Decimal @default(0) @map("packaging_cost") @db.Decimal(10, 2)
+  overheadCost  Decimal @default(0) @map("overhead_cost") @db.Decimal(10, 2)
+
+  image      String?
+  status     ProductStatus @default(active)
+  launchDate DateTime?     @map("launch_date")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  deletedAt  DateTime?     @map("deleted_at")
+
+  category          Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   pricingTiers      PricingTier[]
   productionBatches ProductionBatch[]
   orderItems        OrderItem[]
+  recipeItems       ProductRecipeItem[]
   finishedProduct   FinishedProduct?
-  businessId        String            @map("business_id")
-  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId        String              @map("business_id")
+  business          Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@map("products")
+}
+
+model ProductRecipeItem {
+  id            String   @id @default(uuid())
+  productId     String   @map("product_id")
+  rawMaterialId String   @map("raw_material_id")
+  quantity      Decimal  @db.Decimal(10, 3)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Restrict)
+  businessId  String      @map("business_id")
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, rawMaterialId])
+  @@index([productId])
+  @@index([rawMaterialId])
+  @@map("product_recipe_items")
 }
 
 model PricingTier {
@@ -544,9 +570,10 @@ model RawMaterial {
   supplierId String?   @map("supplier_id")
   supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
-  stockMovements StockMovement[]
-  businessId     String          @map("business_id")
-  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  stockMovements     StockMovement[]
+  businessId         String              @map("business_id")
+  business           Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  productRecipeItems ProductRecipeItem[]
 
   @@map("raw_materials")
 }
@@ -749,6 +776,7 @@ model Business {
   transactions        Transaction[]
   expenses            Expense[]
   auditLogs           AuditLog[]
+  productRecipeItems  ProductRecipeItem[]
 
   @@map("businesses")
 }

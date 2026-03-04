@@ -2,11 +2,12 @@
 
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { ClientType, LeadSource } from '@prisma/client';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
+import { serializeValues } from '@/lib/utils';
 
 const contactSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -65,11 +66,7 @@ export async function getContacts(search?: string, companyId?: string) {
             take: 200,
         });
 
-        // Prisma Json types might need safe parsing if they aren't guaranteed arrays
-        return contacts.map(c => ({
-            ...c,
-            tags: Array.isArray(c.tags) ? c.tags : []
-        }));
+        return serializeValues(contacts);
     } catch (error) {
         console.error('Error fetching contacts:', error);
         return [];
@@ -127,7 +124,12 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
 
         revalidatePath('/crm/contacts');
         revalidatePath('/crm/companies'); // Count of contacts inside companies might effectively change
+        revalidatePath('/crm/contacts');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
     } catch (error) {
         console.error('Error creating contact:', error);
@@ -187,7 +189,12 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
         revalidatePath('/crm/contacts');
         revalidatePath(`/crm/contacts/${id}`);
         revalidatePath('/crm/companies');
+        revalidatePath('/crm/contacts');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
     } catch (error) {
         console.error('Error updating contact:', error);
@@ -224,7 +231,12 @@ export async function deleteContact(id: string) {
 
         revalidatePath('/crm/contacts');
         revalidatePath('/crm/companies');
+        revalidatePath('/crm/contacts');
         revalidatePath('/');
+
+        // Revalidate dashboard cache
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+
         return { success: true };
     } catch (error) {
         console.error('Error deleting contact:', error);

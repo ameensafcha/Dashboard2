@@ -19,4 +19,3 @@ export default async function StrategyLayout({
     return <>{children}</>;
 }
 
-export const dynamic = 'force-dynamic';

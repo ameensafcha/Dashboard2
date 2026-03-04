@@ -8,7 +8,6 @@ export const metadata: Metadata = {
     description: 'Manage raw materials, low stock alerts, and track inventory for production.',
 };
 
-export const dynamic = 'force-dynamic';
 
 export default async function RawMaterialsPage() {
     // We fetch initial data to populate the client component quickly, but Zustand will manage it inside
@@ -16,7 +15,7 @@ export default async function RawMaterialsPage() {
     const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true, isActive: true }, where: { isActive: true }, orderBy: { name: 'asc' } });
 
     const props = {
-        initialMaterials: (initialData.success && initialData.materials) ? initialData.materials : [],
+        initialMaterials: initialData.success ? ('materials' in initialData ? initialData.materials : []) : [],
         suppliers
     };
 

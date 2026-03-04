@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,13 @@ import { useTranslation } from '@/lib/i18n';
 import { useRouter } from 'next/navigation';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
-export default function CompaniesClient() {
+interface CompaniesClientProps {
+    initialCompanies: any[];
+    initialTiers: any[];
+    initialCategories: any[];
+}
+
+export default function CompaniesClient({ initialCompanies, initialTiers, initialCategories }: CompaniesClientProps) {
     const { t, language, isRTL } = useTranslation();
     const router = useRouter();
     const {
@@ -32,7 +38,8 @@ export default function CompaniesClient() {
     } = useCrmStore();
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const isInitialized = useRef(false);
 
     const loadData = async (search = '') => {
         setIsLoading(true);
@@ -53,6 +60,13 @@ export default function CompaniesClient() {
     };
 
     useEffect(() => {
+        if (!isInitialized.current) {
+            setCompanies(initialCompanies as any);
+            setActiveTiers(initialTiers as any);
+            setActiveCategories(initialCategories as any);
+            isInitialized.current = true;
+            return;
+        }
         loadData();
     }, []);
 
