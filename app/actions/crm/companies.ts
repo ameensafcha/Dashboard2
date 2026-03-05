@@ -28,56 +28,56 @@ const companySchema = z.object({
     })).optional()
 });
 
+const getCachedCompanies = (businessId: string, search?: string) => unstable_cache(
+    async () => {
+        try {
+            const companies = await prisma.company.findMany({
+                where: {
+                    deletedAt: null,
+                    businessId: businessId,
+                    ...(search ? {
+                        OR: [
+                            { name: { contains: search, mode: 'insensitive' } },
+                            { industry: { contains: search, mode: 'insensitive' } },
+                            { city: { contains: search, mode: 'insensitive' } },
+                        ]
+                    } : {})
+                },
+                include: {
+                    companyPricingTiers: {
+                        include: {
+                            category: true,
+                            pricingTier: true
+                        }
+                    },
+                    _count: {
+                        select: { contacts: true, deals: true }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 200,
+            });
+
+            return serializeValues(companies);
+        } catch (error) {
+            console.error('Error fetching companies:', error);
+            return [];
+        }
+    },
+    [`companies-${businessId}`, search || ''],
+    {
+        tags: [`companies-${businessId}`],
+        revalidate: 3600
+    }
+);
+
 export async function getCompanies(businessSlug?: string, search?: string) {
     const ctx = await getBusinessContext(businessSlug);
     if (!hasPermission(ctx, 'crm', 'view')) {
         throw new Error('Unauthorized');
     }
 
-    const cacheKey = [`companies-${ctx.businessId}`, search || ''];
-
-    return unstable_cache(
-        async () => {
-            try {
-                const companies = await prisma.company.findMany({
-                    where: {
-                        deletedAt: null,
-                        businessId: ctx.businessId,
-                        ...(search ? {
-                            OR: [
-                                { name: { contains: search, mode: 'insensitive' } },
-                                { industry: { contains: search, mode: 'insensitive' } },
-                                { city: { contains: search, mode: 'insensitive' } },
-                            ]
-                        } : {})
-                    },
-                    include: {
-                        companyPricingTiers: {
-                            include: {
-                                category: true,
-                                pricingTier: true
-                            }
-                        },
-                        _count: {
-                            select: { contacts: true, deals: true }
-                        }
-                    },
-                    orderBy: { createdAt: 'desc' },
-                    take: 200,
-                });
-
-                return serializeValues(companies);
-            } catch (error) {
-                console.error('Error fetching companies:', error);
-                return [];
-            }
-        },
-        cacheKey,
-        {
-            tags: [`companies-${ctx.businessId}`],
-            revalidate: 3600
-        }
-    )();
+    return getCachedCompanies(ctx.businessId, search)();
 }
 
 export async function createCompany(data: z.infer<typeof companySchema>) {
@@ -130,6 +130,7 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
         console.error('Error creating company:', error);
@@ -189,6 +190,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
         console.error('Error updating company:', error);
@@ -228,6 +230,7 @@ export async function deleteCompany(id: string) {
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         return { success: true };
     } catch (error) {
         console.error('Error deleting company:', error);

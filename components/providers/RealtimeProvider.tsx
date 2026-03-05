@@ -2,8 +2,8 @@
 
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
-export function RealtimeProvider({ children }: { children: React.ReactNode }) {
+export function RealtimeProvider({ children, businessId }: { children: React.ReactNode, businessId: string }) {
     // Use the global hook once to establish the WebSocket connection for all tables
-    useRealtimeSync()
+    useRealtimeSync(businessId)
     return <>{children}</>
 }

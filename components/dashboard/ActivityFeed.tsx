@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { Activity, Clock } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -28,9 +29,9 @@ export default function ActivityFeed({ data: initialData }: { data: ActivityItem
         refetchInterval: 30_000,
         refetchOnWindowFocus: true,
     });
-    const data = qData || initialData;
+    const data = (qData || initialData) ?? [];
 
-    function formatFeedItem(item: ActivityItem) {
+    const formatFeedItem = useCallback((item: ActivityItem) => {
         const { type, data } = item;
         if (type === 'order') {
             const status = t[data.status as keyof typeof t] || data.status;
@@ -38,17 +39,17 @@ export default function ActivityFeed({ data: initialData }: { data: ActivityItem
         }
         if (type === 'stock') {
             const icon = data.type === 'STOCK_IN' ? '📥' : '📤';
-            const reason = t[data.type.toLowerCase() as keyof typeof t] || data.type.replace('_', ' ');
+            const reason = t[data.type?.toLowerCase() as keyof typeof t] || data.type?.replace('_', ' ') || 'Unknown';
             return `${icon} ${data.id}: ${reason} — ${data.qty} kg`;
         }
         if (type === 'production') {
-            const status = t[data.status as keyof typeof t] || data.status.replace('_', ' ');
+            const status = t[data.status as keyof typeof t] || data.status?.replace('_', ' ') || 'Unknown';
             return `🏭 ${data.number} — ${status}`;
         }
         return '';
-    }
+    }, [t]);
 
-    function timeAgo(dateStr: string) {
+    const timeAgo = useCallback((dateStr: string) => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
         if (isNaN(date.getTime())) return '';
@@ -60,7 +61,7 @@ export default function ActivityFeed({ data: initialData }: { data: ActivityItem
         if (hours < 24) return `${hours}${t.hoursAgo}`;
         const days = Math.floor(hours / 24);
         return `${days}${t.daysAgo}`;
-    }
+    }, [t]);
 
     return (
         <div className="rounded-2xl p-6 border shadow-sm h-full" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
@@ -84,7 +85,7 @@ export default function ActivityFeed({ data: initialData }: { data: ActivityItem
                 <div className="space-y-0 max-h-[360px] overflow-y-auto pr-2 custom-scrollbar">
                     {data.map((item, i) => (
                         <div
-                            key={i}
+                            key={`${item.type}-${item.time}-${i}`}
                             className={cn("flex items-start gap-4 py-4 group transition-colors hover:bg-[var(--muted)]/20 px-4 -mx-4 rounded-xl", isRTL ? "flex-row-reverse" : "flex-row")}
                             style={{ borderBottom: i < data.length - 1 ? '1px solid var(--border)' : 'none' }}
                         >
@@ -93,7 +94,7 @@ export default function ActivityFeed({ data: initialData }: { data: ActivityItem
                                 style={{ background: feedColors[item.type] || 'var(--text-muted)' }}
                             />
                             <span className={cn("text-xs font-bold flex-1 leading-relaxed", isRTL ? "text-right" : "text-left")} style={{ color: 'var(--foreground)' }}>{formatFeedItem(item)}</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-30 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>{timeAgo(item.time)}</span>
+                            <span suppressHydrationWarning className="text-[10px] font-black uppercase tracking-widest opacity-30 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>{timeAgo(item.time)}</span>
                         </div>
                     ))}
                 </div>

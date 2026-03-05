@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,19 @@ export default function SalesChannelChart({ data: initialData }: { data: Channel
         refetchInterval: 30_000,
         refetchOnWindowFocus: true,
     });
-    const data = qData || initialData;
+    const data = (qData || initialData) ?? [];
+
+    const tooltipFormatter = useCallback((value: any) =>
+        `SAR ${Number(value).toLocaleString()}`,
+        []);
+
+    const legendFormatter = useCallback((value: any) => (
+        <span className={cn("text-[10px] font-black uppercase tracking-widest", isRTL ? "mr-1" : "ml-1")}>
+            {t[`chan_${value}` as keyof typeof t] || value}
+        </span>
+    ), [t, isRTL]);
+
+    const tooltipStyle = useMemo(() => ({ textAlign: isRTL ? 'right' : 'left' } as const), [isRTL]);
 
     return (
         <div className="rounded-2xl p-6 border shadow-sm h-full" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
@@ -46,16 +59,12 @@ export default function SalesChannelChart({ data: initialData }: { data: Channel
                                 <Cell key={i} fill={CHANNEL_COLORS[i % CHANNEL_COLORS.length]} />
                             ))}
                         </Pie>
-                        <Tooltip formatter={(value: any) => `SAR ${Number(value).toLocaleString()}`} contentStyle={{ textAlign: isRTL ? 'right' : 'left' }} />
+                        <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
                         <Legend
                             verticalAlign="bottom"
                             align="center"
                             iconType="circle"
-                            formatter={(value: any) => (
-                                <span className={cn("text-[10px] font-black uppercase tracking-widest", isRTL ? "mr-1" : "ml-1")}>
-                                    {t[`chan_${value}` as keyof typeof t] || value}
-                                </span>
-                            )}
+                            formatter={legendFormatter}
                         />
                     </PieChart>
                 </ResponsiveContainer>

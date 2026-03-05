@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { DollarSign, ShoppingCart, Package, Users, TrendingUp, TrendingDown, Receipt, BarChart3 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -37,7 +38,7 @@ export default function KpiCards({ data: initialData }: { data: KpiData }) {
 
     if (!data) return null;
 
-    const cards = [
+    const cards = useMemo(() => [
         { title: t.revenueMTD, value: data.revenue.value, change: data.revenue.change, icon: DollarSign, prefix: 'SAR ', color: '#22c55e' },
         { title: t.expensesMTD, value: data.expenses.value, change: data.expenses.change, icon: Receipt, prefix: 'SAR ', color: '#ef4444' },
         { title: t.netProfitMTD, value: data.netProfit.value, change: data.netProfit.change, icon: BarChart3, prefix: 'SAR ', color: data.netProfit.value >= 0 ? '#22c55e' : '#ef4444' },
@@ -46,7 +47,7 @@ export default function KpiCards({ data: initialData }: { data: KpiData }) {
         { title: 'Finished (Cost)', value: data.finishedInventoryCost.value, change: 0, icon: Package, prefix: 'SAR ', color: '#22c55e' },
         { title: 'Finished (Retail)', value: data.finishedInventoryRetail.value, change: 0, icon: DollarSign, prefix: 'SAR ', color: '#E8A838' },
         { title: t.activeClients, value: data.activeClients.value, change: data.activeClients.change, icon: Users, color: '#a855f7' },
-    ];
+    ], [data, t]);
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

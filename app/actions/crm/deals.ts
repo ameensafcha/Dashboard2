@@ -107,6 +107,7 @@ export async function createDeal(data: z.infer<typeof dealSchema>) {
         revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
@@ -155,6 +156,7 @@ export async function updateDeal(id: string, data: Partial<z.infer<typeof dealSc
         revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
@@ -200,6 +202,7 @@ export async function updateDealStage(id: string, stage: DealStage) {
         revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
@@ -239,6 +242,7 @@ export async function deleteDeal(id: string) {
         revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true };
@@ -302,6 +306,8 @@ export async function convertDealToOrder(dealId: string) {
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`sales-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/sales/orders');
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');

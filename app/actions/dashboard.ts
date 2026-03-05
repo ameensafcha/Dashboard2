@@ -12,8 +12,8 @@ import { unstable_cache } from 'next/cache';
 const getCachedKpis = (businessId: string) => unstable_cache(
     async () => {
         const now = new Date();
-        const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
 
         const [revMTD_res, revLast_res, expMTD_res, expLast_res, ordMTD_res, ordLast_res, clientRes, rawInvRes, products_for_cost] = await Promise.all([
             prisma.transaction.aggregate({ where: { type: 'revenue', date: { gte: firstOfMonth }, businessId }, _sum: { amount: true } }),
@@ -61,11 +61,15 @@ const getCachedKpis = (businessId: string) => unstable_cache(
     { tags: [`dashboard-kpi`, `dashboard-kpi-${businessId}`], revalidate: 3600 }
 );
 
-export async function revalidateDashboard() {
+export async function revalidateDashboard(businessId?: string) {
     try {
-        const ctx = await getBusinessContext();
+        let bid = businessId;
+        if (!bid) {
+            const ctx = await getBusinessContext();
+            bid = ctx.businessId;
+        }
+
         const { revalidateTag } = await import('next/cache');
-        const bid = ctx.businessId;
         // Dashboard
         revalidateTag(`dashboard-kpi-${bid}`, { expire: 0 });
         revalidateTag(`dashboard-charts-${bid}`, { expire: 0 });
@@ -105,6 +109,7 @@ export async function revalidateDashboard() {
         revalidateTag(`dashboard-inventory`, { expire: 0 });
         return { success: true };
     } catch (e) {
+        console.error("Cache Revalidation Failed:", e);
         return { success: false };
     }
 }
@@ -125,9 +130,8 @@ export async function getDashboardKpis(businessSlug?: string) {
  */
 const getCachedRevenueTrend = (businessId: string) => unstable_cache(
     async () => {
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-        sixMonthsAgo.setDate(1);
+        const now = new Date();
+        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1, 0, 0, 0, 0);
 
         const revTrendRes = await prisma.$queryRaw<{ month: Date; revenue: number; expenses: number }[]>`
             SELECT DATE_TRUNC('month', date) AS month,
@@ -137,7 +141,6 @@ const getCachedRevenueTrend = (businessId: string) => unstable_cache(
         `;
 
         const revenueTrend: any[] = [];
-        const now = new Date();
         for (let i = 5; i >= 0; i--) {
             const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const dbRow = revTrendRes.find(r => {
@@ -154,13 +157,13 @@ const getCachedRevenueTrend = (businessId: string) => unstable_cache(
     },
     [`dashboard-trend-${businessId}`],
     { tags: [`dashboard-charts`, `dashboard-charts-${businessId}`] }
-)();
+);
 
 export async function getDashboardRevenueTrend(businessSlug?: string) {
     try {
         const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
-        return await getCachedRevenueTrend(ctx.businessId);
+        return await getCachedRevenueTrend(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching revenue trend:', error);
         return [];
@@ -172,8 +175,8 @@ export async function getDashboardRevenueTrend(businessSlug?: string) {
  */
 const getCachedSalesByChannel = (businessId: string) => unstable_cache(
     async () => {
-        const firstOfMonth = new Date();
-        firstOfMonth.setDate(1);
+        const now = new Date();
+        const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 
         const salesChanRes = await prisma.order.groupBy({
             by: ['channel'],
@@ -188,13 +191,13 @@ const getCachedSalesByChannel = (businessId: string) => unstable_cache(
     },
     [`dashboard-channel-${businessId}`],
     { tags: [`dashboard-charts`, `dashboard-charts-${businessId}`] }
-)();
+);
 
 export async function getDashboardSalesByChannel(businessSlug?: string) {
     try {
         const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
-        return await getCachedSalesByChannel(ctx.businessId);
+        return await getCachedSalesByChannel(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching sales by channel:', error);
         return [];
@@ -224,13 +227,13 @@ const getCachedActivityFeed = (businessId: string) => unstable_cache(
     },
     [`dashboard-feed-${businessId}`],
     { tags: [`dashboard-feed`, `dashboard-feed-${businessId}`] }
-)();
+);
 
 export async function getDashboardActivityFeed(businessSlug?: string) {
     try {
         const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
-        return await getCachedActivityFeed(ctx.businessId);
+        return await getCachedActivityFeed(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching activity feed:', error);
         return [];
@@ -265,13 +268,13 @@ const getCachedLowStockAlerts = (businessId: string) => unstable_cache(
     },
     [`dashboard-lowstock-${businessId}`],
     { tags: [`dashboard-inventory`, `dashboard-inventory-${businessId}`] }
-)();
+);
 
 export async function getDashboardLowStockAlerts(businessSlug?: string) {
     try {
         const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
-        return await getCachedLowStockAlerts(ctx.businessId);
+        return await getCachedLowStockAlerts(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching low stock alerts:', error);
         return [];

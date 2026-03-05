@@ -24,7 +24,7 @@ export default function LowStockAlerts({ data: initialData }: { data: LowStockIt
         refetchInterval: 30_000,
         refetchOnWindowFocus: true,
     });
-    const data = qData || initialData;
+    const data = (qData || initialData) ?? [];
 
     if (data.length === 0) return null;
 

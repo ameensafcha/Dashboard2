@@ -131,11 +131,10 @@ export default function PipelineClient({ initialData, businessSlug }: PipelineCl
                 toast({ title: '✓ Deal Moved', description: `Stage updated to "${destTitle}"` });
             } else {
                 toast({ title: 'Error', description: 'Failed to update deal stage' });
-                loadData();
             }
         } catch (error) {
+            console.error('Failed to update stage', error);
             toast({ title: 'Error', description: 'Failed to update deal stage' });
-            loadData();
         } finally {
             setIsSaving(false);
         }

@@ -85,8 +85,8 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId, 
             return;
         }
 
-        // Only fetch if searching or filtering, otherwise favor store (synced via Realtime)
-        if (searchTerm || filterCompanyId) {
+        // Only fetch if companyId is actualy changed and not null (initial load handled by initialContacts)
+        if (filterCompanyId) {
             loadData(searchTerm, filterCompanyId || undefined, true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

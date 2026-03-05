@@ -22,21 +22,20 @@ export default async function BusinessLayout({
     redirect('/login')
   }
 
-  // 2. Find the business by slug
+  // 2. Find the business and verify membership in a single query
   const business = await prisma.business.findUnique({
     where: { slug: businessSlug },
-    select: { id: true, name: true }
+    select: {
+      id: true,
+      name: true,
+      users: {
+        where: { userId: user.id, isActive: true },
+        select: { isActive: true }
+      }
+    }
   })
-  if (!business) {
-    redirect('/select-business')
-  }
 
-  // 3. Verify the user is a member of this business
-  const membership = await prisma.businessUser.findUnique({
-    where: { businessId_userId: { businessId: business.id, userId: user.id } },
-    select: { isActive: true }
-  })
-  if (!membership || !membership.isActive) {
+  if (!business || business.users.length === 0) {
     redirect('/select-business')
   }
 
@@ -50,7 +49,7 @@ export default async function BusinessLayout({
   return (
     <RootClientLayout>
       <QueryProvider>
-        <RealtimeProvider>
+        <RealtimeProvider businessId={business.id}>
           {children}
         </RealtimeProvider>
       </QueryProvider>

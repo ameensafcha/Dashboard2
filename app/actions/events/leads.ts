@@ -9,7 +9,7 @@ import { logAudit } from '@/lib/logAudit';
 import { serializeValues } from '@/lib/utils';
 import { createContact } from '../crm/contacts'; // Import generic CRM contact creation
 
-export const eventLeadSchema = z.object({
+const eventLeadSchema = z.object({
     eventId: z.string(),
     name: z.string().min(1, 'Name is required'),
     companyName: z.string().optional(),

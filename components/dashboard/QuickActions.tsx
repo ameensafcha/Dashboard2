@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Package, Users, DollarSign } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
@@ -13,14 +14,16 @@ export default function QuickActions() {
     const params = useParams();
     const businessSlug = params?.businessSlug as string;
 
-    const rawQuickActions = [
+    const rawQuickActions = useMemo(() => [
         { label: t.newOrder, href: `/${businessSlug}/sales/orders/new`, icon: ShoppingCart, module: 'orders', action: 'create' },
         { label: t.addStock, href: `/${businessSlug}/inventory/raw-materials`, icon: Package, module: 'inventory', action: 'create' },
         { label: t.addClient, href: `/${businessSlug}/crm/contacts`, icon: Users, module: 'crm', action: 'create' },
         { label: t.addExpense, href: `/${businessSlug}/finance/expenses`, icon: DollarSign, module: 'finance', action: 'create' },
-    ];
+    ], [businessSlug, t]);
 
-    const quickActions = rawQuickActions.filter(action => can(action.module, action.action));
+    const quickActions = useMemo(() =>
+        rawQuickActions.filter(action => can(action.module, action.action)),
+        [rawQuickActions, can]);
 
     return (
         <div className="rounded-2xl p-6 border shadow-sm h-full" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>

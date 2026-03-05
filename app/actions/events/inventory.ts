@@ -8,7 +8,7 @@ import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
 import { serializeValues } from '@/lib/utils';
 
-export const eventInventorySchema = z.object({
+const eventInventorySchema = z.object({
     eventId: z.string(),
     name: z.string().min(1, 'Name is required'),
     quantity: z.number().min(1).default(1),

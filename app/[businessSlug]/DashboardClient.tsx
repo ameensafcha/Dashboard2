@@ -55,11 +55,11 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
         }
         if (type === 'stock') {
             const icon = data.type === 'STOCK_IN' ? '📥' : '📤';
-            const reason = t[data.type.toLowerCase() as keyof typeof t] || data.type.replace('_', ' ');
+            const reason = t[data.type?.toLowerCase() as keyof typeof t] || data.type?.replace('_', ' ') || 'Unknown';
             return `${icon} ${data.id}: ${reason} — ${data.qty} kg`;
         }
         if (type === 'production') {
-            const status = t[data.status as keyof typeof t] || data.status.replace('_', ' ');
+            const status = t[data.status as keyof typeof t] || data.status?.replace('_', ' ') || 'Unknown';
             return `🏭 ${data.number} — ${status}`;
         }
         return '';
@@ -299,7 +299,7 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
                                         style={{ background: feedColors[item.type] || 'var(--text-muted)' }}
                                     />
                                     <span className={cn("text-xs font-bold flex-1 leading-relaxed", isRTL ? "text-right" : "text-left")} style={{ color: 'var(--foreground)' }}>{formatFeedItem(item)}</span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-30 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>{timeAgo(item.time)}</span>
+                                    <span suppressHydrationWarning className="text-[10px] font-black uppercase tracking-widest opacity-30 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>{timeAgo(item.time)}</span>
                                 </div>
                             ))}
                         </div>
