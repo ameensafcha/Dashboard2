@@ -84,7 +84,7 @@ export async function getMarketingOverview(businessSlug?: string) {
         async () => {
             try {
                 const campaigns = await prisma.campaign.findMany({
-                    where: { deletedAt: null, businessId: ctx.businessId, status: { in: ['ACTIVE', 'COMPLETED'] } },
+                    where: { deletedAt: null, businessId: ctx.businessId },
                     select: { budget: true, spent: true, leads: true, revenue: true }
                 });
 
@@ -134,7 +134,7 @@ export async function createCampaign(data: z.infer<typeof campaignSchema>) {
         const validData = parsed.data;
 
         const campaign = await prisma.$transaction(async (tx) => {
-            const campaignId = await generateCampaignId();
+            const campaignId = await generateCampaignId(ctx.businessId, tx);
             const newCampaign = await tx.campaign.create({
                 data: {
                     businessId: ctx.businessId,
@@ -155,11 +155,14 @@ export async function createCampaign(data: z.infer<typeof campaignSchema>) {
                 entityId: campaignId,
                 module: 'marketing',
                 entityName: 'Campaign',
-                details: validData
+                details: validData,
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
             });
 
             return newCampaign;
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`campaigns-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`marketing-overview-${ctx.businessId}`, { expire: 0 });
@@ -207,11 +210,14 @@ export async function updateCampaign(id: string, data: z.infer<typeof campaignSc
                 entityId: updatedCampaign.campaignId,
                 module: 'marketing',
                 entityName: 'Campaign',
-                details: data
+                details: data,
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
             });
 
             return updatedCampaign;
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`campaigns-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`marketing-overview-${ctx.businessId}`, { expire: 0 });
@@ -242,9 +248,12 @@ export async function deleteCampaign(id: string) {
                 entityId: campaign.campaignId,
                 module: 'marketing',
                 entityName: 'Campaign',
-                details: { reason: 'User deleted campaign' }
+                details: { reason: 'User deleted campaign' },
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
             });
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`campaigns-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`marketing-overview-${ctx.businessId}`, { expire: 0 });

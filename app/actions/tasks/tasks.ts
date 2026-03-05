@@ -92,9 +92,19 @@ export async function createTask(data: z.infer<typeof taskSchema>) {
                 }
             });
 
-            await logAudit({ action: 'CREATE', entity: 'Task', entityId: newTask.id, module: 'tasks', entityName: 'Task', details: validData });
+            await logAudit({
+                action: 'CREATE',
+                entity: 'Task',
+                entityId: newTask.id,
+                module: 'tasks',
+                entityName: 'Task',
+                details: validData,
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
+            });
             return newTask;
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`tasks-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: serializeValues(task) };
@@ -115,9 +125,19 @@ export async function updateTask(id: string, data: Partial<z.infer<typeof taskSc
                 data
             });
 
-            await logAudit({ action: 'UPDATE', entity: 'Task', entityId: id, module: 'tasks', entityName: 'Task', details: data });
+            await logAudit({
+                action: 'UPDATE',
+                entity: 'Task',
+                entityId: id,
+                module: 'tasks',
+                entityName: 'Task',
+                details: data,
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
+            });
             return updated;
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`task-${id}`, { expire: 0 });
         revalidateTag(`tasks-${ctx.businessId}`, { expire: 0 });
@@ -138,8 +158,18 @@ export async function deleteTask(id: string) {
                 where: { id, businessId: ctx.businessId },
                 data: { deletedAt: new Date() }
             });
-            await logAudit({ action: 'SOFT_DELETE', entity: 'Task', entityId: id, module: 'tasks', entityName: 'Task', details: { reason: 'User deleted task' } });
-        });
+            await logAudit({
+                action: 'SOFT_DELETE',
+                entity: 'Task',
+                entityId: id,
+                module: 'tasks',
+                entityName: 'Task',
+                details: { reason: 'User deleted task' },
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
+            });
+        }, { timeout: 15000 });
 
         revalidateTag(`task-${id}`, { expire: 0 });
         revalidateTag(`tasks-${ctx.businessId}`, { expire: 0 });

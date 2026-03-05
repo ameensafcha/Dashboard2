@@ -147,7 +147,17 @@ export async function createGoal(data: z.input<typeof goalSchema>) {
                 });
             }
 
-            await logAudit({ action: 'CREATE', entity: 'Objective', entityId: newObjective.id, module: 'strategy', entityName: newObjective.title, details: validData });
+            await logAudit({
+                action: 'CREATE',
+                entity: 'Objective',
+                entityId: newObjective.id,
+                module: 'strategy',
+                entityName: newObjective.title,
+                details: validData,
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
+            });
 
             return {
                 id: newObjective.id,
@@ -161,7 +171,7 @@ export async function createGoal(data: z.input<typeof goalSchema>) {
                 endDate: newObjective.dueDate,
                 createdAt: newObjective.createdAt,
             };
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`goals-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: serializeValues(goal) };
@@ -229,9 +239,19 @@ export async function updateGoal(id: string, data: Partial<z.input<typeof goalSc
                 }
             });
 
-            await logAudit({ action: 'UPDATE', entity: 'Objective', entityId: id, module: 'strategy', entityName: updated.title, details: validData });
+            await logAudit({
+                action: 'UPDATE',
+                entity: 'Objective',
+                entityId: id,
+                module: 'strategy',
+                entityName: updated.title,
+                details: validData,
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
+            });
             return updated;
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`goal-${id}`, { expire: 0 });
         revalidateTag(`goals-${ctx.businessId}`, { expire: 0 });
@@ -251,9 +271,19 @@ export async function deleteGoal(id: string) {
             const obj = await tx.objective.findUnique({ where: { id }, include: { strategy: true } });
             if (obj && obj.strategy.businessId === ctx.businessId) {
                 await tx.objective.delete({ where: { id } });
-                await logAudit({ action: 'DELETE', entity: 'Objective', entityId: id, module: 'strategy', entityName: 'Goal', details: { reason: 'User deleted goal' } });
+                await logAudit({
+                    action: 'DELETE',
+                    entity: 'Objective',
+                    entityId: id,
+                    module: 'strategy',
+                    entityName: 'Goal',
+                    details: { reason: 'User deleted goal' },
+                    tx,
+                    userId: ctx.userId,
+                    businessId: ctx.businessId
+                });
             }
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`goal-${id}`, { expire: 0 });
         revalidateTag(`goals-${ctx.businessId}`, { expire: 0 });

@@ -8,7 +8,10 @@ export async function logAudit({
     details,
     module,
     entityName,
-    description
+    description,
+    tx,
+    userId,
+    businessId
 }: {
     action: string
     entity: string
@@ -17,24 +20,38 @@ export async function logAudit({
     module?: string
     entityName?: string
     description?: string
+    tx?: any
+    userId?: string
+    businessId?: string
 }) {
     try {
-        const ctx = await getBusinessContext()
+        let finalUserId = userId;
+        let finalBusinessId = businessId;
+        let finalUserName: string | undefined;
 
-        await prisma.auditLog.create({
+        if (!finalUserId || !finalBusinessId) {
+            const ctx = await getBusinessContext();
+            finalUserId = ctx.userId;
+            finalBusinessId = ctx.businessId;
+            finalUserName = ctx.userName;
+        }
+
+        const db = tx || prisma;
+
+        await db.auditLog.create({
             data: {
                 action,
                 entity,
                 entityId,
                 details: details || {},
-                userId: ctx.userId,
-                userName: ctx.userName,
-                businessId: ctx.businessId,
+                userId: finalUserId,
+                userName: finalUserName || 'System',
+                businessId: finalBusinessId,
                 module,
                 entityName,
                 description
             }
-        })
+        });
     } catch (error) {
         console.error('Failed to log audit:', error)
     }

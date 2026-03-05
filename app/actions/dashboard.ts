@@ -88,6 +88,16 @@ export async function revalidateDashboard() {
         revalidateTag(`inventory-overview-${bid}`, { expire: 0 });
         // Products
         revalidateTag(`products-overview-${bid}`, { expire: 0 });
+        // Marketing
+        revalidateTag(`marketing-overview-${bid}`, { expire: 0 });
+        revalidateTag(`campaigns-${bid}`, { expire: 0 });
+        // Strategy
+        revalidateTag(`strategies-${bid}`, { expire: 0 });
+        revalidateTag(`goals-${bid}`, { expire: 0 });
+        // Events
+        revalidateTag(`events-${bid}`, { expire: 0 });
+        // Documents
+        revalidateTag(`documents-${bid}`, { expire: 0 });
         // Generic dashboard tags (fallback)
         revalidateTag(`dashboard-kpi`, { expire: 0 });
         revalidateTag(`dashboard-charts`, { expire: 0 });

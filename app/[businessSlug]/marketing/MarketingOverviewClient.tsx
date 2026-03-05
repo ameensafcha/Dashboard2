@@ -26,7 +26,7 @@ import { CampaignChannel, CampaignStatus } from '@prisma/client';
 
 export default function MarketingOverviewClient({ data: initialData, initialCampaigns, businessSlug }: { data: any, initialCampaigns: any[], businessSlug: string }) {
     const { t, isRTL } = useTranslation();
-    const { setIsNewCampaignModalOpen, setSelectedCampaignId, setIsDetailDrawerOpen } = useMarketingStore();
+    const { setIsNewCampaignModalOpen, setSelectedCampaignId, setIsDetailDrawerOpen, selectedCampaignId } = useMarketingStore();
 
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -118,7 +118,7 @@ export default function MarketingOverviewClient({ data: initialData, initialCamp
         return colors[channel] || 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20';
     };
 
-    const selectedCampaign = campaigns?.find(c => c.id === useMarketingStore.getState().selectedCampaignId);
+    const selectedCampaign = campaigns?.find(c => c.id === selectedCampaignId);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -284,7 +284,7 @@ export default function MarketingOverviewClient({ data: initialData, initialCamp
             </div>
 
             <NewCampaignModal onCampaignAdded={refreshData} />
-            <CampaignDetailDrawer campaign={selectedCampaign} onUpdated={refreshData} />
+            <CampaignDetailDrawer key={selectedCampaign?.id} campaign={selectedCampaign} onUpdated={refreshData} />
         </div>
     );
 }

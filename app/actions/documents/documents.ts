@@ -91,9 +91,19 @@ export async function uploadDocument(data: z.infer<typeof documentSchema>) {
                 }
             });
 
-            await logAudit({ action: 'CREATE', entity: 'Document', entityId: newDoc.id, module: 'documents', entityName: newDoc.name, details: validData });
+            await logAudit({
+                action: 'CREATE',
+                entity: 'Document',
+                entityId: newDoc.id,
+                module: 'documents',
+                entityName: newDoc.name,
+                details: validData,
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
+            });
             return newDoc;
-        });
+        }, { timeout: 15000 });
 
         revalidateTag(`documents-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: serializeValues(doc) };
@@ -113,8 +123,18 @@ export async function deleteDocument(id: string) {
                 where: { id, businessId: ctx.businessId },
                 data: { deletedAt: new Date() }
             });
-            await logAudit({ action: 'SOFT_DELETE', entity: 'Document', entityId: id, module: 'documents', entityName: doc.name, details: { reason: 'User deleted document' } });
-        });
+            await logAudit({
+                action: 'SOFT_DELETE',
+                entity: 'Document',
+                entityId: id,
+                module: 'documents',
+                entityName: doc.name,
+                details: { reason: 'User deleted document' },
+                tx,
+                userId: ctx.userId,
+                businessId: ctx.businessId
+            });
+        }, { timeout: 15000 });
 
         revalidateTag(`document-${id}`, { expire: 0 });
         revalidateTag(`documents-${ctx.businessId}`, { expire: 0 });

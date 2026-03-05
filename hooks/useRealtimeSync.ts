@@ -215,6 +215,62 @@ export function useRealtimeSync() {
             }, () => {
                 triggerRefresh()
             })
+            // ── Marketing: Campaigns ───────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'campaigns'
+            }, () => {
+                triggerRefresh()
+            })
+            // ── Strategy: Strategies ──────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'strategies'
+            }, () => {
+                triggerRefresh()
+            })
+            // ── Strategy: Objectives ──────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'objectives'
+            }, () => {
+                triggerRefresh()
+            })
+            // ── Strategy: Key Results ─────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'key_results'
+            }, () => {
+                triggerRefresh()
+            })
+            // ── Events: Events ────────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'events'
+            }, () => {
+                triggerRefresh()
+            })
+            // ── Team: Tasks ──────────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'tasks'
+            }, () => {
+                triggerRefresh()
+            })
+            // ── Documents: Documents ──────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'documents'
+            }, () => {
+                triggerRefresh()
+            })
 
             .subscribe((status: string) => {
                 if (status === 'SUBSCRIBED') {

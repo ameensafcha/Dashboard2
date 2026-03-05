@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,24 @@ export default function CampaignDetailDrawer({ campaign, onUpdated }: { campaign
         revenue: campaign?.revenue?.toString() || '0',
         notes: campaign?.notes || '',
     });
+
+    useEffect(() => {
+        if (campaign) {
+            setFormState({
+                name: campaign.name || '',
+                status: campaign.status || CampaignStatus.DRAFT,
+                channel: campaign.channel || CampaignChannel.OTHER,
+                budget: campaign.budget?.toString() || '0',
+                reach: campaign.reach?.toString() || '0',
+                clicks: campaign.clicks?.toString() || '0',
+                leads: campaign.leads?.toString() || '0',
+                conversions: campaign.conversions?.toString() || '0',
+                spent: campaign.spent?.toString() || '0',
+                revenue: campaign.revenue?.toString() || '0',
+                notes: campaign.notes || '',
+            });
+        }
+    }, [campaign]);
 
     const handleChange = (field: string, value: string) => {
         setFormState(prev => ({ ...prev, [field]: value }));

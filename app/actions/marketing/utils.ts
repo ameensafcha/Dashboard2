@@ -1,15 +1,16 @@
 import prisma from '@/lib/prisma';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 
-export async function generateCampaignId(): Promise<string> {
-    const ctx = await getBusinessContext();
+export async function generateCampaignId(businessId: string, tx?: any): Promise<string> {
     const currentYear = new Date().getFullYear();
     const prefix = `CAM-${currentYear}-`;
 
-    const lastCampaign = await prisma.campaign.findFirst({
+    const db = tx || prisma;
+
+    const lastCampaign = await db.campaign.findFirst({
         where: {
             campaignId: { startsWith: prefix },
-            businessId: ctx.businessId,
+            businessId,
         },
         orderBy: {
             campaignId: 'desc'
