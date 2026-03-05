@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Building2, User, Mail, Phone, ArrowRight, ChevronRight, Globe } from 'lucide-react';
+import { User, Search, Building2, Phone, Mail, MapPin, Plus, Filter, ArrowRight } from 'lucide-react';
+import TableLoader from '@/components/ui/TableLoader';
 import { useCrmStore } from '@/stores/crmStore';
 import { getContacts } from '@/app/actions/crm/contacts';
 import { getCompanies } from '@/app/actions/crm/companies';
@@ -199,14 +200,7 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId, 
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]/50">
                             {isLoading ? (
-                                <tr key="loading-row">
-                                    <td colSpan={5} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-4 opacity-40">
-                                            <div className="w-10 h-10 border-2 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest">Loading contacts...</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <TableLoader rows={6} cols={5} />
                             ) : contacts.length === 0 ? (
                                 <tr key="empty-row">
                                     <td colSpan={5} className="px-8 py-20 text-center">
@@ -231,7 +225,7 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId, 
                                     </td>
                                 </tr>
                             ) : (
-                                contacts.map((contact,index) => (
+                                contacts.map((contact, index) => (
                                     <tr
                                         key={index}
                                         className={cn(
@@ -319,8 +313,8 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId, 
                 </div>
             </div>
 
-            <NewContactModal onContactAdded={() => loadData()} />
-            <ContactDetailDrawer onContactUpdated={() => loadData()} />
+            <NewContactModal onContactAdded={() => loadData('', undefined, true)} />
+            <ContactDetailDrawer onContactUpdated={() => loadData('', undefined, true)} />
         </div>
     );
 }

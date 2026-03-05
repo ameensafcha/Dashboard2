@@ -4,11 +4,26 @@ import { Activity, TrendingUp, TrendingDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { getDashboardRevenueTrend } from '@/app/actions/dashboard';
 
 type TrendData = { month: string; revenue: number; expenses: number }[];
 
-export default function RevenueTrendChart({ data }: { data: TrendData }) {
+export default function RevenueTrendChart({ data: initialData }: { data: TrendData }) {
     const { t, isRTL } = useTranslation();
+    const params = useParams();
+    const businessSlug = params?.businessSlug as string;
+
+    const { data: qData } = useQuery({
+        queryKey: ['dashboard-revenue-trend', businessSlug],
+        queryFn: () => getDashboardRevenueTrend(businessSlug),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    });
+    const data = qData || initialData;
 
     return (
         <div className="rounded-2xl p-6 border shadow-sm h-full" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>

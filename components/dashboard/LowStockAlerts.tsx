@@ -5,11 +5,26 @@ import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { getDashboardLowStockAlerts } from '@/app/actions/dashboard';
 
 type LowStockItem = { name: string; sku: string; type: 'Raw Material' | 'Finished'; currentStock: number; threshold: number };
 
-export default function LowStockAlerts({ data }: { data: LowStockItem[] }) {
+export default function LowStockAlerts({ data: initialData }: { data: LowStockItem[] }) {
     const { t, isRTL } = useTranslation();
+    const params = useParams();
+    const businessSlug = params?.businessSlug as string;
+
+    const { data: qData } = useQuery({
+        queryKey: ['dashboard-low-stock', businessSlug],
+        queryFn: () => getDashboardLowStockAlerts(businessSlug),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    });
+    const data = qData || initialData;
 
     if (data.length === 0) return null;
 
@@ -24,7 +39,7 @@ export default function LowStockAlerts({ data }: { data: LowStockItem[] }) {
                         {t.lowStockAlerts}
                     </h2>
                 </div>
-                <Link href="/inventory" className={cn("flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-70 transition-opacity", isRTL ? "flex-row-reverse" : "flex-row")} style={{ color: '#ef4444' }}>
+                <Link href={`/${businessSlug}/inventory`} className={cn("flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-70 transition-opacity", isRTL ? "flex-row-reverse" : "flex-row")} style={{ color: '#ef4444' }}>
                     {t.viewInventory} <ArrowRight className={cn("w-3.5 h-3.5", isRTL ? "rotate-180" : "")} />
                 </Link>
             </div>

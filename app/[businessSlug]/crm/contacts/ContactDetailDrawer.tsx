@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +31,8 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
     const { isContactDrawerOpen, setIsContactDrawerOpen, selectedContact, companies } = useCrmStore();
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Form State
     const [name, setName] = useState('');
@@ -85,12 +97,12 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
     };
 
     const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this contact? This action cannot be undone.')) return;
-
+        setIsDeleting(true);
         try {
             const result = await deleteContact(selectedContact.id);
             if (result.success) {
                 toast({ title: 'Success', description: 'Contact deleted successfully' });
+                setShowDeleteDialog(false);
                 setIsContactDrawerOpen(false);
                 onContactUpdated();
             } else {
@@ -98,6 +110,8 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
             }
         } catch (error) {
             toast({ title: 'Error', description: 'An unexpected error occurred', type: 'error' });
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -117,307 +131,334 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
     };
 
     return (
-        <Sheet open={isContactDrawerOpen} onOpenChange={setIsContactDrawerOpen}>
-            <SheetContent
-                className="w-full sm:max-w-2xl overflow-y-auto bg-[var(--card)] border-l border-[var(--border)] p-0 flex flex-col"
-                side={isRTL ? "left" : "right"}
-            >
-                {/* Header Section */}
-                <div className="p-10 border-b border-[var(--border)] bg-[var(--muted)]/20 relative overflow-hidden flex-shrink-0">
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12">
-                        <User size={120} />
-                    </div>
-
-                    <div className={cn("space-y-6 relative z-10", isRTL ? "text-right" : "")}>
-                        <div className={cn("flex items-start justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
-                            <div className="w-16 h-16 rounded-full bg-[var(--primary)]/10 border border-[var(--primary)]/20 flex items-center justify-center font-black text-2xl text-[var(--primary)] shadow-lg uppercase">
-                                {(selectedContact?.name || '??').substring(0, 2)}
-                            </div>
-                            <div className="flex gap-2">
-                                {!isEditing && (
-                                    <>
-                                        <PermissionGuard module="crm" action="edit" mode="lock">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setIsEditing(true)}
-                                                className="h-10 px-5 rounded-xl border-[var(--border)] bg-[var(--card)] text-[var(--text-secondary)] font-black uppercase tracking-widest text-[10px] hover:bg-[var(--muted)] flex items-center gap-2"
-                                            >
-                                                <Edit className="h-3.5 w-3.5" />
-                                                {t.edit}
-                                            </Button>
-                                        </PermissionGuard>
-                                        <PermissionGuard module="crm" action="delete" mode="lock">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={handleDelete}
-                                                className="h-10 w-10 p-0 rounded-xl border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500/10"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </PermissionGuard>
-                                    </>
-                                )}
-                            </div>
+        <>
+            <Sheet open={isContactDrawerOpen} onOpenChange={setIsContactDrawerOpen}>
+                <SheetContent
+                    className="w-full sm:max-w-2xl overflow-y-auto bg-[var(--card)] border-l border-[var(--border)] p-0 flex flex-col"
+                    side={isRTL ? "left" : "right"}
+                >
+                    {/* Header Section */}
+                    <div className="p-10 border-b border-[var(--border)] bg-[var(--muted)]/20 relative overflow-hidden flex-shrink-0">
+                        <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12">
+                            <User size={120} />
                         </div>
 
-                        <div className="space-y-2">
-                            <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
-                                <SheetTitle className="text-3xl font-black text-[var(--text-primary)] tracking-tight">
-                                    {selectedContact.name}
-                                </SheetTitle>
-                                <Badge variant="outline" className={cn("font-black uppercase text-[10px] tracking-widest border-0 px-3 py-1", getTypeStyles(selectedContact.type))}>
-                                    {selectedContact.type}
-                                </Badge>
-                            </div>
-
-                            <div className={cn("flex flex-wrap gap-x-6 gap-y-3 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]", isRTL ? "flex-row-reverse" : "")}>
-                                <div className="flex items-center gap-2">
-                                    <Building2 className="h-3.5 w-3.5 text-[var(--primary)]/60" />
-                                    {selectedContact.company?.name || 'Independent'}
+                        <div className={cn("space-y-6 relative z-10", isRTL ? "text-right" : "")}>
+                            <div className={cn("flex items-start justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
+                                <div className="w-16 h-16 rounded-full bg-[var(--primary)]/10 border border-[var(--primary)]/20 flex items-center justify-center font-black text-2xl text-[var(--primary)] shadow-lg uppercase">
+                                    {(selectedContact?.name || '??').substring(0, 2)}
                                 </div>
-                                {selectedContact.role && (
-                                    <div className="flex items-center gap-2">
-                                        <Briefcase className="h-3.5 w-3.5 text-[var(--primary)]/60" />
-                                        {selectedContact.role}
-                                    </div>
-                                )}
-                                {selectedContact.city && (
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-3.5 w-3.5 text-[var(--primary)]/60" />
-                                        {selectedContact.city}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Content Section */}
-                <div className="p-10 flex-1 space-y-12 bg-[var(--card)]">
-                    {isEditing ? (
-                        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary)]">
-                                    <Edit className="w-3.5 h-3.5" />
-                                    Edit Contact Details
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2 col-span-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Full Name</Label>
-                                        <Input
-                                            value={name}
-                                            onChange={e => setName(e.target.value)}
-                                            className="bg-[var(--muted)]/50 border-[var(--border)] h-12 rounded-xl font-bold"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Email</Label>
-                                        <Input
-                                            type="email"
-                                            value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Phone</Label>
-                                        <Input
-                                            value={phone}
-                                            onChange={e => setPhone(e.target.value)}
-                                            className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
-                                        />
-                                    </div>
-                                    <div className="space-y-2 col-span-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Company</Label>
-                                        <Select value={companyId} onValueChange={setCompanyId}>
-                                            <SelectTrigger className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-bold">
-                                                <SelectValue placeholder="Select a company" />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-[var(--card)] border-[var(--border)]">
-                                                <SelectItem value="none" className="font-bold">Independent / Personal</SelectItem>
-                                                {companies.map(c => (
-                                                    <SelectItem key={c.id} value={c.id} className="font-bold">{c.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Job Role</Label>
-                                        <Input
-                                            value={role}
-                                            onChange={e => setRole(e.target.value)}
-                                            className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">City</Label>
-                                        <Input
-                                            value={city}
-                                            onChange={e => setCity(e.target.value)}
-                                            className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Contact Type</Label>
-                                        <Select value={type} onValueChange={setType}>
-                                            <SelectTrigger className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
-                                            <SelectContent className="bg-[var(--card)] border-[var(--border)]">
-                                                <SelectItem value="client" className="font-bold">Client</SelectItem>
-                                                <SelectItem value="lead" className="font-bold">Lead</SelectItem>
-                                                <SelectItem value="supplier" className="font-bold">Supplier</SelectItem>
-                                                <SelectItem value="partner" className="font-bold">Partner</SelectItem>
-                                                <SelectItem value="investor" className="font-bold">Investor</SelectItem>
-                                                <SelectItem value="other" className="font-bold">Other</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Lead Source</Label>
-                                        <Select value={source} onValueChange={setSource}>
-                                            <SelectTrigger className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
-                                            <SelectContent className="bg-[var(--card)] border-[var(--border)]">
-                                                <SelectItem value="manual_import" className="font-bold">Manual</SelectItem>
-                                                <SelectItem value="website" className="font-bold">Website</SelectItem>
-                                                <SelectItem value="event" className="font-bold">Event</SelectItem>
-                                                <SelectItem value="referral" className="font-bold">Referral</SelectItem>
-                                                <SelectItem value="cold_outreach" className="font-bold">Outreach</SelectItem>
-                                                <SelectItem value="social_media" className="font-bold">Social Media</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2 col-span-2">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Private Notes</Label>
-                                        <Textarea
-                                            value={notes}
-                                            onChange={e => setNotes(e.target.value)}
-                                            rows={4}
-                                            className="bg-[var(--muted)]/30 border-[var(--border)] rounded-xl font-medium"
-                                        />
-                                    </div>
+                                <div className="flex gap-2">
+                                    {!isEditing && (
+                                        <>
+                                            <PermissionGuard module="crm" action="edit" mode="lock">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setIsEditing(true)}
+                                                    className="h-10 px-5 rounded-xl border-[var(--border)] bg-[var(--card)] text-[var(--text-secondary)] font-black uppercase tracking-widest text-[10px] hover:bg-[var(--muted)] flex items-center gap-2"
+                                                >
+                                                    <Edit className="h-3.5 w-3.5" />
+                                                    {t.edit}
+                                                </Button>
+                                            </PermissionGuard>
+                                            <PermissionGuard module="crm" action="delete" mode="lock">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setShowDeleteDialog(true)}
+                                                    className="h-10 w-10 p-0 rounded-xl border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500/10"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-4 pt-6 border-t border-[var(--border)]">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setIsEditing(false)}
-                                    className="h-12 px-8 rounded-xl border-[var(--border)] font-bold uppercase tracking-widest text-[11px]"
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={isSaving}
-                                    className="bg-[#E8A838] text-black hover:bg-[#d69628] h-12 px-10 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-[#E8A838]/20"
-                                >
-                                    {isSaving ? 'Saving...' : 'Save Changes'}
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-12 animate-in fade-in duration-700">
-                            {/* 1. Impact Metrics */}
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="bg-[var(--muted)]/20 rounded-2xl p-6 border border-[var(--border)] group hover:border-[#3b82f6]/30 transition-all">
-                                    <div className={cn("flex items-center gap-3 mb-4", isRTL ? "flex-row-reverse" : "")}>
-                                        <div className="w-8 h-8 rounded-lg bg-[#3b82f6]/10 flex items-center justify-center">
-                                            <Target className="w-4 h-4 text-[#3b82f6]" />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Linked Deals</span>
-                                    </div>
-                                    <div className={cn("text-3xl font-black text-[var(--text-primary)] tracking-tight", isRTL ? "text-right" : "")}>
-                                        {selectedContact._count?.deals || 0}
-                                    </div>
-                                </div>
-
-                                <div className="bg-[var(--muted)]/20 rounded-2xl p-6 border border-[var(--border)] group hover:border-[var(--primary)]/30 transition-all">
-                                    <div className={cn("flex items-center gap-3 mb-4", isRTL ? "flex-row-reverse" : "")}>
-                                        <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center">
-                                            <Calendar className="w-4 h-4 text-[var(--primary)]" />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Relationship Age</span>
-                                    </div>
-                                    <div className={cn("text-sm font-black text-[var(--text-primary)] tracking-tight uppercase", isRTL ? "text-right" : "")}>
-                                        Since {new Date(selectedContact.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 2. Contact Details */}
-                            <div className="space-y-6">
+                            <div className="space-y-2">
                                 <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
-                                    <div className="w-1.5 h-6 bg-[var(--primary)] rounded-full" />
-                                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Communications</h3>
+                                    <SheetTitle className="text-3xl font-black text-[var(--text-primary)] tracking-tight">
+                                        {selectedContact.name}
+                                    </SheetTitle>
+                                    <Badge variant="outline" className={cn("font-black uppercase text-[10px] tracking-widest border-0 px-3 py-1", getTypeStyles(selectedContact.type))}>
+                                        {selectedContact.type}
+                                    </Badge>
                                 </div>
-                                <div className="grid grid-cols-1 gap-4">
-                                    <div className={cn("bg-[var(--muted)]/10 border border-[var(--border)] rounded-2xl p-5 flex items-center justify-between group hover:bg-[var(--muted)]/20 transition-all", isRTL ? "flex-row-reverse" : "")}>
-                                        <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
-                                            <div className="w-10 h-10 rounded-xl bg-[var(--muted)] flex items-center justify-center text-[var(--text-disabled)] group-hover:text-[var(--primary)] transition-colors">
-                                                <Mail className="w-5 h-5" />
-                                            </div>
-                                            <div className={cn("text-left space-y-0.5", isRTL ? "text-right" : "")}>
-                                                <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-tighter">Professional Email</div>
-                                                <div className="text-sm font-bold text-[var(--text-primary)]">{selectedContact.email || 'N/A'}</div>
-                                            </div>
-                                        </div>
-                                        {selectedContact.email && (
-                                            <Button variant="ghost" className="h-8 w-8 p-0 rounded-lg text-[var(--text-disabled)] hover:text-[var(--primary)]" asChild>
-                                                <a href={`mailto:${selectedContact.email}`}><ArrowRight className={cn("w-4 h-4", isRTL ? "rotate-180" : "")} /></a>
-                                            </Button>
-                                        )}
-                                    </div>
 
-                                    <div className={cn("bg-[var(--muted)]/10 border border-[var(--border)] rounded-2xl p-5 flex items-center justify-between group hover:bg-[var(--muted)]/20 transition-all", isRTL ? "flex-row-reverse" : "")}>
-                                        <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
-                                            <div className="w-10 h-10 rounded-xl bg-[var(--muted)] flex items-center justify-center text-[var(--text-disabled)] group-hover:text-[var(--primary)] transition-colors">
-                                                <Phone className="w-5 h-5" />
-                                            </div>
-                                            <div className={cn("text-left space-y-0.5", isRTL ? "text-right" : "")}>
-                                                <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-tighter">Direct Line</div>
-                                                <div className="text-sm font-bold text-[var(--text-primary)]">{selectedContact.phone || 'N/A'}</div>
-                                            </div>
-                                        </div>
+                                <div className={cn("flex flex-wrap gap-x-6 gap-y-3 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]", isRTL ? "flex-row-reverse" : "")}>
+                                    <div className="flex items-center gap-2">
+                                        <Building2 className="h-3.5 w-3.5 text-[var(--primary)]/60" />
+                                        {selectedContact.company?.name || 'Independent'}
                                     </div>
+                                    {selectedContact.role && (
+                                        <div className="flex items-center gap-2">
+                                            <Briefcase className="h-3.5 w-3.5 text-[var(--primary)]/60" />
+                                            {selectedContact.role}
+                                        </div>
+                                    )}
+                                    {selectedContact.city && (
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="h-3.5 w-3.5 text-[var(--primary)]/60" />
+                                            {selectedContact.city}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            {/* 3. Notes Section */}
-                            {selectedContact.notes && (
+                    {/* Content Section */}
+                    <div className="p-10 flex-1 space-y-12 bg-[var(--card)]">
+                        {isEditing ? (
+                            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary)]">
+                                        <Edit className="w-3.5 h-3.5" />
+                                        Edit Contact Details
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2 col-span-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Full Name</Label>
+                                            <Input
+                                                value={name}
+                                                onChange={e => setName(e.target.value)}
+                                                className="bg-[var(--muted)]/50 border-[var(--border)] h-12 rounded-xl font-bold"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Email</Label>
+                                            <Input
+                                                type="email"
+                                                value={email}
+                                                onChange={e => setEmail(e.target.value)}
+                                                className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Phone</Label>
+                                            <Input
+                                                value={phone}
+                                                onChange={e => setPhone(e.target.value)}
+                                                className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 col-span-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Company</Label>
+                                            <Select value={companyId} onValueChange={setCompanyId}>
+                                                <SelectTrigger className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-bold">
+                                                    <SelectValue placeholder="Select a company" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-[var(--card)] border-[var(--border)]">
+                                                    <SelectItem value="none" className="font-bold">Independent / Personal</SelectItem>
+                                                    {companies.map(c => (
+                                                        <SelectItem key={c.id} value={c.id} className="font-bold">{c.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Job Role</Label>
+                                            <Input
+                                                value={role}
+                                                onChange={e => setRole(e.target.value)}
+                                                className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">City</Label>
+                                            <Input
+                                                value={city}
+                                                onChange={e => setCity(e.target.value)}
+                                                className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-medium"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Contact Type</Label>
+                                            <Select value={type} onValueChange={setType}>
+                                                <SelectTrigger className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="bg-[var(--card)] border-[var(--border)]">
+                                                    <SelectItem value="client" className="font-bold">Client</SelectItem>
+                                                    <SelectItem value="lead" className="font-bold">Lead</SelectItem>
+                                                    <SelectItem value="supplier" className="font-bold">Supplier</SelectItem>
+                                                    <SelectItem value="partner" className="font-bold">Partner</SelectItem>
+                                                    <SelectItem value="investor" className="font-bold">Investor</SelectItem>
+                                                    <SelectItem value="other" className="font-bold">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Lead Source</Label>
+                                            <Select value={source} onValueChange={setSource}>
+                                                <SelectTrigger className="bg-[var(--muted)]/30 border-[var(--border)] h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="bg-[var(--card)] border-[var(--border)]">
+                                                    <SelectItem value="manual_import" className="font-bold">Manual</SelectItem>
+                                                    <SelectItem value="website" className="font-bold">Website</SelectItem>
+                                                    <SelectItem value="event" className="font-bold">Event</SelectItem>
+                                                    <SelectItem value="referral" className="font-bold">Referral</SelectItem>
+                                                    <SelectItem value="cold_outreach" className="font-bold">Outreach</SelectItem>
+                                                    <SelectItem value="social_media" className="font-bold">Social Media</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2 col-span-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Private Notes</Label>
+                                            <Textarea
+                                                value={notes}
+                                                onChange={e => setNotes(e.target.value)}
+                                                rows={4}
+                                                className="bg-[var(--muted)]/30 border-[var(--border)] rounded-xl font-medium"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-4 pt-6 border-t border-[var(--border)]">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsEditing(false)}
+                                        className="h-12 px-8 rounded-xl border-[var(--border)] font-bold uppercase tracking-widest text-[11px]"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className="bg-[#E8A838] text-black hover:bg-[#d69628] h-12 px-10 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-[#E8A838]/20"
+                                    >
+                                        {isSaving ? 'Saving...' : 'Save Changes'}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-12 animate-in fade-in duration-700">
+                                {/* 1. Impact Metrics */}
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="bg-[var(--muted)]/20 rounded-2xl p-6 border border-[var(--border)] group hover:border-[#3b82f6]/30 transition-all">
+                                        <div className={cn("flex items-center gap-3 mb-4", isRTL ? "flex-row-reverse" : "")}>
+                                            <div className="w-8 h-8 rounded-lg bg-[#3b82f6]/10 flex items-center justify-center">
+                                                <Target className="w-4 h-4 text-[#3b82f6]" />
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Linked Deals</span>
+                                        </div>
+                                        <div className={cn("text-3xl font-black text-[var(--text-primary)] tracking-tight", isRTL ? "text-right" : "")}>
+                                            {selectedContact._count?.deals || 0}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[var(--muted)]/20 rounded-2xl p-6 border border-[var(--border)] group hover:border-[var(--primary)]/30 transition-all">
+                                        <div className={cn("flex items-center gap-3 mb-4", isRTL ? "flex-row-reverse" : "")}>
+                                            <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center">
+                                                <Calendar className="w-4 h-4 text-[var(--primary)]" />
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Relationship Age</span>
+                                        </div>
+                                        <div className={cn("text-sm font-black text-[var(--text-primary)] tracking-tight uppercase", isRTL ? "text-right" : "")}>
+                                            Since {new Date(selectedContact.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 2. Contact Details */}
                                 <div className="space-y-6">
                                     <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
-                                        <div className="w-1.5 h-6 bg-[#3b82f6] rounded-full" />
-                                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Strategic Notes</h3>
+                                        <div className="w-1.5 h-6 bg-[var(--primary)] rounded-full" />
+                                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Communications</h3>
                                     </div>
-                                    <div className="bg-[var(--background)] p-6 rounded-2xl border border-[var(--border)] border-l-4 border-l-[#3b82f6] text-[var(--text-primary)] text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                                        {selectedContact.notes}
-                                    </div>
-                                </div>
-                            )}
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className={cn("bg-[var(--muted)]/10 border border-[var(--border)] rounded-2xl p-5 flex items-center justify-between group hover:bg-[var(--muted)]/20 transition-all", isRTL ? "flex-row-reverse" : "")}>
+                                            <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
+                                                <div className="w-10 h-10 rounded-xl bg-[var(--muted)] flex items-center justify-center text-[var(--text-disabled)] group-hover:text-[var(--primary)] transition-colors">
+                                                    <Mail className="w-5 h-5" />
+                                                </div>
+                                                <div className={cn("text-left space-y-0.5", isRTL ? "text-right" : "")}>
+                                                    <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-tighter">Professional Email</div>
+                                                    <div className="text-sm font-bold text-[var(--text-primary)]">{selectedContact.email || 'N/A'}</div>
+                                                </div>
+                                            </div>
+                                            {selectedContact.email && (
+                                                <Button variant="ghost" className="h-8 w-8 p-0 rounded-lg text-[var(--text-disabled)] hover:text-[var(--primary)]" asChild>
+                                                    <a href={`mailto:${selectedContact.email}`}><ArrowRight className={cn("w-4 h-4", isRTL ? "rotate-180" : "")} /></a>
+                                                </Button>
+                                            )}
+                                        </div>
 
-                            {/* 4. CRM Context */}
-                            <div className="bg-[var(--muted)]/30 rounded-2xl p-6 border border-[var(--border)] space-y-4">
-                                <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
-                                    <Info className="h-4 w-4 text-[var(--primary)]" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Lead Intelligence</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                                    <div className={cn("space-y-1", isRTL ? "text-right" : "")}>
-                                        <div className="text-[9px] font-black uppercase text-[var(--text-disabled)] tracking-tighter">Contact Source</div>
-                                        <div className="text-xs font-black text-[var(--text-secondary)]">{formatSource(selectedContact.source)}</div>
+                                        <div className={cn("bg-[var(--muted)]/10 border border-[var(--border)] rounded-2xl p-5 flex items-center justify-between group hover:bg-[var(--muted)]/20 transition-all", isRTL ? "flex-row-reverse" : "")}>
+                                            <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
+                                                <div className="w-10 h-10 rounded-xl bg-[var(--muted)] flex items-center justify-center text-[var(--text-disabled)] group-hover:text-[var(--primary)] transition-colors">
+                                                    <Phone className="w-5 h-5" />
+                                                </div>
+                                                <div className={cn("text-left space-y-0.5", isRTL ? "text-right" : "")}>
+                                                    <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-tighter">Direct Line</div>
+                                                    <div className="text-sm font-bold text-[var(--text-primary)]">{selectedContact.phone || 'N/A'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className={cn("space-y-1", isRTL ? "text-right" : "")}>
-                                        <div className="text-[9px] font-black uppercase text-[var(--text-disabled)] tracking-tighter">Origin City</div>
-                                        <div className="text-xs font-black text-[var(--text-secondary)]">{selectedContact.city || 'Undisclosed'}</div>
+                                </div>
+
+                                {/* 3. Notes Section */}
+                                {selectedContact.notes && (
+                                    <div className="space-y-6">
+                                        <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                                            <div className="w-1.5 h-6 bg-[#3b82f6] rounded-full" />
+                                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Strategic Notes</h3>
+                                        </div>
+                                        <div className="bg-[var(--background)] p-6 rounded-2xl border border-[var(--border)] border-l-4 border-l-[#3b82f6] text-[var(--text-primary)] text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                                            {selectedContact.notes}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 4. CRM Context */}
+                                <div className="bg-[var(--muted)]/30 rounded-2xl p-6 border border-[var(--border)] space-y-4">
+                                    <div className={cn("flex items-center gap-3", isRTL ? "flex-row-reverse" : "")}>
+                                        <Info className="h-4 w-4 text-[var(--primary)]" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Lead Intelligence</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                                        <div className={cn("space-y-1", isRTL ? "text-right" : "")}>
+                                            <div className="text-[9px] font-black uppercase text-[var(--text-disabled)] tracking-tighter">Contact Source</div>
+                                            <div className="text-xs font-black text-[var(--text-secondary)]">{formatSource(selectedContact.source)}</div>
+                                        </div>
+                                        <div className={cn("space-y-1", isRTL ? "text-right" : "")}>
+                                            <div className="text-[9px] font-black uppercase text-[var(--text-disabled)] tracking-tighter">Origin City</div>
+                                            <div className="text-xs font-black text-[var(--text-secondary)]">{selectedContact.city || 'Undisclosed'}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            </SheetContent>
-        </Sheet>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent className="bg-[var(--card)] border-[var(--border)] max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-[var(--text-primary)] text-lg font-black">
+                            Delete Contact
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-[var(--text-secondary)] text-sm">
+                            Are you sure you want to delete <strong className="text-[var(--text-primary)]">{selectedContact?.name}</strong>? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-3">
+                        <AlertDialogCancel className="border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--muted)] font-bold">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-red-600 text-white hover:bg-red-700 font-bold"
+                        >
+                            {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

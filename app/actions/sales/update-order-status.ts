@@ -197,6 +197,8 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
         revalidatePath('/');
 
         // Revalidate granular dashboard cache
+        revalidateTag(`orders-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`sales-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });

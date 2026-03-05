@@ -153,6 +153,8 @@ export async function createOrder(data: CreateOrderInput) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`orders-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`sales-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
@@ -240,6 +242,8 @@ export async function deleteOrder(id: string) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`orders-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`sales-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
@@ -328,6 +332,8 @@ export async function updateOrder(id: string, data: CreateOrderInput) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`orders-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`sales-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });

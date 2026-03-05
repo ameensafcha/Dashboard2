@@ -8,6 +8,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import InventorySopPanel from '@/components/inventory/InventorySopPanel';
+import { useQuery } from '@tanstack/react-query';
+import { getInventoryOverview } from '@/app/actions/inventory/overview';
 
 type InventoryOverviewData = {
     kpis: {
@@ -31,7 +33,15 @@ function daysUntil(dateStr: string) {
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function InventoryOverviewClient({ data, businessSlug }: { data: InventoryOverviewData; businessSlug: string }) {
+export default function InventoryOverviewClient({ data: initialData, businessSlug }: { data: InventoryOverviewData; businessSlug: string }) {
+    const { data } = useQuery({
+        queryKey: ['inventory-overview', businessSlug],
+        queryFn: () => getInventoryOverview(),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    })
     const kpis = [
         { title: 'Total Inventory Value (Cost)', value: data.kpis.totalValue, prefix: 'SAR ', icon: DollarSign, color: '#E8A838' },
         { title: 'Raw Materials Value', value: data.kpis.rawInventoryValue, prefix: 'SAR ', icon: Package, color: '#3b82f6' },

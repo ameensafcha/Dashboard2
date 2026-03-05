@@ -1,7 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { toSafeNumber } from '@/lib/decimal';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
@@ -116,6 +116,9 @@ export async function createFinishedProduct(data: {
             });
         }, { timeout: 15000 });
 
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
         revalidatePath('/');
@@ -152,6 +155,9 @@ export async function deleteFinishedProduct(id: string) {
             });
         }, { timeout: 15000 });
 
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
         revalidatePath('/');
@@ -204,6 +210,9 @@ export async function updateFinishedProduct(id: string, data: {
             });
         }, { timeout: 15000 });
 
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/inventory/finished');
         revalidatePath('/inventory');
         revalidatePath('/');

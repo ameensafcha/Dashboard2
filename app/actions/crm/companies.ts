@@ -128,6 +128,7 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
         });
 
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
@@ -186,6 +187,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
         });
 
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
@@ -224,6 +226,7 @@ export async function deleteCompany(id: string) {
         });
 
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true };
     } catch (error) {

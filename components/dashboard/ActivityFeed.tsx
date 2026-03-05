@@ -3,6 +3,9 @@
 import { Activity, Clock } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { getDashboardActivityFeed } from '@/app/actions/dashboard';
 
 const feedColors: Record<string, string> = {
     order: '#22c55e',
@@ -12,8 +15,20 @@ const feedColors: Record<string, string> = {
 
 type ActivityItem = { type: 'order' | 'stock' | 'production', time: string, data: any };
 
-export default function ActivityFeed({ data }: { data: ActivityItem[] }) {
+export default function ActivityFeed({ data: initialData }: { data: ActivityItem[] }) {
     const { t, isRTL } = useTranslation();
+    const params = useParams();
+    const businessSlug = params?.businessSlug as string;
+
+    const { data: qData } = useQuery({
+        queryKey: ['dashboard-activity-feed', businessSlug],
+        queryFn: () => getDashboardActivityFeed(businessSlug),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    });
+    const data = qData || initialData;
 
     function formatFeedItem(item: ActivityItem) {
         const { type, data } = item;

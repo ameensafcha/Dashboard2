@@ -777,6 +777,13 @@ model Business {
   expenses            Expense[]
   auditLogs           AuditLog[]
   productRecipeItems  ProductRecipeItem[]
+  campaigns           Campaign[]
+  events              Event[]
+  eventLeads          EventLead[]
+  eventInventoryItems EventInventoryItem[]
+  tasks               Task[]
+  documents           Document[]
+  strategies          Strategy[]
 
   @@map("businesses")
 }
@@ -825,11 +832,326 @@ model BusinessUser {
   lastSeenAt DateTime? @map("last_seen_at")
   invitedBy  String?   @map("invited_by") // userId who invited
 
-  role     Role     @relation(fields: [roleId], references: [id])
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  role          Role     @relation(fields: [roleId], references: [id])
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assignedTasks Task[]   @relation("TaskAssignee")
+  createdTasks  Task[]   @relation("TaskCreator")
 
   @@unique([businessId, userId])
   @@index([businessId])
   @@index([userId])
   @@map("business_users")
+}
+
+// ==========================================
+// Phase B1: Marketing Campaigns
+// ==========================================
+
+enum CampaignChannel {
+  INSTAGRAM
+  TIKTOK
+  SNAPCHAT
+  GOOGLE_ADS
+  EMAIL
+  SMS
+  WHATSAPP
+  EVENT
+  INFLUENCER
+  OTHER
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model Campaign {
+  id          String          @id @default(uuid())
+  businessId  String          @map("business_id")
+  campaignId  String          @unique @map("campaign_id") // Auto-generated: CAM-YYYY-XXXX
+  name        String
+  channel     CampaignChannel
+  status      CampaignStatus  @default(DRAFT)
+  budget      Decimal         @db.Decimal(10, 2)
+  spent       Decimal         @default(0) @db.Decimal(10, 2)
+  startDate   DateTime        @map("start_date")
+  endDate     DateTime?       @map("end_date")
+  reach       Int             @default(0)
+  clicks      Int             @default(0)
+  leads       Int             @default(0)
+  conversions Int             @default(0)
+  revenue     Decimal?        @db.Decimal(10, 2)
+  notes       String?         @db.Text
+  deletedAt   DateTime?       @map("deleted_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, status])
+  @@map("campaigns")
+}
+
+// ==========================================
+// Phase B2: Events & Expos
+// ==========================================
+
+enum EventType {
+  EXPO
+  TRADE_SHOW
+  POPUP_STORE
+  SAMPLING_EVENT
+  ONLINE_WEBINAR
+  CORPORATE_VISIT
+  OTHER
+}
+
+enum EventStatus {
+  PLANNING
+  CONFIRMED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  businessId  String      @map("business_id")
+  eventId     String      @unique @map("event_id") // EVT-YYYY-XXXX
+  name        String
+  type        EventType
+  status      EventStatus @default(PLANNING)
+  venue       String?
+  city        String?
+  country     String      @default("SA")
+  startDate   DateTime    @map("start_date")
+  endDate     DateTime?   @map("end_date")
+  budget      Decimal?    @db.Decimal(10, 2)
+  actualCost  Decimal?    @map("actual_cost") @db.Decimal(10, 2)
+  boothNumber String?     @map("booth_number")
+  notes       String?     @db.Text
+  deletedAt   DateTime?   @map("deleted_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  leads     EventLead[]
+  inventory EventInventoryItem[]
+  business  Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, startDate])
+  @@map("events")
+}
+
+model EventLead {
+  id                String   @id @default(uuid())
+  businessId        String   @map("business_id")
+  eventId           String   @map("event_id")
+  name              String
+  phone             String?
+  email             String?
+  company           String?
+  productInterest   String?  @map("product_interest")
+  notes             String?  @db.Text
+  converted         Boolean  @default(false)
+  convertedClientId String?  @map("converted_client_id")
+  capturedAt        DateTime @default(now()) @map("captured_at")
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("event_leads")
+}
+
+model EventInventoryItem {
+  id         String @id @default(uuid())
+  businessId String @map("business_id")
+  eventId    String @map("event_id")
+  name       String
+  quantity   Int
+  used       Int    @default(0)
+  returned   Int    @default(0)
+  status     String @default("PREPARING") // PREPARING | SHIPPED | AT_VENUE | RETURNED
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("event_inventory_items")
+}
+
+// ==========================================
+// Phase B3: Team & Tasks
+// ==========================================
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id            String       @id @default(uuid())
+  businessId    String       @map("business_id")
+  taskId        String       @unique @map("task_id") // TSK-YYYY-XXXX
+  title         String
+  description   String?      @db.Text
+  status        TaskStatus   @default(TODO)
+  priority      TaskPriority @default(MEDIUM)
+  assigneeId    String?      @map("assignee_id") // Soft link to BusinessUser.userId
+  assigneeName  String?      @map("assignee_name")
+  createdById   String       @map("created_by_id")
+  createdByName String       @map("created_by_name")
+  dueDate       DateTime?    @map("due_date")
+  completedAt   DateTime?    @map("completed_at")
+  module        String?
+  referenceId   String?      @map("reference_id")
+  tags          String[]
+  checklist     Json?
+  deletedAt     DateTime?    @map("deleted_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  assignedTo BusinessUser? @relation("TaskAssignee", fields: [businessId, assigneeId], references: [businessId, userId], map: "task_assignee_fkey")
+  createdBy  BusinessUser  @relation("TaskCreator", fields: [businessId, createdById], references: [businessId, userId], map: "task_creator_fkey")
+
+  comments TaskComment[]
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, status])
+  @@index([businessId, assigneeId])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  userName  String   @map("user_name")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_comments")
+}
+
+// ==========================================
+// Phase B4: Document Vault
+// ==========================================
+
+enum DocumentCategory {
+  CONTRACT
+  CERTIFICATE
+  SOP
+  LEGAL
+  FINANCIAL
+  HR
+  PRODUCT
+  MARKETING
+  OTHER
+}
+
+model Document {
+  id             String           @id @default(uuid())
+  businessId     String           @map("business_id")
+  docId          String           @unique @map("doc_id") // DOC-YYYY-XXXX
+  name           String
+  description    String?          @db.Text
+  category       DocumentCategory
+  filePath       String           @map("file_path")
+  fileName       String           @map("file_name")
+  fileSize       Int              @map("file_size")
+  mimeType       String           @map("mime_type")
+  tags           String[]
+  isConfidential Boolean          @default(false) @map("is_confidential")
+  expiresAt      DateTime?        @map("expires_at")
+  uploadedById   String           @map("uploaded_by_id") // user ID
+  uploadedByName String           @map("uploaded_by_name")
+  deletedAt      DateTime?        @map("deleted_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// ==========================================
+// Phase B5: Strategy & OKRs
+// ==========================================
+
+enum StrategyType {
+  ANNUAL_PLAN
+  QUARTERLY_OKR
+  PRODUCT_ROADMAP
+  MARKET_EXPANSION
+  FINANCIAL_TARGET
+}
+
+enum ObjectiveStatus {
+  ON_TRACK
+  AT_RISK
+  BEHIND
+  COMPLETED
+  CANCELLED
+}
+
+model Strategy {
+  id         String       @id @default(uuid())
+  businessId String       @map("business_id")
+  title      String
+  year       Int
+  quarter    Int?
+  type       StrategyType
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  objectives Objective[]
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("strategies")
+}
+
+model Objective {
+  id          String          @id @default(uuid())
+  strategyId  String          @map("strategy_id")
+  title       String
+  description String?         @db.Text
+  owner       String?
+  dueDate     DateTime?       @map("due_date")
+  progress    Decimal         @default(0) @db.Decimal(5, 2)
+  status      ObjectiveStatus @default(ON_TRACK)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  strategy   Strategy    @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  keyResults KeyResult[]
+
+  @@map("objectives")
+}
+
+model KeyResult {
+  id           String   @id @default(uuid())
+  objectiveId  String   @map("objective_id")
+  title        String
+  targetValue  Decimal? @map("target_value") @db.Decimal(10, 2)
+  currentValue Decimal  @default(0) @map("current_value") @db.Decimal(10, 2)
+  unit         String // e.g. "SAR", "deals", "%"
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  objective Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  @@map("key_results")
 }

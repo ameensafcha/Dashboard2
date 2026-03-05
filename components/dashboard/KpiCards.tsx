@@ -3,6 +3,9 @@
 import { DollarSign, ShoppingCart, Package, Users, TrendingUp, TrendingDown, Receipt, BarChart3 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { getDashboardKpis } from '@/app/actions/dashboard';
 
 type KpiData = {
     revenue: { value: number; change: number };
@@ -16,8 +19,21 @@ type KpiData = {
     finishedInventoryRetail: { value: number; change: number };
 } | null;
 
-export default function KpiCards({ data }: { data: KpiData }) {
+export default function KpiCards({ data: initialData }: { data: KpiData }) {
     const { t, isRTL } = useTranslation();
+    const params = useParams();
+    const businessSlug = params?.businessSlug as string;
+
+    const { data: qData } = useQuery({
+        queryKey: ['dashboard-kpi', businessSlug],
+        queryFn: () => getDashboardKpis(businessSlug),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    });
+
+    const data = qData || initialData;
 
     if (!data) return null;
 

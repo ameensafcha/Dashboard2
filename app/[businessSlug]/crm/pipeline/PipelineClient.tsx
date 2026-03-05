@@ -70,6 +70,7 @@ export default function PipelineClient({ initialData, businessSlug }: PipelineCl
     const [isLoading, setIsLoading] = useState(false);
     const isInitialized = useRef(false);
     const [isConverting, setIsConverting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [dealToConvert, setDealToConvert] = useState<Deal | null>(null);
 
     const COLUMNS: { id: DealStageType; title: string; color: string; bg: string }[] = [
@@ -120,11 +121,23 @@ export default function PipelineClient({ initialData, businessSlug }: PipelineCl
         if (sourceCol === destCol && result.source.index === result.destination.index) return;
 
         const dealId = result.draggableId;
+        const destTitle = COLUMNS.find(c => c.id === destCol)?.title || destCol;
         moveDealOptimistic(dealId, destCol);
 
-        const response = await updateDealStage(dealId, destCol as any);
-        if (!response.success) {
+        setIsSaving(true);
+        try {
+            const response = await updateDealStage(dealId, destCol as any);
+            if (response.success) {
+                toast({ title: '✓ Deal Moved', description: `Stage updated to "${destTitle}"` });
+            } else {
+                toast({ title: 'Error', description: 'Failed to update deal stage' });
+                loadData();
+            }
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to update deal stage' });
             loadData();
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -185,7 +198,15 @@ export default function PipelineClient({ initialData, businessSlug }: PipelineCl
             </div>
 
             {/* Board Area */}
-            <div className="flex-1 overflow-x-auto pb-6 scrollbar-hide">
+            <div className="flex-1 overflow-x-auto pb-6 scrollbar-hide relative">
+                {isSaving && (
+                    <div className="absolute inset-0 bg-[var(--card)]/60 backdrop-blur-[1px] z-40 flex items-center justify-center rounded-2xl">
+                        <div className="flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] px-6 py-3 rounded-2xl shadow-2xl">
+                            <div className="w-5 h-5 border-2 border-[var(--border)] border-t-[#E8A838] rounded-full animate-spin" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Saving...</span>
+                        </div>
+                    </div>
+                )}
                 <DragDropContext onDragEnd={handleDragEnd}>
                     <div className="flex gap-6 h-full min-w-max px-2">
                         {COLUMNS.map(column => {
@@ -228,7 +249,7 @@ export default function PipelineClient({ initialData, businessSlug }: PipelineCl
                                                             key={deal.id}
                                                             draggableId={deal.id}
                                                             index={index}
-                                                            isDragDisabled={!can('crm', 'edit')}
+                                                            isDragDisabled={!can('crm', 'edit') || isSaving}
                                                         >
                                                             {(provided, snapshot) => (
                                                                 <div

@@ -137,6 +137,7 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
         // Revalidate CRM cache
         revalidateTag(`contacts-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
 
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
@@ -198,6 +199,7 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
         // Revalidate CRM cache
         revalidateTag(`contacts-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
 
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
@@ -237,6 +239,7 @@ export async function deleteContact(id: string) {
         // Revalidate CRM cache
         revalidateTag(`contacts-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
 
         return { success: true };

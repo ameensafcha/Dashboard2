@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import RootClientLayout from '@/components/layout/RootClientLayout'
 import { RealtimeProvider } from '@/components/providers/RealtimeProvider'
+import { QueryProvider } from '@/components/providers/QueryProvider'
 
 export default async function BusinessLayout({
   children,
@@ -40,8 +41,6 @@ export default async function BusinessLayout({
   }
 
   // 4. Ensure the cookie is set for this business.
-  //    If cookie is missing or pointing to a different business,
-  //    go through the Route Handler which sets the cookie and comes back.
   const cookieStore = await cookies()
   const currentBusinessId = cookieStore.get('active-business-id')?.value
   if (currentBusinessId !== business.id) {
@@ -50,9 +49,11 @@ export default async function BusinessLayout({
 
   return (
     <RootClientLayout>
-      <RealtimeProvider>
-        {children}
-      </RealtimeProvider>
+      <QueryProvider>
+        <RealtimeProvider>
+          {children}
+        </RealtimeProvider>
+      </QueryProvider>
     </RootClientLayout>
   )
 }

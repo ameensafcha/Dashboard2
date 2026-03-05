@@ -19,6 +19,8 @@ import {
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { useQuery } from '@tanstack/react-query'
+import { getCrmOverview } from '@/app/actions/crm/overview'
 
 interface CrmOverviewData {
     kpis: { companies: number; contacts: number; activeDeals: number; pipelineValue: number };
@@ -26,8 +28,17 @@ interface CrmOverviewData {
     recentDeals: { id: string; title: string; value: number; stage: string; updatedAt: string; company: { name: string } | null; client: { name: string } | null }[];
 }
 
-export default function CrmOverviewClient({ data, businessSlug }: { data: CrmOverviewData; businessSlug: string }) {
+export default function CrmOverviewClient({ data: initialData, businessSlug }: { data: CrmOverviewData; businessSlug: string }) {
     const { t, isRTL } = useTranslation()
+
+    const { data } = useQuery({
+        queryKey: ['crm-overview', businessSlug],
+        queryFn: () => getCrmOverview(),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    })
 
     const kpis = [
         {

@@ -6,6 +6,8 @@ import { Coffee, Layers, CheckCircle, Activity, ArrowRight, LayoutGrid, ChevronL
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { getProductsOverview } from '@/app/actions/product/overview';
 
 interface ProductsOverviewData {
     totalProducts: number;
@@ -17,8 +19,17 @@ interface ProductsOverviewData {
     recentProducts: any[];
 }
 
-export default function ProductsOverviewClient({ data, businessSlug }: { data: ProductsOverviewData; businessSlug: string }) {
-    const { t, isRTL } = useTranslation();
+export default function ProductsOverviewClient({ data: initialData, businessSlug }: { data: ProductsOverviewData; businessSlug: string }) {
+    const { t, isRTL } = useTranslation()
+
+    const { data } = useQuery({
+        queryKey: ['products-overview', businessSlug],
+        queryFn: () => getProductsOverview(),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    });
 
     const stats = [
         {

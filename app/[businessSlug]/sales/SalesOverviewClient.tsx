@@ -7,6 +7,8 @@ import {
     DollarSign, ShoppingCart, TrendingUp, TrendingDown, Clock, ArrowRight,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { getSalesOverview } from '@/app/actions/sales/overview';
 
 const CHANNEL_COLORS = ['#E8A838', '#22c55e', '#3b82f6', '#ec4899', '#a855f7', '#6b7280'];
 
@@ -26,7 +28,16 @@ type SalesOverviewData = {
     salesByChannel: { name: string; value: number }[];
 };
 
-export default function SalesOverviewClient({ data, businessSlug }: { data: SalesOverviewData; businessSlug: string }) {
+export default function SalesOverviewClient({ data: initialData, businessSlug }: { data: SalesOverviewData; businessSlug: string }) {
+    const { data } = useQuery({
+        queryKey: ['sales-overview', businessSlug],
+        queryFn: () => getSalesOverview(),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    })
+
     const kpis = [
         { title: 'Revenue (MTD)', value: data.kpis.revenue.value, change: data.kpis.revenue.change, icon: DollarSign, prefix: 'SAR ', color: '#22c55e' },
         { title: 'Orders (MTD)', value: data.kpis.orders.value, change: data.kpis.orders.change, icon: ShoppingCart, color: '#3b82f6' },

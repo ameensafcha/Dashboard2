@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { ExpenseCategory, PaymentMethod } from '@prisma/client';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
@@ -163,6 +163,7 @@ export async function createExpense(data: CreateExpenseInput) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`finance-summary-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
 
@@ -246,6 +247,7 @@ export async function updateExpense(id: string, data: CreateExpenseInput) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`finance-summary-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
 
@@ -299,6 +301,7 @@ export async function deleteExpense(id: string) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`finance-summary-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
 
@@ -313,26 +316,21 @@ export async function deleteExpense(id: string) {
 // Dashboard Summary
 // ==========================================
 
-export async function getFinanceSummary() {
-    try {
-        const ctx = await getBusinessContext();
-        if (!hasPermission(ctx, 'finance', 'view')) {
-            throw new Error('Unauthorized');
-        }
-
+const getCachedFinanceSummary = (businessId: string) => unstable_cache(
+    async () => {
         const [revenueAgg, expenseAgg, transactions] = await Promise.all([
             prisma.transaction.aggregate({
-                where: { type: 'revenue', deletedAt: null, businessId: ctx.businessId },
+                where: { type: 'revenue', deletedAt: null, businessId },
                 _sum: { amount: true },
                 _count: true,
             }),
             prisma.transaction.aggregate({
-                where: { type: 'expense', deletedAt: null, businessId: ctx.businessId },
+                where: { type: 'expense', deletedAt: null, businessId },
                 _sum: { amount: true },
                 _count: true,
             }),
             prisma.transaction.findMany({
-                where: { deletedAt: null, businessId: ctx.businessId },
+                where: { deletedAt: null, businessId },
                 orderBy: { date: 'desc' },
                 take: 20,
             }),
@@ -352,6 +350,18 @@ export async function getFinanceSummary() {
             expenseCount: expenseAgg._count,
             recentTransactions: transactions,
         });
+    },
+    [`finance-summary-${businessId}`],
+    { tags: [`finance-summary-${businessId}`], revalidate: 3600 }
+);
+
+export async function getFinanceSummary() {
+    try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'finance', 'view')) {
+            throw new Error('Unauthorized');
+        }
+        return await getCachedFinanceSummary(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching finance summary:', error);
         return {

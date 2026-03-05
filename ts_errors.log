@@ -1,0 +1,79 @@
+app/[businessSlug]/events/EventDetailDrawer.tsx(26,40): error TS2339: Property 'EXHIBITION' does not exist on type '{ EXPO: "EXPO"; TRADE_SHOW: "TRADE_SHOW"; POPUP_STORE: "POPUP_STORE"; SAMPLING_EVENT: "SAMPLING_EVENT"; ONLINE_WEBINAR: "ONLINE_WEBINAR"; CORPORATE_VISIT: "CORPORATE_VISIT"; OTHER: "OTHER"; }'.
+app/[businessSlug]/events/NewEventModal.tsx(25,49): error TS2345: Argument of type '"EXHIBITION"' is not assignable to parameter of type 'EventType | (() => EventType)'.
+app/[businessSlug]/events/NewEventModal.tsx(37,17): error TS2345: Argument of type '"EXHIBITION"' is not assignable to parameter of type 'SetStateAction<EventType>'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(16,10): error TS2305: Module '"@prisma/client"' has no exported member 'GoalStatus'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(16,22): error TS2305: Module '"@prisma/client"' has no exported member 'GoalType'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(148,61): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(148,69): error TS2322: Type 'unknown' is not assignable to type 'string'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(148,110): error TS18046: 's' is of type 'unknown'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(161,61): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(161,69): error TS2322: Type 'unknown' is not assignable to type 'string'.
+app/[businessSlug]/strategy/GoalDetailDrawer.tsx(161,110): error TS18046: 't' is of type 'unknown'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(16,10): error TS2305: Module '"@prisma/client"' has no exported member 'GoalStatus'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(16,22): error TS2305: Module '"@prisma/client"' has no exported member 'GoalType'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(51,45): error TS2345: Argument of type '{ title: string; description: string | undefined; type: GoalType; status: GoalStatus; targetValue: number | undefined; unit: string | undefined; endDate: Date | undefined; }' is not assignable to parameter of type '{ title: string; type: "ANNUAL_PLAN" | "QUARTERLY_OKR" | "PRODUCT_ROADMAP" | "MARKET_EXPANSION" | "FINANCIAL_TARGET"; status: "COMPLETED" | "CANCELLED" | "ON_TRACK" | "AT_RISK" | "BEHIND"; ... 4 more ...; endDate?: Date | ... 1 more ... | undefined; }'.
+  Property 'currentValue' is missing in type '{ title: string; description: string | undefined; type: GoalType; status: GoalStatus; targetValue: number | undefined; unit: string | undefined; endDate: Date | undefined; }' but required in type '{ title: string; type: "ANNUAL_PLAN" | "QUARTERLY_OKR" | "PRODUCT_ROADMAP" | "MARKET_EXPANSION" | "FINANCIAL_TARGET"; status: "COMPLETED" | "CANCELLED" | "ON_TRACK" | "AT_RISK" | "BEHIND"; ... 4 more ...; endDate?: Date | ... 1 more ... | undefined; }'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(148,65): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(148,73): error TS2322: Type 'unknown' is not assignable to type 'string'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(148,106): error TS18046: 's' is of type 'unknown'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(161,65): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(161,73): error TS2322: Type 'unknown' is not assignable to type 'string'.
+app/[businessSlug]/strategy/NewGoalModal.tsx(161,106): error TS18046: 's' is of type 'unknown'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(25,10): error TS2305: Module '"@prisma/client"' has no exported member 'GoalStatus'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(25,22): error TS2305: Module '"@prisma/client"' has no exported member 'GoalType'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(187,53): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(187,61): error TS2322: Type 'unknown' is not assignable to type 'string'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(187,102): error TS18046: 't' is of type 'unknown'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(198,53): error TS2322: Type 'unknown' is not assignable to type 'Key | null | undefined'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(198,61): error TS2322: Type 'unknown' is not assignable to type 'string'.
+app/[businessSlug]/strategy/StrategyOverviewClient.tsx(198,102): error TS18046: 's' is of type 'unknown'.
+app/[businessSlug]/tasks/TasksBoardClient.tsx(127,30): error TS2339: Property 'REVIEW' does not exist on type '{ TODO: "TODO"; IN_PROGRESS: "IN_PROGRESS"; IN_REVIEW: "IN_REVIEW"; DONE: "DONE"; CANCELLED: "CANCELLED"; }'.
+app/actions/documents/documents.ts(10,32): error TS2307: Cannot find module '@/lib/auth' or its corresponding type declarations.
+app/actions/documents/documents.ts(99,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/documents/documents.ts(117,124): error TS2339: Property 'title' does not exist on type '{ name: string; id: string; createdAt: Date; updatedAt: Date; businessId: string; deletedAt: Date | null; tags: string[]; category: DocumentCategory; description: string | null; ... 8 more ...; uploadedByName: string; }'.
+app/actions/documents/documents.ts(120,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/documents/documents.ts(121,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(150,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(151,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(174,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(175,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(176,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(197,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(198,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/events.ts(199,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/inventory.ts(36,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/inventory.ts(51,21): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type '(Without<EventInventoryItemUpdateInput, EventInventoryItemUncheckedUpdateInput> & EventInventoryItemUncheckedUpdateInput) | (Without<...> & EventInventoryItemUpdateInput)'.
+app/actions/events/inventory.ts(54,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/inventory.ts(71,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(57,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(58,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(95,29): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type 'Without<CompanyCreateInput, CompanyUncheckedCreateInput> & CompanyUncheckedCreateInput'.
+app/actions/events/leads.ts(103,41): error TS2339: Property 'contact' does not exist on type 'Omit<PrismaClient<PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">'.
+app/actions/events/leads.ts(127,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(128,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(129,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(130,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(149,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/events/leads.ts(150,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/marketing/campaigns.ts(164,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/marketing/campaigns.ts(165,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/marketing/campaigns.ts(216,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/marketing/campaigns.ts(217,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/marketing/campaigns.ts(249,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/marketing/campaigns.ts(250,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/strategy/goals.ts(166,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/strategy/goals.ts(198,49): error TS2322: Type 'number' is not assignable to type 'Decimal'.
+app/actions/strategy/goals.ts(204,25): error TS2322: Type 'number | null | undefined' is not assignable to type 'string | number | Decimal | DecimalJsLike | DecimalFieldUpdateOperationsInput | undefined'.
+  Type 'null' is not assignable to type 'string | number | Decimal | DecimalJsLike | DecimalFieldUpdateOperationsInput | undefined'.
+app/actions/strategy/goals.ts(218,48): error TS2322: Type 'number' is not assignable to type 'Decimal'.
+app/actions/strategy/goals.ts(236,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/strategy/goals.ts(237,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/strategy/goals.ts(258,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/strategy/goals.ts(259,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/tasks/tasks.ts(42,25): error TS2353: Object literal may only specify known properties, and 'assignedTo' does not exist in type 'TaskInclude<DefaultArgs>'.
+app/actions/tasks/tasks.ts(69,31): error TS2304: Cannot find name 'getUserSession'.
+app/actions/tasks/tasks.ts(100,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/tasks/tasks.ts(123,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/tasks/tasks.ts(124,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/tasks/tasks.ts(145,9): error TS2554: Expected 2 arguments, but got 1.
+app/actions/tasks/tasks.ts(146,9): error TS2554: Expected 2 arguments, but got 1.

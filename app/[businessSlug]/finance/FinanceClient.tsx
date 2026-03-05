@@ -17,6 +17,8 @@ import {
 } from "lucide-react"
 import Link from 'next/link'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { useQuery } from '@tanstack/react-query'
+import { getFinanceSummary } from '@/app/actions/finance/expenses'
 
 interface FinanceClientProps {
     summary: {
@@ -31,8 +33,17 @@ interface FinanceClientProps {
     businessSlug: string;
 }
 
-export function FinanceClient({ summary, businessSlug }: FinanceClientProps) {
+export function FinanceClient({ summary: initialSummary, businessSlug }: FinanceClientProps) {
     const { t, isRTL } = useTranslation()
+
+    const { data: summary } = useQuery({
+        queryKey: ['finance-summary', businessSlug],
+        queryFn: () => getFinanceSummary(),
+        initialData: initialSummary,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    })
 
     const kpis = [
         {

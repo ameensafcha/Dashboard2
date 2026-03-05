@@ -3,14 +3,10 @@
 import prisma from '@/lib/prisma';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
+import { unstable_cache } from 'next/cache';
 
-export async function getSalesOverview(businessSlug?: string) {
-    try {
-        const ctx = await getBusinessContext(businessSlug);
-        if (!hasPermission(ctx, 'orders', 'view')) {
-            throw new Error('Unauthorized');
-        }
-
+const getCachedSalesOverview = (businessId: string) => unstable_cache(
+    async () => {
         const now = new Date();
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -24,19 +20,19 @@ export async function getSalesOverview(businessSlug?: string) {
             recentOrders,
             channelOrders,
         ] = await Promise.all([
-            prisma.order.count({ where: { date: { gte: firstOfMonth }, businessId: ctx.businessId, deletedAt: null } }),
-            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId: ctx.businessId, deletedAt: null } }),
+            prisma.order.count({ where: { date: { gte: firstOfMonth }, businessId, deletedAt: null } }),
+            prisma.order.count({ where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, businessId, deletedAt: null } }),
             prisma.order.aggregate({
-                where: { date: { gte: firstOfMonth }, status: 'delivered', businessId: ctx.businessId, deletedAt: null },
+                where: { date: { gte: firstOfMonth }, status: 'delivered', businessId, deletedAt: null },
                 _sum: { grandTotal: true },
             }),
             prisma.order.aggregate({
-                where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, status: 'delivered', businessId: ctx.businessId, deletedAt: null },
+                where: { date: { gte: firstOfLastMonth, lt: firstOfMonth }, status: 'delivered', businessId, deletedAt: null },
                 _sum: { grandTotal: true },
             }),
-            prisma.order.count({ where: { status: { in: ['confirmed', 'processing'] }, businessId: ctx.businessId, deletedAt: null } }),
+            prisma.order.count({ where: { status: { in: ['confirmed', 'processing'] }, businessId, deletedAt: null } }),
             prisma.order.findMany({
-                where: { businessId: ctx.businessId, deletedAt: null },
+                where: { businessId, deletedAt: null },
                 take: 10,
                 orderBy: { createdAt: 'desc' },
                 select: {
@@ -46,7 +42,7 @@ export async function getSalesOverview(businessSlug?: string) {
                 },
             }),
             prisma.order.findMany({
-                where: { date: { gte: firstOfMonth }, businessId: ctx.businessId, deletedAt: null },
+                where: { date: { gte: firstOfMonth }, businessId, deletedAt: null },
                 select: { channel: true, grandTotal: true },
             }),
         ]);
@@ -60,7 +56,6 @@ export async function getSalesOverview(businessSlug?: string) {
             return Math.round(((cur - prev) / prev) * 1000) / 10;
         };
 
-        // Channel breakdown
         const channelMap: Record<string, number> = {};
         channelOrders.forEach(o => {
             const ch = o.channel || 'other';
@@ -81,6 +76,18 @@ export async function getSalesOverview(businessSlug?: string) {
             })),
             salesByChannel,
         };
+    },
+    [`sales-overview-${businessId}`],
+    { tags: [`sales-overview-${businessId}`, `orders-${businessId}`], revalidate: 3600 }
+);
+
+export async function getSalesOverview(businessSlug?: string) {
+    try {
+        const ctx = await getBusinessContext(businessSlug);
+        if (!hasPermission(ctx, 'orders', 'view')) {
+            throw new Error('Unauthorized');
+        }
+        return await getCachedSalesOverview(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching sales overview:', error);
         return {

@@ -2,12 +2,12 @@
 
 import { PrismaClient, Product, Category, Prisma, ProductStatus, SfdaStatus } from '@prisma/client';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
 
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required').optional(),
@@ -233,9 +233,11 @@ export async function createProduct(data: Partial<Product> & { categoryId?: stri
     details: validData
   })
 
+  revalidateTag(`products-overview-${ctx.businessId}`, { expire: 0 });
+  revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
-  revalidatePath('/inventory/finished'); // Products affect finished inventory lists
+  revalidatePath('/inventory/finished');
 
   return serializeProduct(product);
 }
@@ -285,6 +287,8 @@ export async function updateProduct(id: string, data: Partial<Product> & { categ
     details: validData
   })
 
+  revalidateTag(`products-overview-${ctx.businessId}`, { expire: 0 });
+  revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
   revalidatePath('/inventory/finished');
@@ -314,6 +318,8 @@ export async function deleteProduct(id: string) {
     entityName: 'Finished Product',
   })
 
+  revalidateTag(`products-overview-${ctx.businessId}`, { expire: 0 });
+  revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
   revalidatePath('/products');
   revalidatePath('/products/catalog');
   revalidatePath('/inventory/finished');

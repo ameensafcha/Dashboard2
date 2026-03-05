@@ -4,7 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Building2, Plus, Search, MapPin, Briefcase, User, Globe, ArrowRight, TrendingUp } from 'lucide-react';
+import { Building2, Plus, Search, MapPin, Globe, ArrowRight, ChevronRight, User, Briefcase, TrendingUp } from 'lucide-react';
+import TableLoader from '@/components/ui/TableLoader';
 import { useCrmStore } from '@/stores/crmStore';
 import { getCompanies } from '@/app/actions/crm/companies';
 import { getPricingTiers } from '@/app/actions/pricing';
@@ -153,14 +154,7 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]/50">
                             {isLoading ? (
-                                <tr key="loading-row">
-                                    <td colSpan={6} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-4 opacity-40">
-                                            <div className="w-10 h-10 border-2 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest">Loading records...</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <TableLoader rows={5} cols={6} />
                             ) : companies.length === 0 ? (
                                 <tr key="empty-row">
                                     <td colSpan={6} className="px-8 py-20 text-center">
@@ -285,7 +279,7 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
                 </div>
             </div>
 
-            <NewCompanyModal onCompanyAdded={() => loadData()} />
+            <NewCompanyModal onCompanyAdded={() => loadData('', true)} />
             <CompanyDetailDrawer />
         </div>
     );

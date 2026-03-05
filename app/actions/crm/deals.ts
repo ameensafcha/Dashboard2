@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { DealStage } from '@prisma/client';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
@@ -104,6 +104,9 @@ export async function createDeal(data: z.infer<typeof dealSchema>) {
             timeout: 15000
         });
 
+        revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
@@ -149,6 +152,9 @@ export async function updateDeal(id: string, data: Partial<z.infer<typeof dealSc
             timeout: 15000
         });
 
+        revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
@@ -191,6 +197,9 @@ export async function updateDealStage(id: string, stage: DealStage) {
             timeout: 15000
         });
 
+        revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true, deal: { ...deal, value: Number(deal.value) } };
@@ -227,6 +236,9 @@ export async function deleteDeal(id: string) {
             timeout: 15000
         });
 
+        revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');
         return { success: true };
@@ -285,6 +297,11 @@ export async function convertDealToOrder(dealId: string) {
             timeout: 15000
         });
 
+        revalidateTag(`deals-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`orders-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`sales-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/sales/orders');
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');

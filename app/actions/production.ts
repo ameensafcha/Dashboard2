@@ -225,6 +225,7 @@ export async function createProductionBatch(data: {
 
     // Revalidate dashboard cache
     revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
+    revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
@@ -301,6 +302,7 @@ export async function updateProductionBatch(id: string, data: {
 
     // Revalidate dashboard cache
     revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
+    revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
@@ -342,6 +344,7 @@ export async function deleteProductionBatch(id: string) {
 
     // Revalidate dashboard cache
     revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
+    revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
 
     return { success: true };
@@ -763,6 +766,10 @@ export async function updateQualityCheck(id: string, data: {
       maxWait: 5000
     }).then(result => {
       if (result.success) {
+        revalidateTag(`quality-checks-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/production/quality');
         revalidatePath('/production/batches');
         revalidatePath('/inventory/finished');

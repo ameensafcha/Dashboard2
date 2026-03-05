@@ -1,13 +1,19 @@
-import { PageHeader } from '@/components/ui/PageHeader';
+import { getTasks } from '@/app/actions/tasks/tasks';
+import TasksBoardClient from './TasksBoardClient';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
-export default function TasksPage() {
+export default async function TasksPage({ params, searchParams }: { params: Promise<{ businessSlug: string }>, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const { businessSlug } = await params;
+
+  const resolvedSearchParams = await searchParams;
+  const assigneeId = typeof resolvedSearchParams.assigneeId === 'string' ? resolvedSearchParams.assigneeId : undefined;
+  const status = typeof resolvedSearchParams.status === 'string' ? resolvedSearchParams.status : undefined;
+
+  const tasks = await getTasks(businessSlug, assigneeId, status);
+
   return (
-    <PermissionGuard module="tasks" action="view">
-      <div className="p-4 sm:p-6">
-        <PageHeader title="Team & Tasks" />
-        <p style={{ color: 'var(--text-muted)' }}>Tasks module coming soon...</p>
-      </div>
+    <PermissionGuard module="crm" action="view">
+      <TasksBoardClient initialTasks={tasks} businessSlug={businessSlug} />
     </PermissionGuard>
   );
 }

@@ -65,10 +65,34 @@ export async function revalidateDashboard() {
     try {
         const ctx = await getBusinessContext();
         const { revalidateTag } = await import('next/cache');
-        revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
-        revalidateTag(`dashboard-charts-${ctx.businessId}`, { expire: 0 });
-        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
-        revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+        const bid = ctx.businessId;
+        // Dashboard
+        revalidateTag(`dashboard-kpi-${bid}`, { expire: 0 });
+        revalidateTag(`dashboard-charts-${bid}`, { expire: 0 });
+        revalidateTag(`dashboard-feed-${bid}`, { expire: 0 });
+        revalidateTag(`dashboard-inventory-${bid}`, { expire: 0 });
+        // CRM
+        revalidateTag(`contacts-${bid}`, { expire: 0 });
+        revalidateTag(`companies-${bid}`, { expire: 0 });
+        revalidateTag(`deals-${bid}`, { expire: 0 });
+        revalidateTag(`crm-overview-${bid}`, { expire: 0 });
+        // Sales
+        revalidateTag(`orders-${bid}`, { expire: 0 });
+        revalidateTag(`sales-overview-${bid}`, { expire: 0 });
+        // Finance
+        revalidateTag(`finance-summary-${bid}`, { expire: 0 });
+        // Production
+        revalidateTag(`production-batches-${bid}`, { expire: 0 });
+        revalidateTag(`quality-checks-${bid}`, { expire: 0 });
+        // Inventory
+        revalidateTag(`inventory-overview-${bid}`, { expire: 0 });
+        // Products
+        revalidateTag(`products-overview-${bid}`, { expire: 0 });
+        // Generic dashboard tags (fallback)
+        revalidateTag(`dashboard-kpi`, { expire: 0 });
+        revalidateTag(`dashboard-charts`, { expire: 0 });
+        revalidateTag(`dashboard-feed`, { expire: 0 });
+        revalidateTag(`dashboard-inventory`, { expire: 0 });
         return { success: true };
     } catch (e) {
         return { success: false };

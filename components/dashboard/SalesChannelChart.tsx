@@ -3,13 +3,28 @@
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { getDashboardSalesByChannel } from '@/app/actions/dashboard';
 
 const CHANNEL_COLORS = ['#E8A838', '#22c55e', '#3b82f6', '#ec4899', '#a855f7', '#6b7280'];
 
 type ChannelData = { name: string; value: number }[];
 
-export default function SalesChannelChart({ data }: { data: ChannelData }) {
+export default function SalesChannelChart({ data: initialData }: { data: ChannelData }) {
     const { t, isRTL } = useTranslation();
+    const params = useParams();
+    const businessSlug = params?.businessSlug as string;
+
+    const { data: qData } = useQuery({
+        queryKey: ['dashboard-sales-channel', businessSlug],
+        queryFn: () => getDashboardSalesByChannel(businessSlug),
+        initialData,
+        staleTime: 10_000,
+        refetchInterval: 30_000,
+        refetchOnWindowFocus: true,
+    });
+    const data = qData || initialData;
 
     return (
         <div className="rounded-2xl p-6 border shadow-sm h-full" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>

@@ -120,6 +120,7 @@ export async function createRawMaterial(data: CreateRawMaterialInput) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
@@ -181,6 +182,7 @@ export async function updateRawMaterial(id: string, data: UpdateRawMaterialInput
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         return { success: true };
@@ -221,6 +223,7 @@ export async function deleteRawMaterial(id: string) {
         revalidatePath('/');
 
         // Revalidate dashboard cache
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
         return { success: true };

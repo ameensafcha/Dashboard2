@@ -1,23 +1,41 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useCrmStore } from '@/stores/crmStore'
 import { useSalesStore } from '@/stores/salesStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useProductionStore } from '@/stores/productionStore'
+import { revalidateDashboard } from '@/app/actions/dashboard'
 
 export function useRealtimeSync() {
     const supabase = createClient()
+    const router = useRouter()
     const channelRef = useRef<any>(null)
+    const refreshTimerRef = useRef<NodeJS.Timeout | null>(null)
 
     const { upsertContact, removeContact, upsertCompany, removeCompany } = useCrmStore()
     const { updateOrderInStore } = useSalesStore()
     const { setRawMaterials } = useInventoryStore()
     const { setBatches } = useProductionStore()
 
+    // Debounced refresh — batches multiple rapid DB events into one server refresh
+    // 1.5 second debounce: if 10 CRUDs happen in 1 sec, only 1 refresh fires
+    const triggerRefresh = useCallback(() => {
+        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = setTimeout(async () => {
+            try {
+                // Use server action — it knows businessId and busts correct scoped tags
+                await revalidateDashboard()
+            } catch (e) {
+                // Silent fail — next refresh will catch up
+            }
+            router.refresh()
+        }, 1500)
+    }, [router])
+
     useEffect(() => {
-        // Pehle old channel close karo (cleanup)
         if (channelRef.current) {
             supabase.removeChannel(channelRef.current)
         }
@@ -46,6 +64,7 @@ export function useRealtimeSync() {
                     };
                     upsertContact(mappedContact as any)
                 }
+                triggerRefresh()
             })
 
             // ── CRM: Companies ─────────────────────────
@@ -69,19 +88,31 @@ export function useRealtimeSync() {
                     };
                     upsertCompany(mappedCompany as any)
                 }
+                triggerRefresh()
             })
 
             // ── Sales: Orders ──────────────────────────
             .on('postgres_changes', {
-                event: 'UPDATE',
+                event: '*',
                 schema: 'public',
                 table: 'orders'
             }, (payload: any) => {
-                updateOrderInStore(payload.new.id, payload.new as any)
+                if (payload.eventType !== 'DELETE') {
+                    updateOrderInStore(payload.new.id, payload.new as any)
+                }
+                triggerRefresh()
+            })
+
+            // ── Sales: Transactions ────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'transactions'
+            }, () => {
+                triggerRefresh()
             })
 
             // ── Inventory: Raw Materials ───────────────
-            // Complex relations hain, isliye API route se re-fetch
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
@@ -94,6 +125,25 @@ export function useRealtimeSync() {
                 } catch (e) {
                     console.error('Inventory sync failed:', e)
                 }
+                triggerRefresh()
+            })
+
+            // ── Inventory: Stock Movements ─────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'stock_movements'
+            }, () => {
+                triggerRefresh()
+            })
+
+            // ── Inventory: Finished Products ───────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'finished_products'
+            }, () => {
+                triggerRefresh()
             })
 
             // ── Production: Batches ────────────────────
@@ -109,6 +159,61 @@ export function useRealtimeSync() {
                 } catch (e) {
                     console.error('Production sync failed:', e)
                 }
+                triggerRefresh()
+            })
+
+            // ── CRM: Deals ──────────────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'deals'
+            }, () => {
+                triggerRefresh()
+            })
+
+            // ── Finance: Expenses ───────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'expenses'
+            }, () => {
+                triggerRefresh()
+            })
+
+            // ── Sales: Order Items ──────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'order_items'
+            }, () => {
+                triggerRefresh()
+            })
+
+            // ── Sales: Invoices ─────────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'invoices'
+            }, () => {
+                triggerRefresh()
+            })
+
+            // ── Production: Batch Items ─────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'batch_items'
+            }, () => {
+                triggerRefresh()
+            })
+
+            // ── Production: Quality Checks ──────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'quality_checks'
+            }, () => {
+                triggerRefresh()
             })
 
             .subscribe((status: string) => {
@@ -122,11 +227,13 @@ export function useRealtimeSync() {
 
         channelRef.current = channel
 
-        // Cleanup on unmount
         return () => {
+            if (refreshTimerRef.current) {
+                clearTimeout(refreshTimerRef.current)
+            }
             if (channel) {
                 supabase.removeChannel(channel)
             }
         }
-    }, []) // Empty deps — sirf mount aur unmount par
+    }, [])
 }

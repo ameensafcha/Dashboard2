@@ -4,19 +4,15 @@ import prisma from '@/lib/prisma';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { serializeValues } from '@/lib/utils';
+import { unstable_cache } from 'next/cache';
 
-export async function getProductsOverview() {
-    try {
-        const ctx = await getBusinessContext();
-        if (!hasPermission(ctx, 'products', 'view')) {
-            throw new Error('Unauthorized');
-        }
-
-        const where: any = { deletedAt: null, businessId: ctx.businessId };
+const getCachedProductsOverview = (businessId: string) => unstable_cache(
+    async () => {
+        const where: any = { deletedAt: null, businessId };
 
         const [totalProducts, totalCategories, productsByStatus, productsBySfda, recentProducts] = await Promise.all([
             prisma.product.count({ where }),
-            prisma.category.count({ where: { deletedAt: null, businessId: ctx.businessId } }),
+            prisma.category.count({ where: { deletedAt: null, businessId } }),
             prisma.product.groupBy({
                 by: ['status'],
                 where,
@@ -38,7 +34,7 @@ export async function getProductsOverview() {
         const activeCount = productsByStatus.find(p => p.status === 'active')?._count.status || 0;
         const sfdaApprovedCount = productsBySfda.find(p => p.sfdaStatus === 'approved')?._count.sfdaStatus || 0;
 
-        const data = {
+        return serializeValues({
             totalProducts,
             totalCategories,
             activeCount,
@@ -52,9 +48,19 @@ export async function getProductsOverview() {
                 count: p._count.sfdaStatus
             })),
             recentProducts
-        };
+        });
+    },
+    [`products-overview-${businessId}`],
+    { tags: [`products-overview-${businessId}`], revalidate: 3600 }
+);
 
-        return serializeValues(data);
+export async function getProductsOverview() {
+    try {
+        const ctx = await getBusinessContext();
+        if (!hasPermission(ctx, 'products', 'view')) {
+            throw new Error('Unauthorized');
+        }
+        return await getCachedProductsOverview(ctx.businessId)();
     } catch (error) {
         console.error('Error fetching products overview:', error);
         return {
