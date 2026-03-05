@@ -10,9 +10,10 @@ export const metadata = {
   description: 'Manage and track production batches',
 };
 
-export default async function ProductionBatchesPage() {
+export default async function ProductionBatchesPage({ params }: { params: Promise<{ businessSlug: string }> }) {
+  const { businessSlug } = await params;
   const [batches, productsResp, rmResp, capacity] = await Promise.all([
-    getProductionBatches(),
+    getProductionBatches(businessSlug),
     getProducts({ page: 1, limit: 100, search: '', status: '' }),
     getRawMaterials(),
     getCapacityStatus(),

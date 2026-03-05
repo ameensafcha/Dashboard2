@@ -44,12 +44,15 @@ import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 
 interface PipelineClientProps {
-    initialDeals: any[];
-    initialCompanies: any[];
-    initialContacts: any[];
+    initialData: {
+        deals: any[];
+        companies: any[];
+        contacts: any[];
+    };
+    businessSlug: string;
 }
 
-export default function PipelineClient({ initialDeals, initialCompanies, initialContacts }: PipelineClientProps) {
+export default function PipelineClient({ initialData, businessSlug }: PipelineClientProps) {
     const { t, isRTL } = useTranslation();
     const {
         deals,
@@ -99,9 +102,9 @@ export default function PipelineClient({ initialDeals, initialCompanies, initial
 
     useEffect(() => {
         if (!isInitialized.current) {
-            setDeals(initialDeals as any);
-            setCompanies(initialCompanies as any);
-            setContacts(initialContacts as any);
+            setDeals(initialData.deals as any);
+            setCompanies(initialData.companies as any);
+            setContacts(initialData.contacts as any);
             isInitialized.current = true;
             return;
         }
@@ -141,7 +144,7 @@ export default function PipelineClient({ initialDeals, initialCompanies, initial
                     title: t.success,
                     description: (t as any).successOrderConverted + ". Redirecting to complete order...",
                 });
-                router.push(`/sales/orders/${result.orderId}/edit`);
+                router.push(`/${businessSlug}/sales/orders/${result.orderId}/edit`);
             } else {
                 toast({
                     title: t.error,

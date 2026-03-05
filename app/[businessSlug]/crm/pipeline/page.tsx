@@ -9,19 +9,22 @@ export const metadata: Metadata = {
     description: 'Track and manage your sales CRM pipeline',
 };
 
-
-export default async function PipelinePage() {
+export default async function PipelinePage({ params }: { params: Promise<{ businessSlug: string }> }) {
+    const { businessSlug } = await params;
     const [deals, companies, contacts] = await Promise.all([
-        getDeals(),
-        getCompanies(),
-        getContacts()
+        getDeals(businessSlug),
+        getCompanies(businessSlug),
+        getContacts(businessSlug)
     ]);
 
     return (
         <PipelineClient
-            initialDeals={deals as any}
-            initialCompanies={companies as any}
-            initialContacts={contacts as any}
+            initialData={{
+                deals: deals as any,
+                companies: companies as any,
+                contacts: contacts as any
+            }}
+            businessSlug={businessSlug}
         />
     );
 }

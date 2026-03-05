@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { Prisma, BatchStatus, RndStatus, StockMovementType, StockMovementReason } from '@prisma/client';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { z } from 'zod';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
@@ -94,29 +94,40 @@ async function generateBatchNumber(date: Date = new Date()): Promise<string> {
   }
 }
 
-export async function getProductionBatches(): Promise<ProductionBatchWithProduct[]> {
-  try {
-    const ctx = await getBusinessContext();
-    if (!hasPermission(ctx, 'production', 'view')) {
-      throw new Error('Unauthorized');
-    }
-
-    const batches = await prisma.productionBatch.findMany({
-      where: { deletedAt: null, businessId: ctx.businessId },
-      include: {
-        product: { select: { id: true, name: true, size: true, unit: true } },
-        batchItems: true,
-        qualityChecks: { select: { id: true, overallScore: true, passed: true, checkedAt: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    });
-
-    return serializeValues(batches) as any;
-  } catch (error: unknown) {
-    console.error('Error fetching production batches:', error instanceof Error ? error.message : String(error));
-    return [];
+export async function getProductionBatches(businessSlug?: string): Promise<ProductionBatchWithProduct[]> {
+  const ctx = await getBusinessContext(businessSlug);
+  if (!hasPermission(ctx, 'production', 'view')) {
+    throw new Error('Unauthorized');
   }
+
+  const cacheKey = [`production-batches-${ctx.businessId}`];
+
+  return unstable_cache(
+    async () => {
+      try {
+        const batches = await prisma.productionBatch.findMany({
+          where: { deletedAt: null, businessId: ctx.businessId },
+          include: {
+            product: { select: { id: true, name: true, size: true, unit: true } },
+            batchItems: true,
+            qualityChecks: { select: { id: true, overallScore: true, passed: true, checkedAt: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+        });
+
+        return serializeValues(batches) as any;
+      } catch (error: unknown) {
+        console.error('Error fetching production batches:', error instanceof Error ? error.message : String(error));
+        return [];
+      }
+    },
+    cacheKey,
+    {
+      tags: [`production-batches-${ctx.businessId}`],
+      revalidate: 3600
+    }
+  )();
 }
 
 export async function getProductionBatchById(id: string) {
@@ -213,8 +224,10 @@ export async function createProductionBatch(data: {
     revalidatePath('/');
 
     // Revalidate dashboard cache
+    revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+    revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
 
     return { success: true, data: serializedBatch };
   } catch (error: unknown) {
@@ -287,8 +300,10 @@ export async function updateProductionBatch(id: string, data: {
     revalidatePath('/');
 
     // Revalidate dashboard cache
+    revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-inventory-${ctx.businessId}`, { expire: 0 });
+    revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
 
     return { success: true, data: serializedBatch as any };
   } catch (error) {
@@ -326,6 +341,7 @@ export async function deleteProductionBatch(id: string) {
     revalidatePath('/');
 
     // Revalidate dashboard cache
+    revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
     revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
 
     return { success: true };
@@ -335,29 +351,40 @@ export async function deleteProductionBatch(id: string) {
   }
 }
 
-export async function getQualityChecks() {
-  try {
-    const ctx = await getBusinessContext();
-    if (!hasPermission(ctx, 'production', 'view')) {
-      throw new Error('Unauthorized');
-    }
-
-    const checks = await prisma.qualityCheck.findMany({
-      where: { batch: { businessId: ctx.businessId } },
-      include: {
-        batch: {
-          include: {
-            product: { select: { id: true, name: true } },
-          },
-        },
-      },
-      orderBy: { checkedAt: 'desc' },
-    });
-    return serializeValues(checks);
-  } catch (error) {
-    console.error('Error fetching quality checks:', error);
-    return [];
+export async function getQualityChecks(businessSlug?: string) {
+  const ctx = await getBusinessContext(businessSlug);
+  if (!hasPermission(ctx, 'production', 'view')) {
+    throw new Error('Unauthorized');
   }
+
+  const cacheKey = [`quality-checks-${ctx.businessId}`];
+
+  return unstable_cache(
+    async () => {
+      try {
+        const checks = await prisma.qualityCheck.findMany({
+          where: { batch: { businessId: ctx.businessId } },
+          include: {
+            batch: {
+              include: {
+                product: { select: { id: true, name: true } },
+              },
+            },
+          },
+          orderBy: { checkedAt: 'desc' },
+        });
+        return serializeValues(checks);
+      } catch (error) {
+        console.error('Error fetching quality checks:', error);
+        return [];
+      }
+    },
+    cacheKey,
+    {
+      tags: [`quality-checks-${ctx.businessId}`],
+      revalidate: 3600
+    }
+  )();
 }
 
 export async function createQualityCheck(data: {
@@ -524,11 +551,9 @@ export async function createQualityCheck(data: {
       maxWait: 5000
     }).then(result => {
       if (result.success) {
-        revalidatePath('/production/quality');
-        revalidatePath('/production/batches');
-        revalidatePath('/inventory/finished');
-        revalidatePath('/inventory/raw-materials');
-        revalidatePath('/inventory');
+        revalidateTag(`quality-checks-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`production-batches-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`inventory-overview-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/');
       }
       return result;

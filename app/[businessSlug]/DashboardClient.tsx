@@ -220,7 +220,7 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
                                 {t.lowStockAlerts}
                             </h2>
                         </div>
-                        <Link href="/inventory" className={cn("flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-70 transition-opacity", isRTL ? "flex-row-reverse" : "flex-row")} style={{ color: '#ef4444' }}>
+                        <Link href={`/${businessSlug}/inventory`} className={cn("flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-70 transition-opacity", isRTL ? "flex-row-reverse" : "flex-row")} style={{ color: '#ef4444' }}>
                             {t.viewInventory} <ArrowRight className={cn("w-3.5 h-3.5", isRTL ? "rotate-180" : "")} />
                         </Link>
                     </div>

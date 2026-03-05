@@ -17,6 +17,7 @@ interface ProductionDashboardClientProps {
     maxCapacityKg: number;
     activeTrendText: string;
     activeTrend: 'up' | 'down' | 'neutral';
+    businessSlug: string;
 }
 
 export default function ProductionDashboardClient({
@@ -26,7 +27,8 @@ export default function ProductionDashboardClient({
     monthlyProductionKg,
     maxCapacityKg,
     activeTrendText,
-    activeTrend
+    activeTrend,
+    businessSlug
 }: ProductionDashboardClientProps) {
     const { t, isRTL } = useTranslation();
 
@@ -83,12 +85,12 @@ export default function ProductionDashboardClient({
                 </div>
                 <div className="flex items-center gap-3">
                     <PermissionGuard module="production" action="view">
-                        <Link href="/production/batches" className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
+                        <Link href={`/${businessSlug}/production/batches`} className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
                             {t.viewAll}
                         </Link>
                     </PermissionGuard>
                     <PermissionGuard module="production" action="create">
-                        <Link href="/production/batches" className="h-10 px-5 flex items-center gap-2 rounded-xl text-xs font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 transition-all shadow-lg shadow-[var(--primary)]/20">
+                        <Link href={`/${businessSlug}/production/batches`} className="h-10 px-5 flex items-center gap-2 rounded-xl text-xs font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 transition-all shadow-lg shadow-[var(--primary)]/20">
                             <Factory className="w-4 h-4" />
                             {t.viewAddBatches}
                             <ArrowRight className={cn("w-4 h-4 ml-2", isRTL && "rotate-180 mr-2 ml-0")} />
@@ -222,7 +224,7 @@ export default function ProductionDashboardClient({
 
                 {batches.length > 0 && (
                     <div className="p-6 bg-[var(--muted)]/10 border-t border-[var(--border)]/30 text-center">
-                        <Link href="/production/batches" className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
+                        <Link href={`/${businessSlug}/production/batches`} className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
                             {t.viewAll}
                             {isRTL ? <ChevronLeft className="w-4 h-4 ml-2" /> : <ArrowRight className="w-4 h-4 ml-2" />}
                         </Link>

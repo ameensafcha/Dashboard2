@@ -18,7 +18,9 @@ export default async function TeamPage({ params }: { params: Promise<{ businessS
 
     const getInitials = (name: string) => {
         if (!name) return 'U';
-        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        const parts = name.trim().split(/\s+/);
+        const initials = parts.map(n => n[0]).filter(Boolean).join('');
+        return (initials || name[0] || 'U').substring(0, 2).toUpperCase();
     };
 
     return (

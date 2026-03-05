@@ -75,9 +75,9 @@ export async function revalidateDashboard() {
     }
 }
 
-export async function getDashboardKpis() {
+export async function getDashboardKpis(businessSlug?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
         return await getCachedKpis(ctx.businessId)();
     } catch (error) {
@@ -122,9 +122,9 @@ const getCachedRevenueTrend = (businessId: string) => unstable_cache(
     { tags: [`dashboard-charts`, `dashboard-charts-${businessId}`] }
 )();
 
-export async function getDashboardRevenueTrend() {
+export async function getDashboardRevenueTrend(businessSlug?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
         return await getCachedRevenueTrend(ctx.businessId);
     } catch (error) {
@@ -156,9 +156,9 @@ const getCachedSalesByChannel = (businessId: string) => unstable_cache(
     { tags: [`dashboard-charts`, `dashboard-charts-${businessId}`] }
 )();
 
-export async function getDashboardSalesByChannel() {
+export async function getDashboardSalesByChannel(businessSlug?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
         return await getCachedSalesByChannel(ctx.businessId);
     } catch (error) {
@@ -192,9 +192,9 @@ const getCachedActivityFeed = (businessId: string) => unstable_cache(
     { tags: [`dashboard-feed`, `dashboard-feed-${businessId}`] }
 )();
 
-export async function getDashboardActivityFeed() {
+export async function getDashboardActivityFeed(businessSlug?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
         return await getCachedActivityFeed(ctx.businessId);
     } catch (error) {
@@ -233,9 +233,9 @@ const getCachedLowStockAlerts = (businessId: string) => unstable_cache(
     { tags: [`dashboard-inventory`, `dashboard-inventory-${businessId}`] }
 )();
 
-export async function getDashboardLowStockAlerts() {
+export async function getDashboardLowStockAlerts(businessSlug?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'dashboard', 'view')) throw new Error('Unauthorized');
         return await getCachedLowStockAlerts(ctx.businessId);
     } catch (error) {

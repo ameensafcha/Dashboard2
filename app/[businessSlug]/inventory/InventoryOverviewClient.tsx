@@ -31,7 +31,7 @@ function daysUntil(dateStr: string) {
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function InventoryOverviewClient({ data }: { data: InventoryOverviewData }) {
+export default function InventoryOverviewClient({ data, businessSlug }: { data: InventoryOverviewData; businessSlug: string }) {
     const kpis = [
         { title: 'Total Inventory Value (Cost)', value: data.kpis.totalValue, prefix: 'SAR ', icon: DollarSign, color: '#E8A838' },
         { title: 'Raw Materials Value', value: data.kpis.rawInventoryValue, prefix: 'SAR ', icon: Package, color: '#3b82f6' },
@@ -45,10 +45,10 @@ export default function InventoryOverviewClient({ data }: { data: InventoryOverv
                 <PageHeader title="Inventory Overview" />
                 <div className="flex gap-2">
                     <PermissionGuard module="inventory" action="view">
-                        <Link href="/inventory/raw-materials" className="px-3 py-2 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--primary)]" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Raw Materials</Link>
+                        <Link href={`/${businessSlug}/inventory/raw-materials`} className="px-3 py-2 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--primary)]" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Raw Materials</Link>
                     </PermissionGuard>
                     <PermissionGuard module="inventory" action="view">
-                        <Link href="/inventory/finished" className="px-3 py-2 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--primary)]" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Finished Products</Link>
+                        <Link href={`/${businessSlug}/inventory/finished`} className="px-3 py-2 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--primary)]" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Finished Products</Link>
                     </PermissionGuard>
                 </div>
             </div>

@@ -6,7 +6,8 @@ import { FinanceClient } from './FinanceClient';
 import { translations } from '@/lib/i18n';
 
 
-export default async function FinancePage() {
+export default async function FinancePage({ params }: { params: Promise<{ businessSlug: string }> }) {
+  const { businessSlug } = await params;
   const summary = await getFinanceSummary();
   // We don't have a server-side language hook here easily without more complex setup,
   // so we'll rely on the FinanceClient for internal i18n, but PageHeader can be handled
@@ -16,7 +17,7 @@ export default async function FinancePage() {
   return (
     <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
       <Suspense fallback={<div className="h-96 flex items-center justify-center font-black text-[var(--text-disabled)] uppercase tracking-widest animate-pulse">Initializing financial data...</div>}>
-        <FinanceClient summary={summary} />
+        <FinanceClient summary={summary} businessSlug={businessSlug} />
       </Suspense>
     </div>
   );

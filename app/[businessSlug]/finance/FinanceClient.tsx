@@ -28,9 +28,10 @@ interface FinanceClientProps {
         expenseCount: number
         recentTransactions: any[]
     }
+    businessSlug: string;
 }
 
-export function FinanceClient({ summary }: FinanceClientProps) {
+export function FinanceClient({ summary, businessSlug }: FinanceClientProps) {
     const { t, isRTL } = useTranslation()
 
     const kpis = [
@@ -88,7 +89,7 @@ export function FinanceClient({ summary }: FinanceClientProps) {
                     </div>
                     <PermissionGuard module="finance" action="view">
                         <Link
-                            href="/finance/expenses"
+                            href={`/${businessSlug}/finance/expenses`}
                             className="h-10 px-6 flex items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 shadow-lg transition-all active:scale-95"
                         >
                             {t.manageExpenses || 'Manage Expenses'}
@@ -134,7 +135,7 @@ export function FinanceClient({ summary }: FinanceClientProps) {
                         <p className="text-[10px] font-black uppercase tracking-widest text-red-500/70">{t.expenseRecords}</p>
                         <h4 className="text-2xl font-black text-[var(--text-primary)] mt-1">{summary.expenseCount}</h4>
                         <PermissionGuard module="finance" action="view">
-                            <Link href="/finance/expenses" className="text-[11px] font-black text-[var(--primary)] hover:underline mt-2 inline-block">
+                            <Link href={`/${businessSlug}/finance/expenses`} className="text-[11px] font-black text-[var(--primary)] hover:underline mt-2 inline-block">
                                 {t.viewAllExpenses} →
                             </Link>
                         </PermissionGuard>
@@ -203,7 +204,7 @@ export function FinanceClient({ summary }: FinanceClientProps) {
                 </div>
 
                 <div className="p-6 bg-[var(--muted)]/10 border-t border-[var(--border)]/30 text-center">
-                    <Link href="/finance/expenses" className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
+                    <Link href={`/${businessSlug}/finance/expenses`} className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
                         {t.viewFullHistory}
                         {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                     </Link>

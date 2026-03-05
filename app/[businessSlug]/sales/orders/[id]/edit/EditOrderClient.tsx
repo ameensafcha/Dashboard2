@@ -42,7 +42,8 @@ export default function EditOrderClient({
     products = [],
     companies = [],
     companyPricingTiers = [],
-    globalPricingTiers = []
+    globalPricingTiers = [],
+    businessSlug
 }: any) {
     const router = useRouter();
     const { isRTL, language } = useTranslation();
@@ -146,7 +147,7 @@ export default function EditOrderClient({
                     description: language === 'ar' ? 'تم حفظ التعديلات' : 'All changes have been successfully saved.',
                     type: 'success'
                 });
-                router.push('/sales/orders');
+                router.push(`/${businessSlug}/sales/orders`);
                 router.refresh();
             } else {
                 toast({ title: 'Error', description: result.error || 'Update failed', type: 'error' });
@@ -180,7 +181,7 @@ export default function EditOrderClient({
         <div className="p-4 sm:p-6 lg:p-10 space-y-8 animate-in fade-in duration-700">
             <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
                 <div className="space-y-1">
-                    <Link href="/sales/orders" className="text-xs font-bold text-[var(--text-disabled)] hover:text-[var(--primary)] flex items-center gap-1">
+                    <Link href={`/${businessSlug}/sales/orders`} className="text-xs font-bold text-[var(--text-disabled)] hover:text-[var(--primary)] flex items-center gap-1">
                         <ArrowLeft className="w-3 h-3" /> Back to Orders
                     </Link>
                     <PageHeader title={t.title} />

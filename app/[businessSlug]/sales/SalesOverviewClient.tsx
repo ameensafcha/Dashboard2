@@ -26,7 +26,7 @@ type SalesOverviewData = {
     salesByChannel: { name: string; value: number }[];
 };
 
-export default function SalesOverviewClient({ data }: { data: SalesOverviewData }) {
+export default function SalesOverviewClient({ data, businessSlug }: { data: SalesOverviewData; businessSlug: string }) {
     const kpis = [
         { title: 'Revenue (MTD)', value: data.kpis.revenue.value, change: data.kpis.revenue.change, icon: DollarSign, prefix: 'SAR ', color: '#22c55e' },
         { title: 'Orders (MTD)', value: data.kpis.orders.value, change: data.kpis.orders.change, icon: ShoppingCart, color: '#3b82f6' },
@@ -39,7 +39,7 @@ export default function SalesOverviewClient({ data }: { data: SalesOverviewData 
             <div className="flex justify-between items-center">
                 <PageHeader title="Sales Overview" />
                 <PermissionGuard module="sales" action="create">
-                    <Link href="/sales/orders/new" className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>
+                    <Link href={`/${businessSlug}/sales/orders/new`} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--primary)' }}>
                         + New Order
                     </Link>
                 </PermissionGuard>
@@ -99,7 +99,7 @@ export default function SalesOverviewClient({ data }: { data: SalesOverviewData 
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Recent Orders</h2>
                         <PermissionGuard module="sales" action="view">
-                            <Link href="/sales/orders" className="text-xs flex items-center gap-1" style={{ color: 'var(--primary)' }}>
+                            <Link href={`/${businessSlug}/sales/orders`} className="text-xs flex items-center gap-1" style={{ color: 'var(--primary)' }}>
                                 View All <ArrowRight className="w-3 h-3" />
                             </Link>
                         </PermissionGuard>

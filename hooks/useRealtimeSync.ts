@@ -1,88 +1,132 @@
-'use client';
+'use client'
 
-import { useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useCrmStore } from '@/stores/crmStore'
+import { useSalesStore } from '@/stores/salesStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { useProductionStore } from '@/stores/productionStore'
 
-interface RealtimeSyncOptions {
-    table: string;
-    businessId: string;
-    onInsert?: (payload: any) => void;
-    onUpdate?: (payload: any) => void;
-    onDelete?: (payload: any) => void;
-    enabled?: boolean;
-}
+export function useRealtimeSync() {
+    const supabase = createClient()
+    const channelRef = useRef<any>(null)
 
-export function useRealtimeSync({
-    table,
-    businessId,
-    onInsert,
-    onUpdate,
-    onDelete,
-    enabled = true
-}: RealtimeSyncOptions) {
-    const onInsertRef = useRef(onInsert);
-    const onUpdateRef = useRef(onUpdate);
-    const onDeleteRef = useRef(onDelete);
+    const { upsertContact, removeContact, upsertCompany, removeCompany } = useCrmStore()
+    const { updateOrderInStore } = useSalesStore()
+    const { setRawMaterials } = useInventoryStore()
+    const { setBatches } = useProductionStore()
 
     useEffect(() => {
-        onInsertRef.current = onInsert;
-        onUpdateRef.current = onUpdate;
-        onDeleteRef.current = onDelete;
-    }, [onInsert, onUpdate, onDelete]);
-
-    useEffect(() => {
-        if (!enabled || !businessId) return;
-
-        const supabase = createClient();
-        console.log(`[Realtime] Subscribing to ${table}...`);
+        // Pehle old channel close karo (cleanup)
+        if (channelRef.current) {
+            supabase.removeChannel(channelRef.current)
+        }
 
         const channel = supabase
-            .channel(`realtime-${table}-${businessId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: table,
-                    filter: `business_id=eq.${businessId}`
-                },
-                (payload) => {
-                    console.log(`[Realtime - ${table}] Change Detected:`, payload);
+            .channel('safcha-global-v1')
 
-                    const toCamel = (obj: any): any => {
-                        if (Array.isArray(obj)) return obj.map(toCamel);
-                        if (obj !== null && typeof obj === 'object') {
-                            return Object.keys(obj).reduce((acc, key) => {
-                                const camelKey = key.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
-                                acc[camelKey] = (toCamel as any)(obj[key]);
-                                return acc;
-                            }, {} as any);
-                        }
-                        return obj;
+            // ── CRM: Contacts ──────────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'clients'
+            }, (payload: any) => {
+                if (payload.eventType === 'DELETE') {
+                    removeContact(payload.old.id)
+                } else {
+                    const data = payload.new;
+                    const mappedContact = {
+                        ...data,
+                        companyId: data.company_id,
+                        businessId: data.business_id,
+                        lastContacted: data.last_contacted,
+                        createdAt: data.created_at,
+                        updatedAt: data.updated_at,
+                        deletedAt: data.deleted_at,
                     };
-
-                    const data = payload.new ? toCamel(payload.new) : (payload.old ? toCamel(payload.old) : null);
-
-                    switch (payload.eventType) {
-                        case 'INSERT':
-                            if (onInsertRef.current) onInsertRef.current(data);
-                            break;
-                        case 'UPDATE':
-                            if (onUpdateRef.current) onUpdateRef.current(data);
-                            break;
-                        case 'DELETE':
-                            if (onDeleteRef.current) (onDeleteRef.current as any)(data);
-                            break;
-                    }
+                    upsertContact(mappedContact as any)
                 }
-            )
-            .subscribe((status, err) => {
-                console.log(`[Realtime - ${table}] Status:`, status, err || '');
-            });
+            })
 
+            // ── CRM: Companies ─────────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'companies'
+            }, (payload: any) => {
+                if (payload.eventType === 'DELETE') {
+                    removeCompany(payload.old.id)
+                } else {
+                    const data = payload.new;
+                    const mappedCompany = {
+                        ...data,
+                        lifetimeValue: data.lifetime_value,
+                        pricingTierId: data.pricing_tier_id,
+                        businessId: data.business_id,
+                        createdAt: data.created_at,
+                        updatedAt: data.updated_at,
+                        deletedAt: data.deleted_at,
+                    };
+                    upsertCompany(mappedCompany as any)
+                }
+            })
+
+            // ── Sales: Orders ──────────────────────────
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'orders'
+            }, (payload: any) => {
+                updateOrderInStore(payload.new.id, payload.new as any)
+            })
+
+            // ── Inventory: Raw Materials ───────────────
+            // Complex relations hain, isliye API route se re-fetch
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'raw_materials'
+            }, async () => {
+                try {
+                    const res = await fetch('/api/sync/raw-materials')
+                    const data = await res.json()
+                    if (data.materials) setRawMaterials(data.materials)
+                } catch (e) {
+                    console.error('Inventory sync failed:', e)
+                }
+            })
+
+            // ── Production: Batches ────────────────────
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'production_batches'
+            }, async () => {
+                try {
+                    const res = await fetch('/api/sync/batches')
+                    const data = await res.json()
+                    if (data.batches) setBatches(data.batches)
+                } catch (e) {
+                    console.error('Production sync failed:', e)
+                }
+            })
+
+            .subscribe((status: string) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Realtime connected — all tables syncing')
+                }
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Realtime connection error — retrying...')
+                }
+            })
+
+        channelRef.current = channel
+
+        // Cleanup on unmount
         return () => {
-            console.log(`[Realtime] Unsubscribing from ${table}...`);
-            supabase.removeChannel(channel);
-        };
-    }, [table, businessId, enabled]);
+            if (channel) {
+                supabase.removeChannel(channel)
+            }
+        }
+    }, []) // Empty deps — sirf mount aur unmount par
 }

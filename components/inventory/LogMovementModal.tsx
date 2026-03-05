@@ -49,7 +49,7 @@ export default function LogMovementModal({ targetType, targetId, targetName, onS
         setError(null);
 
         const result = await logMovement({
-            type: formData.type,
+            type: formData.type as StockMovementType,
             quantity: formData.quantity,
             reason: formData.reason,
             notes: formData.notes || undefined,

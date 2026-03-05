@@ -6,7 +6,8 @@ export const metadata = {
     title: 'New Order | Safcha',
 };
 
-export default async function NewOrderPage() {
+export default async function NewOrderPage({ params }: { params: Promise<{ businessSlug: string }> }) {
+    const { businessSlug } = await params;
     // Fetch clients with their company details
     const clients = await prisma.client.findMany({
         include: { company: true },
@@ -96,6 +97,7 @@ export default async function NewOrderPage() {
             products={serializedProducts}
             companyPricingTiers={serializedCompanyPricingTiers}
             globalPricingTiers={serializedGlobalPricingTiers}
+            businessSlug={businessSlug}
         />
     );
 }

@@ -18,7 +18,7 @@ const batchStatusColors: Record<string, string> = {
     failed: 'bg-red-500',
 };
 
-export function BatchDetailsClient({ batch }: { batch: ProductionBatchWithProduct }) {
+export function BatchDetailsClient({ batch, businessSlug }: { batch: ProductionBatchWithProduct; businessSlug: string }) {
     const { t, isRTL } = useTranslation();
     const isCompletedOrQC = batch.status === 'completed' || batch.status === 'quality_check' || batch.status === 'failed';
 
@@ -26,7 +26,7 @@ export function BatchDetailsClient({ batch }: { batch: ProductionBatchWithProduc
         <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
             <div>
                 <Link
-                    href="/production/batches"
+                    href={`/${businessSlug}/production/batches`}
                     className={cn(
                         "flex items-center text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[#E8A838] mb-6 transition-all group",
                         isRTL ? "flex-row-reverse" : "flex-row"

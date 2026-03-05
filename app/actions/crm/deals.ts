@@ -20,9 +20,9 @@ const dealSchema = z.object({
     notes: z.string().optional(),
 });
 
-export async function getDeals(search?: string) {
+export async function getDeals(businessSlug?: string, search?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'crm', 'view')) {
             throw new Error('Unauthorized');
         }

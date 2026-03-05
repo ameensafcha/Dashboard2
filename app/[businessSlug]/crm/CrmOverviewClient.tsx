@@ -26,7 +26,7 @@ interface CrmOverviewData {
     recentDeals: { id: string; title: string; value: number; stage: string; updatedAt: string; company: { name: string } | null; client: { name: string } | null }[];
 }
 
-export default function CrmOverviewClient({ data }: { data: CrmOverviewData }) {
+export default function CrmOverviewClient({ data, businessSlug }: { data: CrmOverviewData; businessSlug: string }) {
     const { t, isRTL } = useTranslation()
 
     const kpis = [
@@ -89,17 +89,17 @@ export default function CrmOverviewClient({ data }: { data: CrmOverviewData }) {
                 </div>
                 <div className="flex items-center gap-3">
                     <PermissionGuard module="crm" action="view">
-                        <Link href="/crm/companies" className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
+                        <Link href={`/${businessSlug}/crm/companies`} className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
                             {t.companies}
                         </Link>
                     </PermissionGuard>
                     <PermissionGuard module="crm" action="view">
-                        <Link href="/crm/contacts" className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
+                        <Link href={`/${businessSlug}/crm/contacts`} className="h-10 px-4 flex items-center gap-2 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--muted)]/50 transition-all">
                             {t.contacts}
                         </Link>
                     </PermissionGuard>
                     <PermissionGuard module="crm" action="view">
-                        <Link href="/crm/pipeline" className="h-10 px-5 flex items-center gap-2 rounded-xl text-xs font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 transition-all">
+                        <Link href={`/${businessSlug}/crm/pipeline`} className="h-10 px-5 flex items-center gap-2 rounded-xl text-xs font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary)]/90 transition-all">
                             {t.pipeline}
                             <ArrowRight className="w-4 h-4" />
                         </Link>
@@ -231,7 +231,7 @@ export default function CrmOverviewClient({ data }: { data: CrmOverviewData }) {
 
                     <PermissionGuard module="crm" action="view">
                         <div className="p-6 bg-[var(--muted)]/10 border-t border-[var(--border)]/30 text-center">
-                            <Link href="/crm/pipeline" className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
+                            <Link href={`/${businessSlug}/crm/pipeline`} className="flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--primary)] hover:underline">
                                 {t.viewPipeline}
                                 {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                             </Link>

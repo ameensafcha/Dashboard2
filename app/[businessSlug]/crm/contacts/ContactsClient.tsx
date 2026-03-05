@@ -17,15 +17,15 @@ import NewContactModal from './NewContactModal';
 import ContactDetailDrawer from './ContactDetailDrawer';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { Contact } from '@/stores/crmStore';
-import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 interface ContactsClientProps {
     initialContacts: any[];
     initialCompanies: any[];
     businessId: string;
+    businessSlug: string;
 }
 
-function ContactsClientContent({ initialContacts, initialCompanies, businessId }: ContactsClientProps) {
+function ContactsClientContent({ initialContacts, initialCompanies, businessId, businessSlug }: ContactsClientProps) {
     const { t, language, isRTL } = useTranslation();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -45,16 +45,14 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
         removeContact
     } = useCrmStore();
 
-    // Activate Realtime Sync for Contacts (table is 'clients')
-    useRealtimeSync({
-        table: 'clients',
-        businessId,
-        onInsert: (payload) => upsertContact(payload),
-        onUpdate: (payload) => upsertContact(payload),
-        onDelete: (payload) => removeContact(payload.id)
-    });
+    // Realtime Sync is now handled globally via RealtimeProvider in layout.tsx
 
-    const loadData = async (search = '', compId = filterCompanyId || undefined) => {
+    const loadData = async (search = '', compId = filterCompanyId || undefined, force = false) => {
+        // If we have data and not forcing, skip loading spinner and fetch
+        if (!force && contacts.length > 0 && !search && !compId) {
+            return;
+        }
+
         setIsLoading(true);
         try {
             const [contactsData, companiesData] = await Promise.all([
@@ -77,12 +75,19 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
 
     useEffect(() => {
         if (!isInitialized.current) {
-            setContacts(initialContacts as any);
-            setCompanies(initialCompanies as any);
+            // Check if store already has data (from previous navigation)
+            if (contacts.length === 0) {
+                setContacts(initialContacts as any);
+                setCompanies(initialCompanies as any);
+            }
             isInitialized.current = true;
             return;
         }
-        loadData();
+
+        // Only fetch if searching or filtering, otherwise favor store (synced via Realtime)
+        if (searchTerm || filterCompanyId) {
+            loadData(searchTerm, filterCompanyId || undefined, true);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterCompanyId]);
 
@@ -151,12 +156,12 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
                                 value={filterCompanyId || "all"}
                                 onValueChange={(val) => {
                                     if (val === "all") {
-                                        router.push('/crm/contacts');
+                                        router.push(`/${businessSlug}/crm/contacts`);
                                         setTimeout(() => loadData(searchTerm, undefined), 50);
                                     } else {
                                         const comp = companies.find(c => c.id === val);
                                         if (comp) {
-                                            router.push(`/crm/contacts?companyId=${comp.id}&companyName=${encodeURIComponent(comp.name)}`);
+                                            router.push(`/${businessSlug}/crm/contacts?companyId=${comp.id}&companyName=${encodeURIComponent(comp.name)}`);
                                             setTimeout(() => loadData(searchTerm, comp.id), 50);
                                         }
                                     }
@@ -194,7 +199,7 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]/50">
                             {isLoading ? (
-                                <tr>
+                                <tr key="loading-row">
                                     <td colSpan={5} className="px-8 py-20 text-center">
                                         <div className="flex flex-col items-center gap-4 opacity-40">
                                             <div className="w-10 h-10 border-2 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin" />
@@ -203,7 +208,7 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
                                     </td>
                                 </tr>
                             ) : contacts.length === 0 ? (
-                                <tr>
+                                <tr key="empty-row">
                                     <td colSpan={5} className="px-8 py-20 text-center">
                                         <div className="flex flex-col items-center justify-center space-y-4">
                                             <div className="w-16 h-16 rounded-2xl bg-[var(--muted)]/30 flex items-center justify-center border border-dashed border-[var(--border)]">
@@ -226,9 +231,9 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
                                     </td>
                                 </tr>
                             ) : (
-                                contacts.map((contact) => (
+                                contacts.map((contact,index) => (
                                     <tr
-                                        key={contact.id}
+                                        key={index}
                                         className={cn(
                                             "hover:bg-[var(--muted)]/40 cursor-pointer transition-all group border-b border-[var(--border)]/30 last:border-0",
                                             isRTL ? "text-right" : ""
@@ -238,11 +243,11 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
                                         <td className="px-8 py-5">
                                             <div className={cn("flex items-center gap-4", isRTL ? "flex-row-reverse" : "")}>
                                                 <div className="w-11 h-11 rounded-full bg-[var(--background)] border border-[var(--border)] flex items-center justify-center group-hover:border-[var(--primary)]/30 transition-colors shadow-sm overflow-hidden uppercase font-black text-xs text-[var(--text-disabled)] group-hover:text-[var(--primary)]">
-                                                    {contact.name.substring(0, 2)}
+                                                    {(contact?.name || '??').substring(0, 2)}
                                                 </div>
                                                 <div className="space-y-1">
                                                     <div className="text-[14px] font-black text-[var(--text-primary)] group-hover:text-[#E8A838] transition-colors tracking-tight">
-                                                        {contact.name}
+                                                        {contact?.name || 'Deleted Contact'}
                                                     </div>
                                                     <div className={cn("flex flex-col gap-0.5", isRTL ? "items-end" : "items-start")}>
                                                         {contact.email && (
@@ -320,7 +325,7 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId }
     );
 }
 
-export default function ContactsClient({ initialContacts, initialCompanies, businessId }: ContactsClientProps) {
+export default function ContactsClient({ initialContacts, initialCompanies, businessId, businessSlug }: ContactsClientProps) {
     return (
         <Suspense fallback={
             <div className="p-4 sm:p-6 lg:p-10 flex items-center justify-center min-h-[500px]">
@@ -330,7 +335,7 @@ export default function ContactsClient({ initialContacts, initialCompanies, busi
                 </div>
             </div>
         }>
-            <ContactsClientContent initialContacts={initialContacts} initialCompanies={initialCompanies} businessId={businessId} />
+            <ContactsClientContent initialContacts={initialContacts} initialCompanies={initialCompanies} businessId={businessId} businessSlug={businessSlug} />
         </Suspense>
     );
 }

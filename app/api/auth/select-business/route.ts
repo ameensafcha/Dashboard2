@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const businessId = searchParams.get('id')
 
     if (!businessId) {
-        return NextResponse.redirect(new URL('/select-business', request.url))
+        return NextResponse.redirect(new URL('/select-business', request.nextUrl.origin))
     }
 
     // Create supabase client to verify user
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-        return NextResponse.redirect(new URL('/login', request.url))
+        return NextResponse.redirect(new URL('/login', request.nextUrl.origin))
     }
 
     // Verify membership and get business slug
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!membership || !membership.isActive) {
-        return NextResponse.redirect(new URL('/select-business', request.url))
+        return NextResponse.redirect(new URL('/select-business', request.nextUrl.origin))
     }
 
     // Update last seen
@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
     })
 
     // Set the cookie and redirect to the business slug dashboard
-    const response = NextResponse.redirect(new URL(`/${membership.business.slug}`, request.url))
+    const redirectUrl = new URL(`/${membership.business.slug}`, request.nextUrl.origin)
+    const response = NextResponse.redirect(redirectUrl)
     response.cookies.set('active-business-id', businessId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

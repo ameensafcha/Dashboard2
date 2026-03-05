@@ -8,9 +8,10 @@ export const metadata: Metadata = {
 };
 
 
-export default async function ProductionPage() {
-  const batches = await getProductionBatches();
-  const qualityChecks = await getQualityChecks();
+export default async function ProductionPage({ params }: { params: Promise<{ businessSlug: string }> }) {
+  const { businessSlug } = await params;
+  const batches = await getProductionBatches(businessSlug);
+  const qualityChecks = await getQualityChecks(businessSlug);
 
   // Calculate KPIs
   const activeBatches = batches.filter(b => b.status === 'in_progress').length;
@@ -66,6 +67,7 @@ export default async function ProductionPage() {
       maxCapacityKg={MAX_CAPACITY_KG}
       activeTrendText={activeTrendText}
       activeTrend={activeTrend}
+      businessSlug={businessSlug}
     />
   );
 }

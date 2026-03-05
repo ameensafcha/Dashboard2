@@ -30,7 +30,7 @@ import {
 import OrderDetailDrawer from '@/components/sales/OrderDetailDrawer';
 import { cn } from '@/lib/utils';
 
-function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
+function OrdersClientContent({ initialOrders, businessSlug }: { initialOrders: any[]; businessSlug: string }) {
     const { orders, setOrders, isLoading, setIsLoading, openOrderDrawer } = useSalesStore();
     const { t, isRTL, language } = useTranslation();
 
@@ -40,7 +40,12 @@ function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
     const [channelFilter, setChannelFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (force = false) => {
+        // Favor store if not searching/filtering and data exists
+        if (!force && orders.length > 0 && !searchQuery && channelFilter === 'all' && statusFilter === 'all') {
+            return;
+        }
+
         setIsLoading(true);
         const result = await getOrders(
             searchQuery || undefined,
@@ -56,12 +61,17 @@ function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
-            if (initialOrders && initialOrders.length > 0) {
+            // Only populate from initial if store is empty (favor persistence)
+            if (orders.length === 0 && initialOrders && initialOrders.length > 0) {
                 setOrders(initialOrders);
-                return;
             }
+            return;
         }
-        fetchOrders();
+
+        // Fetch if searching or filtering, otherwise favor store (synced via Realtime)
+        if (searchQuery || channelFilter !== 'all' || statusFilter !== 'all') {
+            fetchOrders(true);
+        }
     }, [searchQuery, channelFilter, statusFilter]);
 
     const formatCurrency = (amount: number) => {
@@ -92,7 +102,7 @@ function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
                     </p>
                 </div>
                 <PermissionGuard module="sales" action="create">
-                    <Link href="/sales/orders/new">
+                    <Link href={`/${businessSlug}/sales/orders/new`}>
                         <Button className="bg-[#E8A838] text-black hover:bg-[#d69628] px-8 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-[#E8A838]/20 active:scale-95 flex items-center gap-3 group">
                             <Plus className="h-4 w-4 transition-transform group-hover:scale-110" />
                             {isRTL ? 'طلب جديد' : 'Draft New Order'}
@@ -198,7 +208,7 @@ function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
                                                 <p className="text-xs text-[var(--text-muted)]">Your sales queue is currently empty.</p>
                                             </div>
                                             <PermissionGuard module="sales" action="create">
-                                                <Link href="/sales/orders/new">
+                                                <Link href={`/${businessSlug}/sales/orders/new`}>
                                                     <Button
                                                         variant="outline"
                                                         className="border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)]/5 font-black uppercase tracking-tighter text-[10px] mt-4"
@@ -273,7 +283,7 @@ function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
                                                         </DropdownMenuItem>
                                                         <PermissionGuard module="sales" action="edit">
                                                             {order.status === 'draft' && (
-                                                                <Link href={`/sales/orders/${order.id}/edit`}>
+                                                                <Link href={`/${businessSlug}/sales/orders/${order.id}/edit`}>
                                                                     <DropdownMenuItem
                                                                         onClick={(e) => e.stopPropagation()}
                                                                         className="rounded-lg text-xs font-bold py-2.5 px-3 focus:bg-[var(--primary)]/10 focus:text-[var(--primary)] cursor-pointer text-[var(--primary)]"
@@ -311,7 +321,7 @@ function OrdersClientContent({ initialOrders }: { initialOrders: any[] }) {
     );
 }
 
-export default function OrdersClient({ initialOrders = [] }: { initialOrders?: any[] }) {
+export default function OrdersClient({ initialOrders = [], businessSlug }: { initialOrders?: any[]; businessSlug: string }) {
     return (
         <Suspense fallback={
             <div className="p-4 sm:p-6 lg:p-10 flex items-center justify-center min-h-[500px]">
@@ -321,7 +331,7 @@ export default function OrdersClient({ initialOrders = [] }: { initialOrders?: a
                 </div>
             </div>
         }>
-            <OrdersClientContent initialOrders={initialOrders} />
+            <OrdersClientContent initialOrders={initialOrders} businessSlug={businessSlug} />
         </Suspense>
     );
 }

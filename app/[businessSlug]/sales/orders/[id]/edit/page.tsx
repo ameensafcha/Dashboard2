@@ -8,13 +8,14 @@ export const metadata = {
 };
 
 interface PageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+        businessSlug: string;
+    }>;
 }
 
 export default async function EditOrderPage({ params }: PageProps) {
-    const { id } = await params;
+    const { id, businessSlug } = await params;
 
     // 1. Fetch the Order with items
     const order = await prisma.order.findUnique({
@@ -29,7 +30,7 @@ export default async function EditOrderPage({ params }: PageProps) {
     if (!order) notFound();
     if (order.status !== 'draft') {
         // Only draft orders can be edited
-        redirect('/sales/orders');
+        redirect(`/${businessSlug}/sales/orders`);
     }
 
     // 2. Fetch Master Data
@@ -123,6 +124,7 @@ export default async function EditOrderPage({ params }: PageProps) {
             companies={serializedCompanies}
             companyPricingTiers={serializedCompanyPricingTiers}
             globalPricingTiers={serializedGlobalPricingTiers}
+            businessSlug={businessSlug}
         />
     );
 }

@@ -36,9 +36,9 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 // ===================== Queries =====================
 
-export async function getOrders(search?: string, channel?: OrderChannel, status?: OrderStatus) {
+export async function getOrders(businessSlug?: string, search?: string, channel?: OrderChannel, status?: OrderStatus) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'orders', 'view')) {
             throw new Error('Unauthorized');
         }

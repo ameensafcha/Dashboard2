@@ -29,24 +29,24 @@ export default async function BusinessHomePage({ params }: { params: Promise<{ b
     <div className="p-4 sm:p-6">
       <DashboardWrapper businessId={ctx?.businessId}>
         <Suspense fallback={<SectionSkeleton className="h-40 w-full" />}>
-          <KpiSection />
+          <KpiSection businessSlug={businessSlug} />
         </Suspense>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-3">
             <Suspense fallback={<SectionSkeleton className="h-[300px] w-full" />}>
-              <RevenueTrendSection />
+              <RevenueTrendSection businessSlug={businessSlug} />
             </Suspense>
           </div>
           <div className="lg:col-span-2">
             <Suspense fallback={<SectionSkeleton className="h-[300px] w-full" />}>
-              <SalesChannelSection />
+              <SalesChannelSection businessSlug={businessSlug} />
             </Suspense>
           </div>
         </div>
 
         <Suspense fallback={null}>
-          <LowStockAlertsSection />
+          <LowStockAlertsSection businessSlug={businessSlug} />
         </Suspense>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -55,7 +55,7 @@ export default async function BusinessHomePage({ params }: { params: Promise<{ b
           </div>
           <div className="lg:col-span-2">
             <Suspense fallback={<SectionSkeleton className="h-[400px] w-full" />}>
-              <ActivityFeedSection />
+              <ActivityFeedSection businessSlug={businessSlug} />
             </Suspense>
           </div>
         </div>

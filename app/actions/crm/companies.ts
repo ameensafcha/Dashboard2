@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { toSafeNumber } from '@/lib/decimal';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
@@ -28,45 +28,56 @@ const companySchema = z.object({
     })).optional()
 });
 
-export async function getCompanies(search?: string) {
-    try {
-        const ctx = await getBusinessContext();
-        if (!hasPermission(ctx, 'crm', 'view')) {
-            throw new Error('Unauthorized');
-        }
-
-        const companies = await prisma.company.findMany({
-            where: {
-                deletedAt: null,
-                businessId: ctx.businessId,
-                ...(search ? {
-                    OR: [
-                        { name: { contains: search, mode: 'insensitive' } },
-                        { industry: { contains: search, mode: 'insensitive' } },
-                        { city: { contains: search, mode: 'insensitive' } },
-                    ]
-                } : {})
-            },
-            include: {
-                companyPricingTiers: {
-                    include: {
-                        category: true,
-                        pricingTier: true
-                    }
-                },
-                _count: {
-                    select: { contacts: true, deals: true }
-                }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 200,
-        });
-
-        return serializeValues(companies);
-    } catch (error) {
-        console.error('Error fetching companies:', error);
-        return [];
+export async function getCompanies(businessSlug?: string, search?: string) {
+    const ctx = await getBusinessContext(businessSlug);
+    if (!hasPermission(ctx, 'crm', 'view')) {
+        throw new Error('Unauthorized');
     }
+
+    const cacheKey = [`companies-${ctx.businessId}`, search || ''];
+
+    return unstable_cache(
+        async () => {
+            try {
+                const companies = await prisma.company.findMany({
+                    where: {
+                        deletedAt: null,
+                        businessId: ctx.businessId,
+                        ...(search ? {
+                            OR: [
+                                { name: { contains: search, mode: 'insensitive' } },
+                                { industry: { contains: search, mode: 'insensitive' } },
+                                { city: { contains: search, mode: 'insensitive' } },
+                            ]
+                        } : {})
+                    },
+                    include: {
+                        companyPricingTiers: {
+                            include: {
+                                category: true,
+                                pricingTier: true
+                            }
+                        },
+                        _count: {
+                            select: { contacts: true, deals: true }
+                        }
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 200,
+                });
+
+                return serializeValues(companies);
+            } catch (error) {
+                console.error('Error fetching companies:', error);
+                return [];
+            }
+        },
+        cacheKey,
+        {
+            tags: [`companies-${ctx.businessId}`],
+            revalidate: 3600
+        }
+    )();
 }
 
 export async function createCompany(data: z.infer<typeof companySchema>) {
@@ -116,7 +127,7 @@ export async function createCompany(data: z.infer<typeof companySchema>) {
             timeout: 15000
         });
 
-        revalidatePath('/crm/companies');
+        revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
@@ -174,7 +185,7 @@ export async function updateCompany(id: string, data: z.infer<typeof companySche
             timeout: 15000
         });
 
-        revalidatePath('/crm/companies');
+        revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true, data: { ...company, lifetimeValue: company.lifetimeValue.toNumber() } };
     } catch (error) {
@@ -212,7 +223,7 @@ export async function deleteCompany(id: string) {
             timeout: 15000
         });
 
-        revalidatePath('/crm/companies');
+        revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         return { success: true };
     } catch (error) {

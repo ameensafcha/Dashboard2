@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { ClientType, LeadSource } from '@prisma/client';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
@@ -22,55 +22,67 @@ const contactSchema = z.object({
     notes: z.string().optional(),
 });
 
-export async function getContacts(search?: string, companyId?: string) {
-    try {
-        const ctx = await getBusinessContext();
-        if (!hasPermission(ctx, 'crm', 'view')) {
-            throw new Error('Unauthorized');
-        }
-
-        const whereClause: any = { deletedAt: null, businessId: ctx.businessId };
-
-        if (search) {
-            whereClause.OR = [
-                { name: { contains: search, mode: 'insensitive' } },
-                { email: { contains: search, mode: 'insensitive' } },
-                { phone: { contains: search, mode: 'insensitive' } },
-                {
-                    company: {
-                        name: { contains: search, mode: 'insensitive' }
-                    }
-                }
-            ];
-        }
-
-        if (companyId) {
-            whereClause.companyId = companyId;
-        }
-
-        const contacts = await prisma.client.findMany({
-            where: whereClause,
-            include: {
-                company: {
-                    select: {
-                        id: true,
-                        name: true,
-                        industry: true
-                    }
-                },
-                _count: {
-                    select: { deals: true }
-                }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 200,
-        });
-
-        return serializeValues(contacts);
-    } catch (error) {
-        console.error('Error fetching contacts:', error);
-        return [];
+export async function getContacts(businessSlug?: string, search?: string, companyId?: string) {
+    const ctx = await getBusinessContext(businessSlug);
+    if (!hasPermission(ctx, 'crm', 'view')) {
+        throw new Error('Unauthorized');
     }
+
+    // Cache key includes businessId, search, and companyId for granularity
+    const cacheKey = [`contacts-${ctx.businessId}`, search || '', companyId || ''];
+
+    return unstable_cache(
+        async () => {
+            try {
+                const whereClause: any = { deletedAt: null, businessId: ctx.businessId };
+
+                if (search) {
+                    whereClause.OR = [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } },
+                        { phone: { contains: search, mode: 'insensitive' } },
+                        {
+                            company: {
+                                name: { contains: search, mode: 'insensitive' }
+                            }
+                        }
+                    ];
+                }
+
+                if (companyId) {
+                    whereClause.companyId = companyId;
+                }
+
+                const contacts = await prisma.client.findMany({
+                    where: whereClause,
+                    include: {
+                        company: {
+                            select: {
+                                id: true,
+                                name: true,
+                                industry: true
+                            }
+                        },
+                        _count: {
+                            select: { deals: true }
+                        }
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 200,
+                });
+
+                return serializeValues(contacts);
+            } catch (error) {
+                console.error('Error fetching contacts:', error);
+                return [];
+            }
+        },
+        cacheKey,
+        {
+            tags: [`contacts-${ctx.businessId}`],
+            revalidate: 3600 // 1 hour TTL
+        }
+    )();
 }
 
 export async function createContact(data: z.infer<typeof contactSchema>) {
@@ -122,12 +134,9 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
             timeout: 15000
         });
 
-        revalidatePath('/crm/contacts');
-        revalidatePath('/crm/companies'); // Count of contacts inside companies might effectively change
-        revalidatePath('/crm/contacts');
-        revalidatePath('/');
-
-        // Revalidate dashboard cache
+        // Revalidate CRM cache
+        revalidateTag(`contacts-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
 
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
@@ -186,12 +195,9 @@ export async function updateContact(id: string, data: z.infer<typeof contactSche
             timeout: 15000
         });
 
-        revalidatePath('/crm/contacts');
-        revalidatePath(`/crm/contacts/${id}`);
-        revalidatePath('/crm/companies');
-        revalidatePath('/');
-
-        // Revalidate dashboard cache
+        // Revalidate CRM cache
+        revalidateTag(`contacts-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
 
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
@@ -228,12 +234,9 @@ export async function deleteContact(id: string) {
             timeout: 15000
         });
 
-        revalidatePath('/crm/contacts');
-        revalidatePath('/crm/companies');
-        revalidatePath('/crm/contacts');
-        revalidatePath('/');
-
-        // Revalidate dashboard cache
+        // Revalidate CRM cache
+        revalidateTag(`contacts-${ctx.businessId}`, { expire: 0 });
+        revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
 
         return { success: true };

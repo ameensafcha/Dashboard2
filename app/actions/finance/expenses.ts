@@ -68,9 +68,9 @@ async function generateTransactionId(tx: any, businessId: string): Promise<strin
 // Queries
 // ==========================================
 
-export async function getExpenses(category?: ExpenseCategory | 'all') {
+export async function getExpenses(businessSlug?: string, category?: ExpenseCategory | 'all') {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'finance', 'view')) {
             throw new Error('Unauthorized');
         }

@@ -143,16 +143,22 @@ export const useCrmStore = create<CrmStore>((set) => ({
     isCompanyDrawerOpen: false,
     selectedCompany: null,
 
-    setCompanies: (companies) => set({ companies }),
+    setCompanies: (companies) => set({
+        companies: Array.from(new Map(companies.map(c => [c.id, c])).values())
+    }),
     upsertCompany: (company) => set((state) => {
-        if (company.deletedAt) {
+        // If it's a soft delete or has a deleted timestamp, remove it
+        if (company.deletedAt || (company as any).deleted_at) {
             return { companies: state.companies.filter(c => c.id !== company.id) };
         }
-        const index = state.companies.findIndex(c => c.id === company.id);
-        if (index > -1) {
-            const newCompanies = [...state.companies];
-            newCompanies[index] = { ...newCompanies[index], ...company };
-            return { companies: newCompanies };
+        // Safety: Don't add a company if it's missing name (partial payload)
+        if (!company.name) return state;
+
+        const exists = state.companies.some(c => c.id === company.id);
+        if (exists) {
+            return {
+                companies: state.companies.map(c => c.id === company.id ? { ...c, ...company } : c)
+            };
         }
         return { companies: [company, ...state.companies] };
     }),
@@ -170,16 +176,22 @@ export const useCrmStore = create<CrmStore>((set) => ({
     isContactDrawerOpen: false,
     selectedContact: null,
 
-    setContacts: (contacts) => set({ contacts }),
+    setContacts: (contacts) => set({
+        contacts: Array.from(new Map(contacts.map(c => [c.id, c])).values())
+    }),
     upsertContact: (contact) => set((state) => {
-        if (contact.deletedAt) {
+        // If it's a soft delete or has a deleted timestamp, remove it
+        if (contact.deletedAt || (contact as any).deleted_at) {
             return { contacts: state.contacts.filter(c => c.id !== contact.id) };
         }
-        const index = state.contacts.findIndex(c => c.id === contact.id);
-        if (index > -1) {
-            const newContacts = [...state.contacts];
-            newContacts[index] = { ...newContacts[index], ...contact };
-            return { contacts: newContacts };
+        // Safety: Don't add a contact if it's missing name (partial payload)
+        if (!contact.name) return state;
+
+        const exists = state.contacts.some(c => c.id === contact.id);
+        if (exists) {
+            return {
+                contacts: state.contacts.map(c => c.id === contact.id ? { ...c, ...contact } : c)
+            };
         }
         return { contacts: [contact, ...state.contacts] };
     }),

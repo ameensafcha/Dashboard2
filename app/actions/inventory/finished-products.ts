@@ -7,9 +7,9 @@ import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 import { logAudit } from '@/lib/logAudit';
 
-export async function getFinishedProducts(search?: string, location?: string) {
+export async function getFinishedProducts(businessSlug?: string, search?: string, location?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'inventory', 'view')) {
             throw new Error('Unauthorized');
         }

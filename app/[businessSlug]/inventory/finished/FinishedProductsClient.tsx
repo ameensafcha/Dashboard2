@@ -40,9 +40,10 @@ interface FinishedProductData {
 interface Props {
     initialProducts: FinishedProductData[];
     catalogProducts: { id: string; name: string; skuPrefix: string }[];
+    businessSlug: string;
 }
 
-export default function FinishedProductsClient({ initialProducts, catalogProducts }: Props) {
+export default function FinishedProductsClient({ initialProducts, catalogProducts, businessSlug }: Props) {
     const [products, setProducts] = useState(initialProducts);
     const [searchQuery, setSearchQuery] = useState('');
     const [locationFilter, setLocationFilter] = useState('ALL');

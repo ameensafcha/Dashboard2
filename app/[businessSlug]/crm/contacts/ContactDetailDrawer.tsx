@@ -131,7 +131,7 @@ export default function ContactDetailDrawer({ onContactUpdated }: { onContactUpd
                     <div className={cn("space-y-6 relative z-10", isRTL ? "text-right" : "")}>
                         <div className={cn("flex items-start justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
                             <div className="w-16 h-16 rounded-full bg-[var(--primary)]/10 border border-[var(--primary)]/20 flex items-center justify-center font-black text-2xl text-[var(--primary)] shadow-lg uppercase">
-                                {selectedContact.name.substring(0, 2)}
+                                {(selectedContact?.name || '??').substring(0, 2)}
                             </div>
                             <div className="flex gap-2">
                                 {!isEditing && (

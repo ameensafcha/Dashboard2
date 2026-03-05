@@ -9,8 +9,9 @@ export const metadata: Metadata = {
     description: 'Track finished product stock, reservations, and availability.',
 };
 
-export default async function FinishedProductsPage() {
-    const initialData = await getFinishedProducts();
+export default async function FinishedProductsPage({ params }: { params: Promise<{ businessSlug: string }> }) {
+    const { businessSlug } = await params;
+    const initialData = await getFinishedProducts(businessSlug);
     const catalogProducts = await prisma.product.findMany({
         select: { id: true, name: true, skuPrefix: true },
         where: { status: 'active' },
@@ -20,5 +21,6 @@ export default async function FinishedProductsPage() {
     return <FinishedProductsClient
         initialProducts={initialData.success ? initialData.products : []}
         catalogProducts={catalogProducts}
+        businessSlug={businessSlug}
     />;
 }

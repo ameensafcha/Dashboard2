@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import RootClientLayout from '@/components/layout/RootClientLayout'
+import { RealtimeProvider } from '@/components/providers/RealtimeProvider'
 
 export default async function BusinessLayout({
   children,
@@ -49,7 +50,9 @@ export default async function BusinessLayout({
 
   return (
     <RootClientLayout>
-      {children}
+      <RealtimeProvider>
+        {children}
+      </RealtimeProvider>
     </RootClientLayout>
   )
 }

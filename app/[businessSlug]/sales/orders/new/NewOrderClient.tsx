@@ -43,7 +43,8 @@ export default function NewOrderClient({
     clients = [],
     products = [],
     companyPricingTiers = [],
-    globalPricingTiers = []
+    globalPricingTiers = [],
+    businessSlug
 }: any) {
     const router = useRouter();
     const { isRTL, language } = useTranslation();
@@ -168,7 +169,7 @@ export default function NewOrderClient({
                     description: language === 'ar' ? 'تمت إضافة الطلب بنجاح' : 'Order has been created successfully.',
                     type: 'success'
                 });
-                router.push('/sales/orders');
+                router.push(`/${businessSlug}/sales/orders`);
             } else {
                 toast({
                     title: 'Error',
@@ -240,7 +241,7 @@ export default function NewOrderClient({
             <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
                 <div className="space-y-1">
                     <Link
-                        href="/sales/orders"
+                        href={`/${businessSlug}/sales/orders`}
                         className={cn("text-xs font-bold text-[var(--text-disabled)] hover:text-[var(--primary)] flex items-center gap-1 transition-colors group", isRTL ? "flex-row-reverse" : "")}
                     >
                         <ArrowLeft className={cn("w-3 h-3 transition-transform", isRTL ? "rotate-180 group-hover:translate-x-1" : "group-hover:-translate-x-1")} />

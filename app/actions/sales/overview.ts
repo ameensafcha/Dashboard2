@@ -4,9 +4,9 @@ import prisma from '@/lib/prisma';
 import { getBusinessContext } from '@/lib/getBusinessContext';
 import { hasPermission } from '@/lib/permissions';
 
-export async function getSalesOverview() {
+export async function getSalesOverview(businessSlug?: string) {
     try {
-        const ctx = await getBusinessContext();
+        const ctx = await getBusinessContext(businessSlug);
         if (!hasPermission(ctx, 'orders', 'view')) {
             throw new Error('Unauthorized');
         }

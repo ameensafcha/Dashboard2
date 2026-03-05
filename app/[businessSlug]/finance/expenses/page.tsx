@@ -4,8 +4,9 @@ import { getExpenses } from '@/app/actions/finance/expenses';
 import ExpensesClient from './ExpensesClient';
 
 
-export default async function ExpensesPage() {
-    const expenses = await getExpenses();
+export default async function ExpensesPage({ params }: { params: Promise<{ businessSlug: string }> }) {
+    const { businessSlug } = await params;
+    const expenses = await getExpenses(businessSlug);
 
     return (
         <div className="p-4 sm:p-6 space-y-6">

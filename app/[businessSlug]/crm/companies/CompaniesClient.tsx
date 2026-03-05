@@ -17,16 +17,16 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { useRouter } from 'next/navigation';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
-import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 interface CompaniesClientProps {
     initialCompanies: any[];
     initialTiers: any[];
     initialCategories: any[];
     businessId: string;
+    businessSlug: string;
 }
 
-export default function CompaniesClient({ initialCompanies, initialTiers, initialCategories, businessId }: CompaniesClientProps) {
+export default function CompaniesClient({ initialCompanies, initialTiers, initialCategories, businessId, businessSlug }: CompaniesClientProps) {
     const { t, language, isRTL } = useTranslation();
     const router = useRouter();
     const {
@@ -41,20 +41,18 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
         removeCompany
     } = useCrmStore();
 
-    // Activate Realtime Sync for Companies
-    useRealtimeSync({
-        table: 'companies',
-        businessId,
-        onInsert: (payload) => upsertCompany(payload),
-        onUpdate: (payload) => upsertCompany(payload),
-        onDelete: (payload) => removeCompany(payload.id)
-    });
+    // Realtime Sync is now handled globally via RealtimeProvider in layout.tsx
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const isInitialized = useRef(false);
 
-    const loadData = async (search = '') => {
+    const loadData = async (search = '', force = false) => {
+        // Favor store if not searching and data exists
+        if (!force && companies.length > 0 && !search) {
+            return;
+        }
+
         setIsLoading(true);
         try {
             const [comps, tiers, cats] = await Promise.all([
@@ -74,14 +72,19 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
 
     useEffect(() => {
         if (!isInitialized.current) {
-            setCompanies(initialCompanies as any);
-            setActiveTiers(initialTiers as any);
-            setActiveCategories(initialCategories as any);
+            if (companies.length === 0) {
+                setCompanies(initialCompanies as any);
+                setActiveTiers(initialTiers as any);
+                setActiveCategories(initialCategories as any);
+            }
             isInitialized.current = true;
             return;
         }
-        loadData();
-    }, []);
+
+        if (searchTerm) {
+            loadData(searchTerm, true);
+        }
+    }, [searchTerm]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -150,7 +153,7 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]/50">
                             {isLoading ? (
-                                <tr>
+                                <tr key="loading-row">
                                     <td colSpan={6} className="px-8 py-20 text-center">
                                         <div className="flex flex-col items-center gap-4 opacity-40">
                                             <div className="w-10 h-10 border-2 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin" />
@@ -159,7 +162,7 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
                                     </td>
                                 </tr>
                             ) : companies.length === 0 ? (
-                                <tr>
+                                <tr key="empty-row">
                                     <td colSpan={6} className="px-8 py-20 text-center">
                                         <div className="flex flex-col items-center justify-center space-y-4">
                                             <div className="w-16 h-16 rounded-2xl bg-[var(--muted)]/30 flex items-center justify-center border border-dashed border-[var(--border)]">
@@ -256,7 +259,7 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
                                                 )}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    router.push(`/crm/contacts?companyId=${company.id}&companyName=${encodeURIComponent(company.name)}`);
+                                                    router.push(`/${businessSlug}/crm/contacts?companyId=${company.id}&companyName=${encodeURIComponent(company.name)}`);
                                                 }}
                                             >
                                                 <User className="h-4 w-4" />
