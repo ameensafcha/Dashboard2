@@ -307,7 +307,6 @@ export async function convertDealToOrder(dealId: string) {
         revalidateTag(`sales-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
-        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidatePath('/sales/orders');
         revalidatePath('/crm/pipeline');
         revalidatePath('/crm/deals');

@@ -134,7 +134,7 @@ export async function createEvent(data: z.infer<typeof eventSchema>) {
         const validData = parsed.data;
 
         const event = await prisma.$transaction(async (tx) => {
-            const eventId = await generateEventId();
+            const eventId = await generateEventId(ctx.businessId, tx);
             const newEvent = await tx.event.create({
                 data: {
                     businessId: ctx.businessId,

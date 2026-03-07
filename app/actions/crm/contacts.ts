@@ -133,11 +133,10 @@ export async function createContact(data: z.infer<typeof contactSchema>) {
             timeout: 15000
         });
 
-        revalidateTag(`contacts-${ctx.businessId}`, { expire: undefined });
+        revalidateTag(`contacts-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`companies-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
-        revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
 
         return { success: true, data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] } };
@@ -230,8 +229,10 @@ export async function deleteContact(id: string) {
                 entityId: contact.name,
                 module: 'crm',
                 entityName: 'Contact',
-                details: { reason: 'User deleted contact' }
+                details: { deletedAt: new Date() }
             });
+
+            return contact;
         }, {
             timeout: 15000
         });
@@ -241,10 +242,28 @@ export async function deleteContact(id: string) {
         revalidateTag(`crm-overview-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-kpi-${ctx.businessId}`, { expire: 0 });
         revalidateTag(`dashboard-feed-${ctx.businessId}`, { expire: 0 });
-
         return { success: true };
     } catch (error) {
         console.error('Error deleting contact:', error);
         return { success: false, error: 'Failed to delete contact' };
+    }
+}
+
+export async function getContactById(id: string) {
+    try {
+        const ctx = await getBusinessContext();
+        const contact = await prisma.client.findUnique({
+            where: { id, businessId: ctx.businessId, deletedAt: null },
+            include: { company: { select: { id: true, name: true, industry: true } } }
+        });
+
+        if (!contact) return { success: false, error: 'Not found' };
+
+        return {
+            success: true,
+            data: { ...contact, tags: Array.isArray(contact.tags) ? contact.tags : [] }
+        };
+    } catch (e) {
+        return { success: false, error: 'Database error' };
     }
 }

@@ -51,7 +51,10 @@ const getCachedCompanies = (businessId: string, search?: string) => unstable_cac
                         }
                     },
                     _count: {
-                        select: { contacts: true, deals: true }
+                        select: {
+                            contacts: { where: { deletedAt: null } },
+                            deals: { where: { deletedAt: null } }
+                        }
                     }
                 },
                 orderBy: { createdAt: 'desc' },
@@ -221,8 +224,10 @@ export async function deleteCompany(id: string) {
                 entityId: company.name,
                 module: 'crm',
                 entityName: 'Company',
-                details: { reason: 'User deleted company' }
+                details: { deletedAt: new Date() }
             });
+
+            return company;
         }, {
             timeout: 15000
         });
@@ -235,5 +240,47 @@ export async function deleteCompany(id: string) {
     } catch (error) {
         console.error('Error deleting company:', error);
         return { success: false, error: 'Failed to delete company' };
+    }
+}
+
+export async function getCompanyById(id: string) {
+    try {
+        const ctx = await getBusinessContext();
+        const company = await prisma.company.findUnique({
+            where: { id, businessId: ctx.businessId, deletedAt: null },
+            include: {
+                companyPricingTiers: {
+                    include: { category: true, pricingTier: true }
+                },
+                _count: {
+                    select: {
+                        contacts: { where: { deletedAt: null } },
+                        deals: { where: { deletedAt: null } }
+                    }
+                }
+            }
+        });
+
+        if (!company) return { success: false, error: 'Not found' };
+
+        return {
+            success: true,
+            data: {
+                ...company,
+                lifetimeValue: company.lifetimeValue.toNumber(),
+                pricingTiers: company.companyPricingTiers.map(t => ({
+                    id: t.id,
+                    categoryId: t.categoryId,
+                    categoryName: t.category.name,
+                    pricingTierId: t.pricingTierId,
+                    tierName: t.pricingTier.tierName,
+                    pricePerKg: t.pricingTier.pricePerKg.toNumber(),
+                    minOrderKg: t.pricingTier.minOrderKg.toNumber(),
+                    marginPercent: t.pricingTier.marginPercent.toNumber()
+                }))
+            }
+        };
+    } catch (e) {
+        return { success: false, error: 'Database error' };
     }
 }

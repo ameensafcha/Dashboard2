@@ -88,7 +88,16 @@ export function useRealtimeSync(businessId: string) {
                     removeContact(payload.old.id)
                 } else {
                     const data = payload.new
+                    // Immediate optimistic update
                     upsertContact({ ...data, companyId: data.company_id, businessId: data.business_id, lastContacted: data.last_contacted, createdAt: data.created_at, updatedAt: data.updated_at, deletedAt: data.deleted_at } as any)
+
+                    // Fetch full contact to preserve relations
+                    import('@/app/actions/crm/contacts').then(async ({ getContactById }) => {
+                        const res = await getContactById(payload.new.id);
+                        if (res.success && res.data) {
+                            upsertContact(res.data as any);
+                        }
+                    }).catch(console.error);
                 }
                 triggerRefresh()
             })
@@ -97,7 +106,16 @@ export function useRealtimeSync(businessId: string) {
                     removeCompany(payload.old.id)
                 } else {
                     const data = payload.new
+                    // Immediate optimistic update
                     upsertCompany({ ...data, lifetimeValue: data.lifetime_value, pricingTierId: data.pricing_tier_id, businessId: data.business_id, createdAt: data.created_at, updatedAt: data.updated_at, deletedAt: data.deleted_at } as any)
+
+                    // Fetch full company to preserve relations and counts
+                    import('@/app/actions/crm/companies').then(async ({ getCompanyById }) => {
+                        const res = await getCompanyById(payload.new.id);
+                        if (res.success && res.data) {
+                            upsertCompany(res.data as any);
+                        }
+                    }).catch(console.error);
                 }
                 triggerRefresh()
             })

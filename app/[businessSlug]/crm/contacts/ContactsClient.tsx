@@ -57,8 +57,8 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId, 
         setIsLoading(true);
         try {
             const [contactsData, companiesData] = await Promise.all([
-                getContacts(search, compId),
-                getCompanies()
+                getContacts(businessSlug, search, compId),
+                getCompanies(businessSlug)
             ]);
             setContacts(contactsData as any);
             setCompanies(companiesData as any);
@@ -69,32 +69,32 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId, 
         }
     };
 
-    const isInitialized = useRef(false);
-
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // 1. Sync store with Server initial data 
     useEffect(() => {
-        if (!isInitialized.current) {
-            // Check if store already has data (from previous navigation)
-            if (contacts.length === 0) {
-                setContacts(initialContacts as any);
-                setCompanies(initialCompanies as any);
-            }
-            isInitialized.current = true;
-            return;
+        if (!searchTerm) {
+            setContacts(initialContacts as any);
+            setCompanies(initialCompanies as any);
         }
+    }, [initialContacts, initialCompanies, setContacts, setCompanies, searchTerm]);
 
-        // Only fetch if companyId is actualy changed and not null (initial load handled by initialContacts)
-        if (filterCompanyId) {
+    // 2. Debounced Search (only fetch if search term is active)
+    useEffect(() => {
+        if (!searchTerm) return; // if empty, the first useEffect handles sync
+
+        const handler = setTimeout(() => {
             loadData(searchTerm, filterCompanyId || undefined, true);
-        }
+        }, 500);
+
+        return () => clearTimeout(handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filterCompanyId]);
+    }, [searchTerm]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        loadData(searchTerm);
+        loadData(searchTerm, filterCompanyId || undefined, true);
     };
 
     const handleRowClick = (contact: Contact) => {
@@ -158,12 +158,10 @@ function ContactsClientContent({ initialContacts, initialCompanies, businessId, 
                                 onValueChange={(val) => {
                                     if (val === "all") {
                                         router.push(`/${businessSlug}/crm/contacts`);
-                                        setTimeout(() => loadData(searchTerm, undefined), 50);
                                     } else {
                                         const comp = companies.find(c => c.id === val);
                                         if (comp) {
                                             router.push(`/${businessSlug}/crm/contacts?companyId=${comp.id}&companyName=${encodeURIComponent(comp.name)}`);
-                                            setTimeout(() => loadData(searchTerm, comp.id), 50);
                                         }
                                     }
                                 }}

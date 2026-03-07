@@ -207,7 +207,9 @@ export const useCrmStore = create<CrmStore>((set) => ({
     isDealDrawerOpen: false,
     selectedDeal: null,
 
-    setDeals: (deals) => set({ deals }),
+    setDeals: (deals) => set({
+        deals: Array.from(new Map(deals.map(d => [d.id, d])).values())
+    }),
     setIsNewDealModalOpen: (isOpen) => set({ isNewDealModalOpen: isOpen }),
     setIsDealDrawerOpen: (isOpen) => set({ isDealDrawerOpen: isOpen }),
     setSelectedDeal: (deal) => set({ selectedDeal: deal }),

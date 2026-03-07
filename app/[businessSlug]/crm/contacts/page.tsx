@@ -8,12 +8,21 @@ export const metadata = {
     description: 'Manage individual clients, leads, and internal contacts.',
 };
 
-export default async function ContactsPage({ params }: { params: Promise<{ businessSlug: string }> }) {
+export default async function ContactsPage({
+    params,
+    searchParams
+}: {
+    params: Promise<{ businessSlug: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
     const { businessSlug } = await params;
+    const resolvedSearchParams = await searchParams;
+    const companyId = typeof resolvedSearchParams.companyId === 'string' ? resolvedSearchParams.companyId : undefined;
+
     const ctx = await getBusinessContext();
     const [contacts, companies] = await Promise.all([
-        getContacts(businessSlug),
-        getCompanies(businessSlug)
+        getContacts(undefined, undefined, companyId),
+        getCompanies()
     ]);
 
     return (
@@ -25,3 +34,4 @@ export default async function ContactsPage({ params }: { params: Promise<{ busin
         />
     );
 }
+

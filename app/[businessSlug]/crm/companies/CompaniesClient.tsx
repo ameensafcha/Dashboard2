@@ -71,20 +71,24 @@ export default function CompaniesClient({ initialCompanies, initialTiers, initia
         }
     };
 
+    // 1. Sync store with Server initial data 
     useEffect(() => {
-        if (!isInitialized.current) {
-            if (companies.length === 0) {
-                setCompanies(initialCompanies as any);
-                setActiveTiers(initialTiers as any);
-                setActiveCategories(initialCategories as any);
-            }
-            isInitialized.current = true;
-            return;
+        if (!searchTerm) {
+            setCompanies(initialCompanies as any);
+            setActiveTiers(initialTiers as any);
+            setActiveCategories(initialCategories as any);
         }
+    }, [initialCompanies, initialTiers, initialCategories, setCompanies, setActiveTiers, setActiveCategories, searchTerm]);
 
-        if (searchTerm) {
+    // 2. Debounced Search
+    useEffect(() => {
+        if (!searchTerm) return;
+
+        const handler = setTimeout(() => {
             loadData(searchTerm, true);
-        }
+        }, 500);
+
+        return () => clearTimeout(handler);
     }, [searchTerm]);
 
     const handleSearch = (e: React.FormEvent) => {
